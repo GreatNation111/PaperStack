@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface Department {
@@ -14,6 +14,7 @@ export interface Course {
     title: string;
     departmentId: string;
     level: string;
+    semester?: string;
 }
 
 export function useDepartments() {
@@ -136,4 +137,104 @@ export function useRecentCourses() {
     }, []);
 
     return { courses, loading };
+}
+// ... existing code ...
+
+export interface Paper {
+    id: string;
+    departmentId: string;
+    courseId: string;
+    courseCode: string; // Denormalized for easier display
+    year: string;
+    semester: string;
+    type: 'Exam' | 'Test' | 'Midterm';
+    pdfUrl?: string;
+    isPublished: boolean;
+    createdAt: any;
+}
+
+export function useCourse(courseIdOrCode?: string) {
+    const [course, setCourse] = useState<Course | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchCourse() {
+            if (!courseIdOrCode) return;
+            setLoading(true);
+            try {
+                // Try to find by ID first
+                const docRef = doc(db, 'courses', courseIdOrCode);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    setCourse({ id: docSnap.id, ...docSnap.data() } as Course);
+                } else {
+                    // Fallback: try to find by code (e.g. "PHY 101")
+                    // Note: This assumes codes are unique. Ideally we use IDs.
+                    const q = query(collection(db, 'courses'), where('code', '==', courseIdOrCode));
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        const doc = querySnapshot.docs[0];
+                        setCourse({ id: doc.id, ...doc.data() } as Course);
+                    } else {
+                        setCourse(null);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching course:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchCourse();
+    }, [courseIdOrCode]);
+
+    return { course, loading };
+}
+
+export function usePapers(courseId?: string) {
+    const [papers, setPapers] = useState<Paper[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchPapers() {
+            setLoading(true);
+            try {
+                let q;
+                if (courseId) {
+                    q = query(
+                        collection(db, 'papers'),
+                        where('courseId', '==', courseId),
+                        where('isPublished', '==', true)
+                    );
+                } else {
+                    // Fetch all papers (or recent ones) if no course specified
+                    // In a real app, strict pagination/filtering is needed here.
+                    q = query(
+                        collection(db, 'papers'),
+                        where('isPublished', '==', true),
+                        limit(50)
+                    );
+                }
+
+                const querySnapshot = await getDocs(q);
+                const fetchedPapers: Paper[] = [];
+                querySnapshot.forEach((doc) => {
+                    fetchedPapers.push({ id: doc.id, ...doc.data() } as Paper);
+                });
+
+                // Client-side sort if compound index is missing
+                fetchedPapers.sort((a, b) => b.year.localeCompare(a.year));
+
+                setPapers(fetchedPapers);
+            } catch (error) {
+                console.error("Error fetching papers:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchPapers();
+    }, [courseId]);
+
+    return { papers, loading };
 }

@@ -1,170 +1,131 @@
-import { ArrowLeft, Filter, Download, Bookmark, FileText } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, Share2, Download, Bookmark, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Paper } from '@/hooks/useData';
 import { useState } from 'react';
 
-interface PastQuestionsViewerProps {
-  onBack: () => void;
-  courseCode?: string;
+// Mock PDF component since we can't easily embed real PDFs without a library or file URL
+// In production, use 'react-pdf' or an iframe with the PDF URL
+function MockPDFContent({ title }: { title: string }) {
+  return (
+    <div className="w-full h-full bg-white flex flex-col items-center p-8 overflow-y-auto">
+      <div className="max-w-2xl w-full space-y-6 text-slate-800">
+        <div className="text-center border-b-2 border-slate-900 pb-4 mb-8">
+          <h1 className="text-xl font-bold uppercase tracking-wider">University of Excellence</h1>
+          <h2 className="text-lg font-bold mt-2">{title}</h2>
+          <div className="flex justify-between mt-4 text-sm font-medium">
+            <span>Time: 2 Hours</span>
+            <span>Total Marks: 70</span>
+          </div>
+          <div className="mt-4 italic text-sm">Attempt all questions in Section A and any 3 in Section B</div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-bold">SECTION A (Compulsory)</h3>
+          {[1, 2, 3, 4].map(n => (
+            <div key={n} className="flex gap-2">
+              <span className="font-bold">{n}.</span>
+              <p>
+                Explain the fundamental principles of {title.split(' ').slice(0, 2).join(' ')}.
+                (5 Marks)
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-4 pt-4">
+          <h3 className="font-bold">SECTION B</h3>
+          {[5, 6, 7].map(n => (
+            <div key={n} className="flex gap-2">
+              <span className="font-bold">{n}.</span>
+              <p>
+                Discuss the impact of modern technology on the study of this subject.
+                Support your answer with relevant diagrams where necessary. (15 Marks)
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export function PastQuestionsViewer({ onBack, courseCode }: PastQuestionsViewerProps) {
-  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(['1', '3']);
+export function PastQuestionsViewer({ onBack }: { onBack: () => void; courseCode?: string }) {
+  const navigate = useNavigate(); // Need navigate for back button if onBack not provided or custom handling
+  const location = useLocation();
+  const paper = location.state?.paper as Paper | undefined;
+  const [scale, setScale] = useState(1);
 
-  const papers = [
-    {
-      id: '1',
-      course: 'PHY 101',
-      title: 'General Physics I',
-      year: '2023/2024',
-      semester: 'First Semester',
-      examType: 'Final Exam',
-      level: '100L',
-      repeated: true,
-    },
-    {
-      id: '2',
-      course: 'PHY 101',
-      title: 'General Physics I',
-      year: '2022/2023',
-      semester: 'Second Semester',
-      examType: 'Final Exam',
-      level: '100L',
-      repeated: false,
-    },
-    {
-      id: '3',
-      course: 'PHY 101',
-      title: 'General Physics I',
-      year: '2022/2023',
-      semester: 'First Semester',
-      examType: 'Final Exam',
-      level: '100L',
-      repeated: true,
-    },
-    {
-      id: '4',
-      course: 'PHY 101',
-      title: 'General Physics I',
-      year: '2021/2022',
-      semester: 'Second Semester',
-      examType: 'Final Exam',
-      level: '100L',
-      repeated: false,
-    },
-  ];
-
-  const toggleBookmark = (id: string) => {
-    setBookmarkedIds((prev) =>
-      prev.includes(id) ? prev.filter((bid) => bid !== id) : [...prev, id]
+  // Fallback if accessed directly without state (though mostly intended via navigation)
+  if (!paper) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-xl font-bold mb-2">No Paper Selected</div>
+        <button onClick={onBack} className="text-primary hover:underline">Go Back</button>
+      </div>
     );
-  };
-
-  const handleDownload = (paper: typeof papers[0]) => {
-    // Mock download
-    console.log('Downloading:', paper);
-    alert(`Downloading ${paper.course} - ${paper.year} ${paper.semester}`);
-  };
+  }
 
   return (
-    <div className="pb-24 min-h-screen">
-      {/* Header */}
-      <div className="px-6 py-8 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={onBack} className="text-foreground">
-            <ArrowLeft className="w-6 h-6" strokeWidth={2} />
+    <div className="h-screen flex flex-col bg-[#525659]">
+      {/* Toolbar */}
+      <div className="h-14 bg-[#2f3133] flex items-center justify-between px-4 shadow-md z-10">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          <button className="text-foreground">
-            <Filter className="w-6 h-6" strokeWidth={2} />
+          <div className="text-white font-medium truncate max-w-[200px] md:max-w-md">
+            {paper.courseCode} - {paper.year} ({paper.semester})
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+            <ZoomOut className="w-5 h-5" />
+          </button>
+          <span className="text-xs text-gray-400 font-mono w-12 text-center hidden sm:block">
+            {Math.round(scale * 100)}%
+          </span>
+          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+            <ZoomIn className="w-5 h-5" />
+          </button>
+
+          <div className="h-6 w-px bg-gray-600 mx-1 hidden sm:block" />
+
+          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
+            <Bookmark className="w-5 h-5" />
+          </button>
+          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
+            <Download className="w-5 h-5" />
+          </button>
+          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
+            <Share2 className="w-5 h-5" />
           </button>
         </div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {courseCode ? `${courseCode} Past Questions` : 'All Past Questions - Physics'}
-        </h1>
       </div>
 
-      {/* Papers List */}
-      <div className="px-6 py-6">
-        {/* Group by Year */}
-        <div className="space-y-6">
-          {['2023/2024', '2022/2023', '2021/2022'].map((year) => {
-            const yearPapers = papers.filter((p) => p.year === year);
-            if (yearPapers.length === 0) return null;
-
-            return (
-              <div key={year}>
-                <h2 className="text-lg font-bold text-foreground mb-4">{year}</h2>
-                <div className="space-y-3">
-                  {yearPapers.map((paper, index) => {
-                    const isBookmarked = bookmarkedIds.includes(paper.id);
-                    return (
-                      <motion.div
-                        key={paper.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-card border border-border rounded-xl p-4 hover:border-primary transition-all"
-                      >
-                        <div className="flex items-start gap-4">
-                          {/* Thumbnail */}
-                          <div className="w-16 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                            <FileText className="w-7 h-7 text-secondary" strokeWidth={1.5} />
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <h3 className="font-semibold text-foreground mb-1">
-                                  {paper.course} - {paper.semester}
-                                </h3>
-                                <p className="text-sm text-secondary">{paper.title}</p>
-                              </div>
-                              {paper.repeated && (
-                                <span className="px-2 py-1 bg-accent/10 text-accent text-xs font-medium rounded-lg flex-shrink-0">
-                                  Repeated
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-secondary mb-3">
-                              {paper.level} • {paper.examType}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleBookmark(paper.id)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                                  isBookmarked
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted text-foreground hover:bg-muted/80'
-                                }`}
-                              >
-                                <Bookmark
-                                  className="w-4 h-4"
-                                  strokeWidth={2}
-                                  fill={isBookmarked ? 'currentColor' : 'none'}
-                                />
-                                <span className="text-sm font-medium">
-                                  {isBookmarked ? 'Saved' : 'Save'}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => handleDownload(paper)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-all"
-                              >
-                                <Download className="w-4 h-4" strokeWidth={2} />
-                                <span className="text-sm">Download</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+      {/* Viewer Area */}
+      <div className="flex-1 overflow-auto p-4 flex justify-center bg-[#525659]">
+        <div
+          className="bg-white shadow-2xl transition-transform origin-top"
+          style={{
+            width: '100%',
+            maxWidth: '800px',
+            minHeight: '1000px',
+            transform: `scale(${scale})`
+          }}
+        >
+          {paper.pdfUrl ? (
+            <iframe
+              src={paper.pdfUrl}
+              className="w-full h-full min-h-[1000px]"
+              title="Mock PDF"
+            />
+          ) : (
+            <MockPDFContent title={`${paper.courseCode} - ${paper.type}`} />
+          )}
         </div>
       </div>
     </div>

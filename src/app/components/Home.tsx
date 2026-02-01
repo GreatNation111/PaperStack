@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDepartments, useRecentCourses, Course } from '@/hooks/useData';
-import { seedDatabase } from '@/utils/seed';
 
 interface HomeProps {
   userName: string;
@@ -14,14 +13,6 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses: recentCourses, loading: loadingCourses } = useRecentCourses();
   const [searchQuery, setSearchQuery] = useState('');
-  const [seeding, setSeeding] = useState(false);
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    await seedDatabase();
-    setSeeding(false);
-    window.location.reload(); // Simple reload to refresh hooks
-  };
 
   // Helper for department styling and icons
   const getDeptConfig = (name: string) => {
@@ -142,13 +133,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                 <Database className="w-8 h-8 text-muted-foreground/50" />
               </div>
               <p className="text-secondary text-sm font-medium mb-4">Database is empty.</p>
-              <button
-                onClick={handleSeed}
-                disabled={seeding}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50"
-              >
-                {seeding ? 'Seeding...' : 'Populate Dummy Data'}
-              </button>
+              <p className="text-xs text-secondary/60">Navigate to <code className="bg-muted px-1 py-0.5 rounded">/seed</code> to populate data.</p>
             </div>
           ) : filteredCourses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center select-none">

@@ -21,17 +21,17 @@ export async function seedDatabase() {
     // 2. Courses (Sample data for these departments)
     const courses = [
         // Physics Ed
-        { id: 'phy101', code: 'PHY 101', title: 'General Physics I', departmentId: 'physics_ed', level: '100L', papers: 5, lecturer: 'Dr. Einstein' },
-        { id: 'phy102', code: 'PHY 102', title: 'General Physics II', departmentId: 'physics_ed', level: '100L', papers: 3, lecturer: 'Prof. Newton' },
+        { id: 'phy101', code: 'PHY 101', title: 'General Physics I', departmentId: 'physics_ed', level: '100L', semester: 'First', papers: 5, lecturer: 'Dr. Einstein' },
+        { id: 'phy102', code: 'PHY 102', title: 'General Physics II', departmentId: 'physics_ed', level: '100L', semester: 'Second', papers: 3, lecturer: 'Prof. Newton' },
         // Computer Ed
-        { id: 'csc101', code: 'CSC 101', title: 'Introduction to Computer Science', departmentId: 'computer_ed', level: '100L', papers: 8, lecturer: 'Dr. Lovelace' },
-        { id: 'csc201', code: 'CSC 201', title: 'Programming I', departmentId: 'computer_ed', level: '200L', papers: 6, lecturer: 'Dr. Turing' },
+        { id: 'csc101', code: 'CSC 101', title: 'Introduction to Computer Science', departmentId: 'computer_ed', level: '100L', semester: 'First', papers: 8, lecturer: 'Dr. Lovelace' },
+        { id: 'csc201', code: 'CSC 201', title: 'Programming I', departmentId: 'computer_ed', level: '200L', semester: 'First', papers: 6, lecturer: 'Dr. Turing' },
         // Industrial Tech
-        { id: 'ind101', code: 'IND 101', title: 'Intro to Industrial Technology', departmentId: 'industrial_tech', level: '100L', papers: 2, lecturer: 'Engr. Fixit' },
+        { id: 'ind101', code: 'IND 101', title: 'Intro to Industrial Technology', departmentId: 'industrial_tech', level: '100L', semester: 'First', papers: 2, lecturer: 'Engr. Fixit' },
         // Business Ed
-        { id: 'bus101', code: 'BUS 101', title: 'Principles of Business', departmentId: 'business_ed', level: '100L', papers: 10, lecturer: 'Dr. Bezos' },
+        { id: 'bus101', code: 'BUS 101', title: 'Principles of Business', departmentId: 'business_ed', level: '100L', semester: 'Second', papers: 10, lecturer: 'Dr. Bezos' },
         // Chemistry
-        { id: 'chm101', code: 'CHM 101', title: 'General Chemistry I', departmentId: 'chemistry', level: '100L', papers: 7, lecturer: 'Mme. Curie' },
+        { id: 'chm101', code: 'CHM 101', title: 'General Chemistry I', departmentId: 'chemistry', level: '100L', semester: 'First', papers: 7, lecturer: 'Mme. Curie' },
     ];
 
     courses.forEach(course => {
@@ -39,7 +39,22 @@ export async function seedDatabase() {
         batch.set(ref, course);
     });
 
-    // 3. Contributors
+    // 3. Papers (Sample)
+    const papers = [
+        // PHY 101 Papers
+        { id: 'p1', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
+        { id: 'p2', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2022/2023', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
+        { id: 'p3', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Test', isPublished: true, createdAt: new Date() },
+        // CSC 101 Papers
+        { id: 'p4', courseId: 'csc101', courseCode: 'CSC 101', departmentId: 'computer_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
+    ];
+
+    papers.forEach(paper => {
+        const ref = doc(db, 'papers', paper.id);
+        batch.set(ref, paper);
+    });
+
+    // 4. Contributors
     const contributors = [
         { id: 'user1', name: 'Ada Lovelace', department: 'Computer Education', levelOrYear: '400L', contributionCount: 42, badge: 'Top Contributor' },
         { id: 'user2', name: 'Isaac Newton', department: 'Physics Education', levelOrYear: '300L', contributionCount: 28 },

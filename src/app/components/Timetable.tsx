@@ -71,6 +71,24 @@ export function Timetable({ onBack }: TimetableProps) {
                     ))}
                 </div>
             </div>
+
+            {/* Premium Overlay */}
+            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20 animate-pulse">
+                    <div className="text-white font-bold text-2xl">👑</div>
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Premium Feature</h2>
+                <p className="text-secondary max-w-xs mb-8">
+                    Personalized exam schedules filtered automatically for your department are coming soon to PaperStack Premium!
+                </p>
+                <button
+                    onClick={onBack}
+                    className="px-8 py-3 bg-foreground text-background rounded-xl font-semibold hover:opacity-90 transition-all"
+                >
+                    Got it!
+                </button>
+            </div>
         </div>
+
     );
 }

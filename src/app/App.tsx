@@ -10,8 +10,12 @@ import { Library } from '@/app/components/Library';
 import { Profile } from '@/app/components/Profile';
 import { Notifications } from '@/app/components/Notifications';
 import { PastQuestionsViewer } from '@/app/components/PastQuestionsViewer';
+import { PastQuestions } from '@/app/components/PastQuestions';
+import { Timetable } from '@/app/components/Timetable';
+import { RepeatedQuestions } from '@/app/components/RepeatedQuestions';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
+import { SeedData } from '@/app/components/SeedData';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
@@ -48,8 +52,8 @@ function AppContent() {
     navigate('/explore', { state: { department } });
   };
 
-  const handleViewPastQuestions = (course?: string) => {
-    navigate(course ? `/course/${course}` : '/explore');
+  const handleViewPastQuestions = (courseCode?: string, selectedLevel?: string | null) => {
+    navigate('/past-questions', { state: { courseCode, selectedLevel } });
   };
 
   const handleBackFromPastQuestions = () => navigate('/explore');
@@ -90,6 +94,7 @@ function AppContent() {
           {/* Splash/Index */}
           <Route path="/" element={<Navigate to="/splash" replace />} />
           <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
+          <Route path="/seed" element={<SeedData />} />
 
           {/* Protected User Routes */}
           <Route element={<RequireAuth />}>
@@ -98,7 +103,12 @@ function AppContent() {
             <Route path="/library" element={<Library />} />
             <Route path="/profile" element={<Profile userName={userProfile?.name || user?.displayName || 'Student'} isDarkMode={isDarkMode} onToggleDarkMode={handleToggleDarkMode} onSignOut={handleSignOut} />} />
             <Route path="/notifications" element={<Notifications onBack={handleBackFromNotifications} />} />
-            <Route path="/course/:courseId" element={<PastQuestionsViewer onBack={handleBackFromPastQuestions} courseCode={location.pathname.split('/').pop()} />} />
+
+            {/* Feature Routes */}
+            <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} />} />
+            <Route path="/view-paper/:courseId" element={<PastQuestionsViewer onBack={() => navigate(-1)} courseCode={location.pathname.split('/').pop()} />} />
+            <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
+            <Route path="/repeated-questions" element={<RepeatedQuestions onBack={() => navigate(-1)} />} />
           </Route>
 
           {/* Admin Routes */}
