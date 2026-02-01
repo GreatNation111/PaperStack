@@ -8,9 +8,10 @@ interface PastQuestionsProps {
     onBack: () => void;
     courseCode?: string;
     selectedLevel?: string | null;
+    departmentId?: string;
 }
 
-export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel }: PastQuestionsProps) {
+export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel, departmentId }: PastQuestionsProps) {
     const navigate = useNavigate();
 
     // Only fetch course info if we have a specific courseCode
@@ -18,7 +19,8 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel 
 
     // Logic to avoid fetching "All Papers" while waiting for specific course ID
     const skipPapers = courseCode && !course;
-    const { papers, loading: loadingPapers } = usePapers(skipPapers ? 'SKIP' : (course?.id));
+    // Pass departmentId to filter if provided
+    const { papers, loading: loadingPapers } = usePapers(skipPapers ? 'SKIP' : (course?.id), departmentId);
 
     const isLoading = (courseCode && loadingCourse) || loadingPapers;
 
@@ -37,8 +39,8 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel 
         let match = true;
         // If viewing specific course, we show all semsters? Or filter?
         // User requested semester organization.
-        const semesterMatch = p.semester.toLowerCase().includes(selectedSemester.toLowerCase());
-        match = match && semesterMatch;
+        const semesterMatch = p.semester?.toLowerCase().includes(selectedSemester.toLowerCase());
+        match = match && (semesterMatch || !p.semester); // Handle missing semester gracefully
 
         // If viewing "All Papers" repository, level filter applies
         if (!courseCode && selectedLevel) {
@@ -186,7 +188,10 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel 
 
                                                             {/* Actions */}
                                                             <div className="flex items-center justify-between mt-3">
-                                                                <button className="text-xs text-primary font-medium hover:underline">
+                                                                <button
+                                                                    onClick={() => handleDownload(paper)}
+                                                                    className="text-xs text-primary font-medium hover:underline"
+                                                                >
                                                                     Preview
                                                                 </button>
                                                                 <div className="flex gap-2">

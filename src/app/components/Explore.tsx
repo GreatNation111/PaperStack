@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface ExploreProps {
   selectedDepartment?: string;
-  onViewPastQuestions: (course?: string, level?: string | null) => void;
+  onViewPastQuestions: (course?: string, level?: string | null, departmentId?: string) => void;
 }
 
 import { useDepartments, useCourses, useContributors, Course } from '@/hooks/useData';

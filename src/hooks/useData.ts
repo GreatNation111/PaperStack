@@ -192,7 +192,7 @@ export function useCourse(courseIdOrCode?: string) {
     return { course, loading };
 }
 
-export function usePapers(courseId?: string) {
+export function usePapers(courseId?: string, departmentId?: string) {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -207,9 +207,16 @@ export function usePapers(courseId?: string) {
                         where('courseId', '==', courseId),
                         where('isPublished', '==', true)
                     );
+                } else if (departmentId) {
+                    // Filter by department if no course specified
+                    q = query(
+                        collection(db, 'papers'),
+                        where('departmentId', '==', departmentId),
+                        where('isPublished', '==', true),
+                        limit(50)
+                    );
                 } else {
-                    // Fetch all papers (or recent ones) if no course specified
-                    // In a real app, strict pagination/filtering is needed here.
+                    // Fetch all papers (or recent ones) if no course OR department specified
                     q = query(
                         collection(db, 'papers'),
                         where('isPublished', '==', true),
