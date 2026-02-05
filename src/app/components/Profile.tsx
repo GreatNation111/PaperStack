@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { BookOpen, GraduationCap, Calculator, Scale, TestTube, ChevronRight, Edit, Moon, Sun, Crown, LogOut, Check, X, Loader2, MessageCircle } from 'lucide-react';
+import { ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
@@ -16,7 +16,7 @@ interface ProfileProps {
 export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, onSignOut }: ProfileProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, loading } = useUserProfile(user?.uid);
+  const { profile } = useUserProfile(user?.uid);
   const { departments } = useDepartments();
   const { contributors } = useContributors();
 

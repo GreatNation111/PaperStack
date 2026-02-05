@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useDepartments, useRecentCourses, useNotifications, Course } from '@/hooks/useData';
+import { useDepartments, useRecentCourses, useNotifications } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface HomeProps {
@@ -161,32 +161,11 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                     className={`flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-64 text-left`}
                   >
                     {/* Mock Question Page Preview */}
-                    <div className="w-full h-32 bg-gradient-to-br from-muted to-muted/50 rounded-xl mb-4 flex flex-col overflow-hidden relative border border-border/50 group">
-                      {course.thumbnailUrl ? (
-                        <>
-                          <img src={course.thumbnailUrl} alt={course.code} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-                          <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center">
-                            <span className="text-white text-[10px] font-bold px-2 py-1 bg-black/30 backdrop-blur-md rounded-lg border border-white/10 shadow-sm">
-                              {course.code}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="p-4 w-full h-full flex flex-col relative">
-                          <div className="absolute top-4 right-4 text-xs text-secondary/40 font-semibold">
-                            {course.code}
-                          </div>
-                          <div className="space-y-2 opacity-30 mt-2">
-                            <div className="h-2 w-3/4 bg-foreground/20 rounded" />
-                            <div className="h-2 w-full bg-foreground/20 rounded" />
-                            <div className="h-2 w-5/6 bg-foreground/20 rounded" />
-                          </div>
-                          <div className="absolute bottom-4 left-4 right-4">
-                            <AlignLeft className="w-6 h-6 text-secondary/20" strokeWidth={1.5} />
-                          </div>
-                        </div>
-                      )}
+                    <div className="w-full h-32 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl mb-4 flex items-center justify-center overflow-hidden relative border border-border/50 group">
+                      {/* Placeholder background with course code */}
+                      <span className="text-sm font-bold px-3 py-1 bg-primary/10 backdrop-blur-md rounded-lg border border-primary/20 text-primary">
+                        {course.code}
+                      </span>
                     </div>
                     <div>
                       <div className="font-bold text-foreground mb-1">{course.code}</div>

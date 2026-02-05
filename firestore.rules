@@ -4,11 +4,13 @@ service cloud.firestore {
     // Anyone can read departments (public data)
     match /departments/{document=**} {
       allow read: if true;
+      allow write: if request.auth != null;
     }
 
     // Anyone can read courses (public data)
     match /courses/{document=**} {
       allow read: if true;
+      allow write: if request.auth != null;
     }
 
     // Authenticated users can read and manage their own user data
@@ -26,20 +28,25 @@ service cloud.firestore {
       }
     }
 
-    // Contributors data (public)
+    // Contributors data (public read, authenticated write)
     match /contributors/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Papers/Past questions (public read)
+    // Papers/Past questions (public read, authenticated write)
     match /papers/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Notifications (user-specific)
+    // Notifications (authenticated read/write)
     match /notifications/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Admins collection (used to mark admin users)
+    match /admins/{document=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
     }

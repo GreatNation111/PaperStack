@@ -28,6 +28,7 @@ export interface Course {
 }
 
 export interface Contributor {
+    id?: string;
     name: string;
     course: string;
     count: number;
@@ -319,6 +320,43 @@ export function useBookmarks(userId: string | undefined) {
     return { bookmarkIds, loading };
 }
 
+export function useBookmarkedPapers(userId: string | undefined) {
+    const [papers, setPapers] = useState<Paper[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!userId) {
+            setPapers([]);
+            setLoading(false);
+            return;
+        }
+
+        const fetchBookmarks = async () => {
+            try {
+                const q = collection(db, 'users', userId, 'bookmarks');
+                const snapshot = await getDocs(q);
+                // For now, return mock papers based on bookmark IDs
+                const bookmarkedPapers: Paper[] = [
+                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', url: '#', downloads: 124, courseId: '1' },
+                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', url: '#', downloads: 89, courseId: '1' },
+                ];
+                // Filter to only bookmarked ones
+                const bookmarkedIds = snapshot.docs.map(doc => doc.id);
+                setPapers(bookmarkedPapers.filter(p => bookmarkedIds.includes(p.id)));
+            } catch (e) {
+                console.error("Error fetching bookmarked papers:", e);
+                setPapers([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBookmarks();
+    }, [userId]);
+
+    return { bookmarks: papers, loading };
+}
+
 export async function toggleBookmark(userId: string, paperId: string, isBookmarked: boolean) {
     if (!userId) return;
     const ref = doc(db, 'users', userId, 'bookmarks', paperId);
@@ -455,4 +493,19 @@ export function usePaper(paperId: string | undefined) {
     }, [paperId]);
 
     return { paper, loading };
+}
+
+export async function createGlobalNotification(title: string, message: string, type: 'info' | 'alert' | 'success') {
+    try {
+        await addDoc(collection(db, 'notifications'), {
+            title,
+            message,
+            type,
+            createdAt: new Date(),
+            targets: ['all'] // Broadcast to all users
+        });
+    } catch (e) {
+        console.error('Error creating notification:', e);
+        throw e;
+    }
 }

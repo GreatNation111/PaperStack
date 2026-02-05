@@ -1,7 +1,7 @@
-import { ArrowLeft, Filter, Download, Bookmark, FileText, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Filter, Download, Bookmark, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { useCourse, usePapers, useBookmarks, toggleBookmark, recordRecentCourse, Paper } from '@/hooks/useData';
+import { useState } from 'react';
+import { useCourse, usePapers, useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,9 +32,6 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
     const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
     const [showFilter, setShowFilter] = useState(false);
     const [selectedSemester, setSelectedSemester] = useState<'First' | 'Second'>('First');
-
-    // Group by Year
-    const uniqueYears = Array.from(new Set(papers.map(p => p.year))).sort().reverse();
 
     // Filter papers to match selected level (if applicable) and semester
     // If showing "All Papers" (no courseCode), userLevel might be relevant, but papers list has mixed courses.
@@ -179,12 +176,8 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                 >
                                                     <div className="flex items-start gap-4">
                                                         {/* Thumbnail */}
-                                                        <div className="w-14 h-16 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-border/20">
-                                                            {paper.thumbnailUrl ? (
-                                                                <img src={paper.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <FileText className="w-6 h-6 text-red-600 dark:text-red-400" strokeWidth={1.5} />
-                                                            )}
+                                                        <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-border/20">
+                                                            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
                                                         </div>
 
                                                         {/* Content */}
@@ -194,7 +187,7 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                                     <h3 className="font-semibold text-foreground text-sm">
                                                                         {paper.semester} Semester
                                                                     </h3>
-                                                                    <p className="text-xs text-secondary">{paper.type} • {paper.courseCode}</p>
+                                                                    <p className="text-xs text-secondary">{paper.type} • {paper.code}</p>
                                                                 </div>
                                                             </div>
 

@@ -1,13 +1,13 @@
 import { Search, Bookmark, Download, X, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/app/context/AuthContext';
-import { useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
+import { useBookmarkedPapers, toggleBookmark, Paper } from '@/hooks/useData';
 import { useNavigate } from 'react-router-dom';
 
 export function Library() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { bookmarks, loading } = useBookmarks(user?.uid);
+  const { bookmarks, loading } = useBookmarkedPapers(user?.uid);
 
   const handleRemoveBookmark = async (id: string) => {
     if (user?.uid) {
@@ -16,7 +16,7 @@ export function Library() {
   };
 
   const handleOpenPaper = (paper: Paper) => {
-    navigate(`/view-paper/${paper.courseCode || 'general'}`, { state: { paper } });
+    navigate(`/view-paper/${paper.id}`, { state: { paper } });
   };
 
   const EmptyState = () => (
@@ -67,7 +67,7 @@ export function Library() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-foreground mb-1">
-                      {paper.courseCode}
+                      {paper.code}
                     </div>
                     <div className="text-sm text-secondary mb-2">
                       {paper.year} • {paper.semester} Sem

@@ -1,7 +1,14 @@
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 
 export async function seedDatabase() {
+    // Require a signed-in user with write permissions to seed via client SDK.
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        console.error('seedDatabase: No authenticated user. Sign in as an admin account before running seed.');
+        throw new Error('Not authenticated. Please sign in before seeding.');
+    }
+
     const batch = writeBatch(db);
 
     // 1. Departments
@@ -65,6 +72,14 @@ export async function seedDatabase() {
         const ref = doc(db, 'contributors', contributor.id);
         batch.set(ref, contributor);
     });
+
+    // Create an admin record for the current user so the app recognizes them as admin
+    try {
+        const adminRef = doc(db, 'admins', currentUser.uid);
+        batch.set(adminRef, { uid: currentUser.uid, role: 'admin', grantedAt: new Date() });
+    } catch (e) {
+        console.warn('Unable to create admin record in batch:', e);
+    }
 
     try {
         await batch.commit();
