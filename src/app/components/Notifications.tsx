@@ -1,34 +1,49 @@
-import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNotifications, markNotificationRead, markAllNotificationsAsRead, recordFeatureInterest, useFeatureInterests } from '@/hooks/useData';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface NotificationsProps {
   onBack: () => void;
 }
 
 export function Notifications({ onBack }: NotificationsProps) {
-  const notifications = [
-    {
-      id: '1',
-      title: 'New Past Questions Added',
-      message: 'PHY 301 - 2023/2024 Second Semester papers are now available',
-      time: '2 hours ago',
-      read: false,
-    },
-    {
-      id: '2',
-      title: 'Exam Reminder',
-      message: 'Your first semester exams start in 14 days. Start preparing now!',
-      time: '1 day ago',
-      read: false,
-    },
-    {
-      id: '3',
-      title: 'New Contributor Joined',
-      message: 'Adaeze Nwankwo uploaded 5 new past questions to Physics department',
-      time: '2 days ago',
-      read: true,
-    },
-  ];
+  const { user } = useAuth();
+  const { notifications, loading, unreadCount } = useNotifications(user?.uid);
+  const { interests } = useFeatureInterests(user?.uid);
+
+  const handleNotifyInterest = async (title: string) => {
+    if (!user) return;
+    await recordFeatureInterest(user.uid, title);
+  };
+
+
+  const handleMarkRead = async (id: string, isRead: boolean) => {
+    if (isRead || !user) return;
+    await markNotificationRead(user.uid, id);
+  };
+
+  const handleMarkAll = async () => {
+    if (!user) return;
+    const ids = notifications.map(n => n.id);
+    await markAllNotificationsAsRead(user.uid, ids);
+  };
+
+  const formatTime = (createdAt: any) => {
+    if (!createdAt) return '';
+    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    return `${diffDays}d ago`;
+  };
 
   const comingSoonFeatures = [
     {
@@ -64,61 +79,78 @@ export function Notifications({ onBack }: NotificationsProps) {
   return (
     <div className="pb-24 min-h-screen">
       {/* Header */}
-      <div className="px-6 py-8 border-b border-border">
-        <div className="flex items-center gap-4 mb-2">
-          <button onClick={onBack} className="text-foreground">
+      <div className="px-6 py-8 border-b border-border flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="text-foreground p-1 -ml-1 hover:bg-muted rounded-full">
             <ArrowLeft className="w-6 h-6" strokeWidth={2} />
           </button>
-          <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
         </div>
+        {unreadCount > 0 && (
+          <button onClick={handleMarkAll} className="text-xs font-semibold text-primary hover:underline">
+            Mark all read
+          </button>
+        )}
       </div>
 
-      {/* Recent Notifications */}
+      {/* Real Notifications */}
       <div className="px-6 py-6">
         <h2 className="text-xl font-bold text-foreground mb-4">Recent</h2>
-        <div className="space-y-3 mb-8">
-          {notifications.map((notification, index) => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`bg-card border rounded-xl p-4 ${
-                notification.read ? 'border-border' : 'border-primary/30 bg-primary/5'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    notification.read ? 'bg-muted' : 'bg-primary/10'
-                  }`}
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2].map(i => <div key={i} className="h-24 bg-muted/30 rounded-xl animate-pulse" />)}
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border mb-8">
+            <p className="text-secondary text-sm">No new notifications from Admin.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 mb-8">
+            <AnimatePresence>
+              {notifications.map((notification, index) => (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => handleMarkRead(notification.id, notification.isRead)}
+                  className={`bg-card border rounded-xl p-4 cursor-pointer transition-colors ${notification.isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
+                    }`}
                 >
-                  <Bell
-                    className={`w-5 h-5 ${notification.read ? 'text-secondary' : 'text-primary'}`}
-                    strokeWidth={1.5}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground">{notification.title}</h3>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
-                    )}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notification.isRead ? 'bg-muted' : 'bg-primary/10'
+                        }`}
+                    >
+                      {notification.type === 'alert' ? <AlertCircle className="w-5 h-5 text-red-500" /> :
+                        notification.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-500" /> :
+                          <Bell
+                            className={`w-5 h-5 ${notification.isRead ? 'text-secondary' : 'text-primary'}`}
+                            strokeWidth={1.5}
+                          />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className={`font-semibold ${notification.isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
+                        {!notification.isRead && (
+                          <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
+                        )}
+                      </div>
+                      <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.message}</p>
+                      <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.message}</p>
-                  <span className="text-xs text-secondary">{notification.time}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* Coming Soon Features */}
         <div>
           <h2 className="text-xl font-bold text-foreground mb-4">Coming Soon</h2>
-          <p className="text-sm text-secondary mb-6 leading-relaxed">
-            Exciting premium features we're building for you. Be the first to know when they launch!
-          </p>
           <div className="space-y-4">
             {comingSoonFeatures.map((feature, index) => {
               const Icon = feature.icon;
@@ -139,8 +171,15 @@ export function Notifications({ onBack }: NotificationsProps) {
                       <p className="text-sm text-secondary leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
-                  <button className="w-full h-11 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all">
-                    Notify Me When Ready
+                  <button
+                    onClick={() => handleNotifyInterest(feature.title)}
+                    disabled={interests.includes(feature.title)}
+                    className={`w-full h-11 border-2 rounded-xl font-semibold transition-all ${interests.includes(feature.title)
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-primary text-primary hover:bg-primary/5'
+                      }`}
+                  >
+                    {interests.includes(feature.title) ? 'Request Sent!' : 'Notify Me When Ready'}
                   </button>
                 </motion.div>
               );

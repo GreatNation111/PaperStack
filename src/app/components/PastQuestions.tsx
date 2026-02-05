@@ -1,7 +1,8 @@
 import { ArrowLeft, Filter, Download, Bookmark, FileText, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-import { useCourse, usePapers, Paper } from '@/hooks/useData';
+import { useState, useEffect } from 'react';
+import { useCourse, usePapers, useBookmarks, toggleBookmark, recordRecentCourse, Paper } from '@/hooks/useData';
+import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface PastQuestionsProps {
@@ -24,7 +25,10 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
 
     const isLoading = (courseCode && loadingCourse) || loadingPapers;
 
-    const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+    // Use real bookmarks
+    const { user } = useAuth();
+    const { bookmarkIds } = useBookmarks(user?.uid);
+    // const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]); // Removed local state
     const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
     const [showFilter, setShowFilter] = useState(false);
     const [selectedSemester, setSelectedSemester] = useState<'First' | 'Second'>('First');
@@ -60,14 +64,18 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
     const activeUniqueYears = Array.from(new Set(filteredPapers.map(p => p.year))).sort().reverse();
 
 
-    const toggleBookmark = (id: string) => {
-        setBookmarkedIds((prev) =>
-            prev.includes(id) ? prev.filter((bid) => bid !== id) : [...prev, id]
-        );
+    const handleToggleBookmark = async (paperId: string) => {
+        if (!user) return;
+        try {
+            const isBookmarked = bookmarkIds.includes(paperId);
+            await toggleBookmark(user.uid, paperId, isBookmarked);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const handleDownload = (paper: Paper) => {
-        navigate(`/view-paper/${courseCode || 'general'}`, { state: { paper } });
+        navigate(`/view-paper/${paper.id}`, { state: { paper } });
     };
 
     return (
@@ -160,7 +168,7 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                     <h2 className="text-lg font-bold text-foreground mb-4 sticky top-32">{year}</h2>
                                     <div className="space-y-3">
                                         {yearPapers.map((paper, index) => {
-                                            const isBookmarked = bookmarkedIds.includes(paper.id);
+                                            const isBookmarked = bookmarkIds.includes(paper.id);
                                             return (
                                                 <motion.div
                                                     key={paper.id}
@@ -171,8 +179,12 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                 >
                                                     <div className="flex items-start gap-4">
                                                         {/* Thumbnail */}
-                                                        <div className="w-14 h-16 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0 text-red-600 dark:text-red-400">
-                                                            <FileText className="w-6 h-6" strokeWidth={1.5} />
+                                                        <div className="w-14 h-16 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-border/20">
+                                                            {paper.thumbnailUrl ? (
+                                                                <img src={paper.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <FileText className="w-6 h-6 text-red-600 dark:text-red-400" strokeWidth={1.5} />
+                                                            )}
                                                         </div>
 
                                                         {/* Content */}
@@ -196,7 +208,7 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                                 </button>
                                                                 <div className="flex gap-2">
                                                                     <button
-                                                                        onClick={() => toggleBookmark(paper.id)}
+                                                                        onClick={() => handleToggleBookmark(paper.id)}
                                                                         className={`p-2 rounded-full transition-all ${isBookmarked
                                                                             ? 'text-primary bg-primary/10'
                                                                             : 'text-secondary hover:bg-muted'

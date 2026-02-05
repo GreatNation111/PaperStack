@@ -1,7 +1,8 @@
-import { ArrowLeft, Share2, Download, Bookmark, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Paper } from '@/hooks/useData';
-import { useState } from 'react';
+import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2 } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Paper, usePaper, recordRecentCourse } from '@/hooks/useData';
+import { useAuth } from '@/app/context/AuthContext';
+import { useState, useEffect } from 'react';
 
 // Mock PDF component since we can't easily embed real PDFs without a library or file URL
 // In production, use 'react-pdf' or an iframe with the PDF URL
@@ -49,35 +50,81 @@ function MockPDFContent({ title }: { title: string }) {
   );
 }
 
-export function PastQuestionsViewer({ onBack }: { onBack: () => void; courseCode?: string }) {
-  const navigate = useNavigate(); // Need navigate for back button if onBack not provided or custom handling
+export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: string }) {
+  const { paperId } = useParams();
+  const navigate = useNavigate();
   const location = useLocation();
-  const paper = location.state?.paper as Paper | undefined;
-  const [scale, setScale] = useState(1);
 
-  // Fallback if accessed directly without state (though mostly intended via navigation)
-  if (!paper) {
+  // Try to get paper from state (fast), otherwise fetch (refresh)
+  const { paper: fetchedPaper, loading } = usePaper(paperId);
+  const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user && paper?.courseId) {
+      // Record the COURSE of this paper as recently viewed
+      recordRecentCourse(user.uid, paper.courseId);
+    }
+  }, [user, paper]);
+
+  const [scale, setScale] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
+
+  const handleBack = () => {
+    // Smart back navigation
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/past-questions');
+    }
+  };
+
+  if (loading && !paper) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-xl font-bold mb-2">No Paper Selected</div>
-        <button onClick={onBack} className="text-primary hover:underline">Go Back</button>
+      <div className="h-screen flex items-center justify-center bg-[#525659] text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <p>Loading paper...</p>
+        </div>
       </div>
     );
   }
 
+  if (!paper) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center text-white bg-[#525659]">
+        <div className="text-xl font-bold mb-2">Paper Not Found</div>
+        <p className="text-gray-300 mb-6">The requested paper could not be found.</p>
+        <button onClick={handleBack} className="px-6 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  // Use override onBack if provided (e.g. from props), else use internal handler
+  // Actually, props onBack might be passed by Router? No, checking App.tsx. 
+  // App.tsx passes `onBack={() => navigate(-1)}`. 
+  // If we are refreshing, that prop logic is fine IF history exists.
+  // But we want our robust `handleBack` to take precedence if needed.
+  // I will ignore the prop in favor of robust logic or combine them.
+  // Let's use `handleBack` which is robust.
+
   return (
-    <div className="h-screen flex flex-col bg-[#525659]">
+    <div className={`h-screen flex flex-col bg-[#525659] ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
       <div className="h-14 bg-[#2f3133] flex items-center justify-between px-4 shadow-md z-10">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="text-white font-medium truncate max-w-[200px] md:max-w-md">
-            {paper.courseCode} - {paper.year} ({paper.semester})
+            {paper ? `${paper.code} - ${paper.year} (${paper.semester})` : 'Question Paper'}
           </div>
         </div>
 
@@ -100,8 +147,8 @@ export function PastQuestionsViewer({ onBack }: { onBack: () => void; courseCode
           <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
             <Download className="w-5 h-5" />
           </button>
-          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
-            <Share2 className="w-5 h-5" />
+          <button onClick={toggleFullscreen} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -114,17 +161,18 @@ export function PastQuestionsViewer({ onBack }: { onBack: () => void; courseCode
             width: '100%',
             maxWidth: '800px',
             minHeight: '1000px',
-            transform: `scale(${scale})`
+            transform: `scale(${scale})`,
+            marginBottom: `${(scale - 1) * 500}px`
           }}
         >
-          {paper.pdfUrl ? (
+          {paper && paper.url ? (
             <iframe
-              src={paper.pdfUrl}
+              src={paper.url}
               className="w-full h-full min-h-[1000px]"
-              title="Mock PDF"
+              title="Question Paper PDF"
             />
           ) : (
-            <MockPDFContent title={`${paper.courseCode} - ${paper.type}`} />
+            <MockPDFContent title={`${paper?.code || 'Question'} - ${paper?.type || 'Paper'}`} />
           )}
         </div>
       </div>

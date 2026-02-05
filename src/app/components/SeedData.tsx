@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Database, Check, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Database, Check, AlertCircle, Loader2, ArrowLeft, Bell } from 'lucide-react';
 import { seedDatabase } from '@/utils/seed';
+import { createGlobalNotification } from '@/hooks/useData';
 import { useNavigate } from 'react-router-dom';
 
 export function SeedData() {
@@ -69,6 +70,29 @@ export function SeedData() {
                 >
                     {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                     {loading ? 'Seeding...' : 'Run Seed Script'}
+                </button>
+
+                <button
+                    onClick={async () => {
+                        setLoading(true); // Reuse loading state for simplicity
+                        try {
+                            await createGlobalNotification(
+                                "Welcome to PaperStack!",
+                                "This is a test notification to verify the real-time system and red dot indicator. Go check your home screen!",
+                                "success"
+                            );
+                            setStatus('success');
+                        } catch (e) {
+                            setStatus('error');
+                        } finally {
+                            setLoading(false);
+                        }
+                    }}
+                    disabled={loading}
+                    className="w-full h-12 bg-secondary/10 text-foreground rounded-xl font-semibold hover:bg-secondary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mb-4"
+                >
+                    <Bell className="w-4 h-4" />
+                    Create Test Notification
                 </button>
 
                 <button

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, Calendar, FileText, RefreshCw, ChevronDown, ChevronRight, Award, BookOpen, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -8,11 +8,16 @@ interface ExploreProps {
   onViewPastQuestions: (course?: string, level?: string | null, departmentId?: string) => void;
 }
 
-import { useDepartments, useCourses, useContributors, Course } from '@/hooks/useData';
+import { useDepartments, useCourses, useContributors, Course, useUserProfile } from '@/hooks/useData';
+import { useAuth } from '@/app/context/AuthContext';
 
 export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProps) {
   const navigate = useNavigate();
-  const [departmentId, setDepartmentId] = useState<string | undefined>(selectedDepartment || 'physics_ed');
+  const { user } = useAuth();
+  const { profile } = useUserProfile(user?.uid);
+
+  // Use profile department as default if available, otherwise fallback
+  const [departmentId, setDepartmentId] = useState<string | undefined>(selectedDepartment || profile?.departmentId || 'physics_ed');
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
@@ -23,26 +28,25 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
   const { courses, loading: loadingCourses } = useCourses(departmentId);
   const { contributors, loading: loadingContribs } = useContributors();
 
-  // Helper to handle department change
-  // In a real app we might want a "Select" component
+  // Sync department with profile when it loads
+  useEffect(() => {
+    if (profile?.departmentId && !selectedDepartment) {
+      setDepartmentId(profile.departmentId);
+    }
+  }, [profile?.departmentId, selectedDepartment]);
 
   const currentDeptName = departments.find(d => d.id === departmentId)?.name || 'Select Department';
 
-  // Placeholder for user level - ideally fetched from user profile
-  const userLevel = '200L';
+  const userLevel = profile?.level || '100L'; // Default if not set
 
   const coursesForYou = courses.filter(course => {
-    // Search filter takes precedence
     if (searchQuery) {
       return course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.title.toLowerCase().includes(searchQuery.toLowerCase());
     }
-    // Otherwise filter by user level if strict mode enabled, or just show all but highlight?
-    // User request: "it should only show 200 lvl past questions and courses"
-    // So default view should be filtered by level.
-    // But we also have `selectedLevel` from the manual filter buttons.
-    // Logic: If `selectedLevel` is set (manual override), use it. Else use `userLevel`.
+    // Filter by level
     const effectiveLevel = selectedLevel || userLevel;
+    // Strict equality might be too strict if formats differ, but they seem consistent '200L'
     return course.level === effectiveLevel;
   });
 
@@ -84,7 +88,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
                   onClick={() => setSelectedLevel(null)}
                   className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${!selectedLevel ? 'bg-primary/10 text-primary' : 'bg-card border border-border text-foreground hover:bg-muted'}`}
                 >
-                  All (My Level)
+                  All ({userLevel})
                 </button>
                 {['100L', '200L', '300L', '400L'].map(lvl => (
                   <button
@@ -101,6 +105,13 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
         </AnimatePresence>
 
         {/* Department Selector - Pill-shaped */}
+        {!profile?.departmentId && (
+          <div className="mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3">
+            <div className="text-amber-600 text-xs font-medium">
+              Please set your Department and Level in Profile to personalize this feed.
+            </div>
+          </div>
+        )}
         <div className="mb-6">
           <div className="text-xs text-secondary mb-2 px-1">Your department</div>
           <div className="relative">
@@ -193,7 +204,8 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">
             {searchQuery ? 'Search Results' : 'Courses for you'}
-            {!searchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel})</span>}
+            {searchQuery ? 'Search Results' : 'Courses for you'}
+            {!searchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel || 'All Levels'})</span>}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
             {loadingCourses ? (

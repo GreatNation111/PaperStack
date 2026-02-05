@@ -1,37 +1,22 @@
 import { Search, Bookmark, Download, X, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
+import { useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
+import { useNavigate } from 'react-router-dom';
 
 export function Library() {
-  const [bookmarks, setBookmarks] = useState([
-    {
-      id: '1',
-      code: 'PHY 101',
-      title: 'General Physics I',
-      year: '2023/2024',
-      examType: 'First Semester',
-      addedDate: 'Jan 15, 2025',
-    },
-    {
-      id: '2',
-      code: 'MTH 101',
-      title: 'Elementary Mathematics',
-      year: '2023/2024',
-      examType: 'First Semester',
-      addedDate: 'Jan 14, 2025',
-    },
-    {
-      id: '3',
-      code: 'CSC 201',
-      title: 'Computer Programming I',
-      year: '2022/2023',
-      examType: 'Second Semester',
-      addedDate: 'Jan 10, 2025',
-    },
-  ]);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { bookmarks, loading } = useBookmarks(user?.uid);
 
-  const handleRemoveBookmark = (id: string) => {
-    setBookmarks(bookmarks.filter((b) => b.id !== id));
+  const handleRemoveBookmark = async (id: string) => {
+    if (user?.uid) {
+      await toggleBookmark(user.uid, id, true);
+    }
+  };
+
+  const handleOpenPaper = (paper: Paper) => {
+    navigate(`/view-paper/${paper.courseCode || 'general'}`, { state: { paper } });
   };
 
   const EmptyState = () => (
@@ -60,38 +45,45 @@ export function Library() {
         {/* Bookmarks Section */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">Bookmarks</h2>
-          {bookmarks.length === 0 ? (
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2].map(i => <div key={i} className="h-20 bg-muted/50 rounded-xl animate-pulse" />)}
+            </div>
+          ) : bookmarks.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {bookmarks.map((bookmark, index) => (
+              {bookmarks.map((paper, index) => (
                 <motion.div
-                  key={bookmark.id}
+                  key={paper.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-card border border-border rounded-xl p-4 flex items-center gap-4"
+                  onClick={() => handleOpenPaper(paper)}
+                  className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-primary transition-colors group"
                 >
-                  <div className="w-16 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-7 h-7 text-secondary" strokeWidth={1.5} />
+                  <div className="w-16 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-colors">
+                    <FileText className="w-7 h-7 text-secondary group-hover:text-primary transition-colors" strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-foreground mb-1">
-                      {bookmark.code} - {bookmark.year}
+                      {paper.courseCode}
                     </div>
-                    <div className="text-sm text-secondary mb-2">{bookmark.title}</div>
-                    <div className="text-xs text-secondary">
-                      {bookmark.examType} • Added {bookmark.addedDate}
+                    <div className="text-sm text-secondary mb-2">
+                      {paper.year} • {paper.semester} Sem
+                    </div>
+                    <div className="text-xs text-secondary bg-secondary/10 inline-block px-2 py-0.5 rounded">
+                      {paper.type}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => handleRemoveBookmark(bookmark.id)}
+                      onClick={() => handleRemoveBookmark(paper.id)}
                       className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-all"
                     >
                       <X className="w-4 h-4" strokeWidth={2} />
                     </button>
-                    <button className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center hover:opacity-90 transition-all">
+                    <button className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center hover:opacity-90 transition-all shadow-sm">
                       <Download className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
                     </button>
                   </div>

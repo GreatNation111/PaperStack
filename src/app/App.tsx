@@ -16,6 +16,8 @@ import { RepeatedQuestions } from '@/app/components/RepeatedQuestions';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
+import { HelpSupport } from '@/app/components/HelpSupport';
+import { TermsPrivacy } from '@/app/components/TermsPrivacy';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
@@ -106,9 +108,11 @@ function AppContent() {
 
             {/* Feature Routes */}
             <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} departmentId={location.state?.departmentId} />} />
-            <Route path="/view-paper/:courseId" element={<PastQuestionsViewer onBack={() => navigate(-1)} courseCode={location.pathname.split('/').pop()} />} />
+            <Route path="/view-paper/:paperId" element={<PastQuestionsViewer onBack={() => navigate(-1)} />} />
             <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
-            <Route path="/repeated-questions" element={<RepeatedQuestions onBack={() => navigate(-1)} />} />
+            <Route path="/repeated-questions" element={<RepeatedQuestions />} />
+            <Route path="/help" element={<HelpSupport />} />
+            <Route path="/terms" element={<TermsPrivacy />} />
           </Route>
 
           {/* Admin Routes */}
