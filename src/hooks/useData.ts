@@ -49,7 +49,8 @@ export interface Paper {
     year: string;
     semester: string;
     type: string;
-    url: string;
+    pdfUrl: string;
+    thumbnailUrl?: string;
     downloads: number;
     isBookmarked?: boolean;
     courseId?: string;
@@ -78,27 +79,19 @@ export function useDepartments() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchDepartments = async () => {
-            // Mock data or real fetch
-            // For now, let's use the static data or fetch from firestore if you populated it.
-            // We'll stick to static for speed unless you want me to fetch.
-            // Using static for now as per your original request.
-            // Actually, let's use the ones you had.
-            const staticDepts = [
-                { id: 'computer_science', name: 'Computer Science' },
-                { id: 'physics_ed', name: 'Physics Education' },
-                { id: 'chemistry', name: 'Chemistry' },
-                { id: 'biology', name: 'Biology' },
-                // ... add others
-            ];
-            // If you want to fetch from Firestore:
-            // const q = query(collection(db, 'departments'));
-            // const querySnapshot = await getDocs(q);
-            // ...
-            setDepartments(staticDepts);
+        // Listen to real departments collection in Firestore
+        const q = query(collection(db, 'departments'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const depts: Department[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
+                .map((d: any) => ({ id: d.id, name: d.name }));
+            setDepartments(depts);
             setLoading(false);
-        };
-        fetchDepartments();
+        }, (err) => {
+            console.error('Error fetching departments:', err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     return { departments, loading };
@@ -116,19 +109,17 @@ export function useCourses(departmentId: string | undefined) {
             return;
         }
 
-        const fetchCourses = async () => {
-            // Here we would query firestore for courses where departmentId == departmentId
-            // For now, returning mock/static based on ID
-            // You previously had a list.
-            const staticCourses: Course[] = [
-                { id: '1', code: 'PHY 314', title: 'Solid State Physics', departmentId: 'physics_ed', level: '300L' },
-                { id: '2', code: 'EDU 312', title: 'Research Methods', departmentId: 'physics_ed', level: '300L' },
-                { id: '10', code: 'CSC 301', title: 'Structured Programming', departmentId: 'computer_science', level: '300L' },
-            ];
-            setCourses(staticCourses.filter(c => c.departmentId === departmentId));
+        const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const cs: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+            setCourses(cs);
             setLoading(false);
-        };
-        fetchCourses();
+        }, (err) => {
+            console.error('Error fetching courses:', err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [departmentId]);
     return { courses, loading };
 }
@@ -138,13 +129,17 @@ export function useContributors() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch from Firestore 'contributors' collection
-        // For now mock
-        setContributors([
-            { id: 'user1', name: 'Sarah Wilson', course: 'PHY 314', count: 12, date: '2d ago', department: 'Physics Ed', contributionCount: 15, levelOrYear: '400L', badge: 'Top Contributor' },
-            { id: 'user2', name: 'James Olu', course: 'MTH 211', count: 8, date: '5d ago', department: 'Mathematics', contributionCount: 8, levelOrYear: '300L' },
-        ]);
-        setLoading(false);
+        const q = query(collection(db, 'contributors'), orderBy('contributionCount', 'desc'), limit(10));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const contribs: Contributor[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Contributor));
+            setContributors(contribs);
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching contributors:', err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     return { contributors, loading };
@@ -155,12 +150,38 @@ export function useRecentPapers(departmentId: string | undefined) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch recent papers
-        setPapers([
-            { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', url: '#', downloads: 124 },
-            { id: '2', title: '2022 Second Semester Test', code: 'EDU 312', year: '2022', semester: 'Second', type: 'Test', url: '#', downloads: 89 },
-        ]);
-        setLoading(false);
+        // Listen to recent papers (optionally filter by department)
+        let q;
+        if (departmentId) {
+            q = query(collection(db, 'papers'), where('departmentId', '==', departmentId), orderBy('createdAt', 'desc'), limit(20));
+        } else {
+            q = query(collection(db, 'papers'), orderBy('createdAt', 'desc'), limit(20));
+        }
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const docs = snapshot.docs.map(d => {
+                const data = d.data() as any;
+                return {
+                    id: d.id,
+                    title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                    code: data.courseCode || data.code || '',
+                    year: data.year || '',
+                    semester: data.semester || '',
+                    type: data.type || '',
+                    pdfUrl: data.pdfUrl || data.url || '',
+                    thumbnailUrl: data.thumbnailUrl || '',
+                    downloads: data.downloads || 0,
+                    courseId: data.courseId || data.course || undefined,
+                } as Paper;
+            });
+            setPapers(docs);
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching papers:', err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [departmentId]);
 
     return { papers, loading };
@@ -344,8 +365,8 @@ export function useBookmarkedPapers(userId: string | undefined) {
                 const snapshot = await getDocs(q);
                 // For now, return mock papers based on bookmark IDs
                 const bookmarkedPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', url: '#', downloads: 124, courseId: '1' },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', url: '#', downloads: 89, courseId: '1' },
+                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124, courseId: '1' },
+                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89, courseId: '1' },
                 ];
                 // Filter to only bookmarked ones
                 const bookmarkedIds = snapshot.docs.map(doc => doc.id);
@@ -453,8 +474,8 @@ export function usePapers(courseId: string | undefined, departmentId: string | u
         const fetchPapers = async () => {
             try {
                 const staticPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', url: '#', downloads: 124 },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', url: '#', downloads: 89 },
+                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124 },
+                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89 },
                 ];
                 setPapers(staticPapers);
             } catch (e) {
@@ -484,8 +505,8 @@ export function usePaper(paperId: string | undefined) {
         const fetchPaper = async () => {
             try {
                 const staticPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', url: '#', downloads: 124, courseId: '1' },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', url: '#', downloads: 89, courseId: '1' },
+                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124, courseId: '1' },
+                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89, courseId: '1' },
                 ];
                 const found = staticPapers.find(p => p.id === paperId);
                 setPaper(found || null);

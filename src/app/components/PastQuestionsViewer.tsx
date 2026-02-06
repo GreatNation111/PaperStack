@@ -60,6 +60,14 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
   const { user } = useAuth();
 
+  // If paper has pdfUrl, open it directly and go back
+  useEffect(() => {
+    if (paper?.pdfUrl && !loading) {
+      window.open(paper.pdfUrl, '_blank');
+      navigate(-1);
+    }
+  }, [paper?.pdfUrl, loading, navigate]);
+
   useEffect(() => {
     if (user && paper?.courseId) {
       // Record the COURSE of this paper as recently viewed
@@ -165,9 +173,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
             marginBottom: `${(scale - 1) * 500}px`
           }}
         >
-          {paper && paper.url ? (
+          {paper && paper.pdfUrl ? (
             <iframe
-              src={paper.url}
+              src={paper.pdfUrl}
               className="w-full h-full min-h-[1000px]"
               title="Question Paper PDF"
             />

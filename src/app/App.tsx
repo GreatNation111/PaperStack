@@ -18,6 +18,7 @@ import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
 import { HelpSupport } from '@/app/components/HelpSupport';
 import { TermsPrivacy } from '@/app/components/TermsPrivacy';
+import { AdminContainer } from '@/app/components/admin';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
@@ -117,7 +118,7 @@ function AppContent() {
 
           {/* Admin Routes */}
           <Route element={<RequireAdmin />}>
-            {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
+            <Route path="/admin/*" element={<AdminContainer onLogout={handleSignOut} />} />
           </Route>
 
           {/* Errors */}

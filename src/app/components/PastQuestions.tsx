@@ -1,7 +1,7 @@
 import { ArrowLeft, Filter, Download, Bookmark, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-import { useCourse, usePapers, useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
+import { useState, useEffect } from 'react';
+import { useCourse, usePapers, useBookmarks, toggleBookmark, Paper, recordRecentCourse } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,33 +33,12 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
     const [showFilter, setShowFilter] = useState(false);
     const [selectedSemester, setSelectedSemester] = useState<'First' | 'Second'>('First');
 
-    // Filter papers to match selected level (if applicable) and semester
-    // If showing "All Papers" (no courseCode), userLevel might be relevant, but papers list has mixed courses.
-    // If courseCode is present, course level is fixed anyway.
-    const filteredPapers = papers.filter(p => {
-        let match = true;
-        // If viewing specific course, we show all semsters? Or filter?
-        // User requested semester organization.
-        const semesterMatch = p.semester?.toLowerCase().includes(selectedSemester.toLowerCase());
-        match = match && (semesterMatch || !p.semester); // Handle missing semester gracefully
-
-        // If viewing "All Papers" repository, level filter applies
-        if (!courseCode && selectedLevel) {
-            // We need to know paper level. Paper has 'courseCode'. We might not have level on paper object easily 
-            // unless we fetch courses or it's on paper. 
-            // Paper interface in useData currently: id, departmentId, courseId, courseCode, year, semester, type...
-            // It does NOT have level.
-            // But we have `selectedLevel` UI.
-            // For now, let's assume filtering by level in "All Papers" mode is tricky without level on Paper.
-            // I'll skip level filter for Papers list unless I add level to Paper model.
-            // But valid for now.
+    // Record recent course when component mounts/course changes
+    useEffect(() => {
+        if (user && course?.id) {
+            recordRecentCourse(user.uid, course.id);
         }
-        return match;
-    });
-
-    // Re-calculate unique years based on filtered results
-    const activeUniqueYears = Array.from(new Set(filteredPapers.map(p => p.year))).sort().reverse();
-
+    }, [user, course?.id]);
 
     const handleToggleBookmark = async (paperId: string) => {
         if (!user) return;
@@ -71,9 +50,22 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
         }
     };
 
-    const handleDownload = (paper: Paper) => {
-        navigate(`/view-paper/${paper.id}`, { state: { paper } });
+    const handleOpenPDF = (paper: Paper) => {
+        if (paper.pdfUrl) {
+            window.open(paper.pdfUrl, '_blank');
+        } else {
+            navigate(`/view-paper/${paper.id}`, { state: { paper } });
+        }
     };
+
+    // Filter papers to match selected semester
+    const filteredPapers = papers.filter(p => {
+        const semesterMatch = p.semester?.toLowerCase().includes(selectedSemester.toLowerCase());
+        return semesterMatch || !p.semester;
+    });
+
+    // Re-calculate unique years based on filtered results
+    const activeUniqueYears = Array.from(new Set(filteredPapers.map(p => p.year))).sort().reverse();
 
     return (
         <div className="pb-24 min-h-screen">
@@ -194,10 +186,10 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                             {/* Actions */}
                                                             <div className="flex items-center justify-between mt-3">
                                                                 <button
-                                                                    onClick={() => handleDownload(paper)}
+                                                                    onClick={() => handleOpenPDF(paper)}
                                                                     className="text-xs text-primary font-medium hover:underline"
                                                                 >
-                                                                    Preview
+                                                                    {paper.pdfUrl ? 'Open PDF' : 'View'}
                                                                 </button>
                                                                 <div className="flex gap-2">
                                                                     <button
@@ -210,7 +202,7 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                                                                         <Bookmark className="w-4 h-4" strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleDownload(paper)}
+                                                                        onClick={() => handleOpenPDF(paper)}
                                                                         className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all shadow-sm"
                                                                     >
                                                                         <Download className="w-4 h-4" strokeWidth={2} />

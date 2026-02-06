@@ -2,19 +2,9 @@ import { db, auth } from '@/lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 
 export async function seedDatabase() {
-    // Wait for auth state to be ready
-    const currentUser = await new Promise<any>((resolve) => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            unsubscribe();
-            resolve(user);
-        });
-    });
-
-    if (!currentUser) {
-        console.error('seedDatabase: No authenticated user. Sign in before running seed.');
-        throw new Error('Not authenticated. Please sign in before seeding.');
-    }
-
+    // Development mode - no auth required for seeding
+    // TODO: Add admin authentication check when admin panel is built
+    
     const batch = writeBatch(db);
 
     // 1. Departments
@@ -55,11 +45,11 @@ export async function seedDatabase() {
     // 3. Papers (Sample)
     const papers = [
         // PHY 101 Papers
-        { id: 'p1', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
-        { id: 'p2', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2022/2023', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
-        { id: 'p3', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Test', isPublished: true, createdAt: new Date() },
+        { id: 'p1', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p1', thumbnailUrl: '' },
+        { id: 'p2', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2022/2023', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p2', thumbnailUrl: '' },
+        { id: 'p3', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Test', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p3', thumbnailUrl: '' },
         // CSC 101 Papers
-        { id: 'p4', courseId: 'csc101', courseCode: 'CSC 101', departmentId: 'computer_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date() },
+        { id: 'p4', courseId: 'csc101', courseCode: 'CSC 101', departmentId: 'computer_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p4', thumbnailUrl: '' },
     ];
 
     papers.forEach(paper => {
@@ -79,10 +69,19 @@ export async function seedDatabase() {
         batch.set(ref, contributor);
     });
 
-    // Create an admin record for the current user so the app recognizes them as admin
+    // Create an admin record.
+    // If a signed-in user exists, create admins/{uid} so the app recognizes them as admin.
+    // Otherwise create a placeholder admin document keyed by email so you can replace it with the real UID later.
     try {
-        const adminRef = doc(db, 'admins', currentUser.uid);
-        batch.set(adminRef, { uid: currentUser.uid, role: 'admin', grantedAt: new Date() });
+        if (auth.currentUser && auth.currentUser.uid) {
+            const adminRef = doc(db, 'admins', auth.currentUser.uid);
+            batch.set(adminRef, { uid: auth.currentUser.uid, email: auth.currentUser.email || null, role: 'admin', grantedAt: new Date() });
+        } else {
+            // Placeholder document - NOTE: Firestore security rules may prevent writing to admins if blocked.
+            const placeholderId = 'seed-admin-babalola';
+            const adminRef = doc(db, 'admins', placeholderId);
+            batch.set(adminRef, { email: 'babalolagreatnation@gmail.com', note: 'Replace document ID with real admin UID created in Firebase Auth', createdAt: new Date() });
+        }
     } catch (e) {
         console.warn('Unable to create admin record in batch:', e);
     }
