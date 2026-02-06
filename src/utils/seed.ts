@@ -2,10 +2,16 @@ import { db, auth } from '@/lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 
 export async function seedDatabase() {
-    // Require a signed-in user with write permissions to seed via client SDK.
-    const currentUser = auth.currentUser;
+    // Wait for auth state to be ready
+    const currentUser = await new Promise<any>((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            unsubscribe();
+            resolve(user);
+        });
+    });
+
     if (!currentUser) {
-        console.error('seedDatabase: No authenticated user. Sign in as an admin account before running seed.');
+        console.error('seedDatabase: No authenticated user. Sign in before running seed.');
         throw new Error('Not authenticated. Please sign in before seeding.');
     }
 

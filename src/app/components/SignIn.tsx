@@ -34,20 +34,25 @@ export function SignIn({ onBack, onSignUp, onComplete }: SignInProps) {
 
   const handleGoogleSignIn = async () => {
     setError('');
+    setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
+      // Set persistence first
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithPopup(auth, provider);
-      setLoading(true);
-      onComplete('User');
+      // Then open popup immediately
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        onComplete('User');
+      }
     } catch (err: any) {
-      console.error(err);
+      console.error('Google Sign-In Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign in cancelled.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Popup blocked. Please allow popups for this site.');
       } else {
         setError('Google sign-in failed.');
       }
-    } finally {
       setLoading(false);
     }
   };

@@ -46,30 +46,33 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
 
   const handleGoogleSignIn = async () => {
     setError('');
+    setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      // Set persistence first
       await setPersistence(auth, browserLocalPersistence);
+      // Then open popup immediately
       const result = await signInWithPopup(auth, provider);
-
-      // Only set loading after popup succeeds to begin Firestore ops
-      // Setting it earlier might disable the button and kill the user gesture context
-      setLoading(true);
 
       const user = result.user;
       await setDoc(doc(db, 'users', user.uid), {
         name: user.displayName || 'Student',
         email: user.email,
-        // Ensure defaults if new
+        department: 'General',
+        level: '100L',
+        bookmarks: [],
+        createdAt: serverTimestamp(),
       }, { merge: true });
       onComplete(user.displayName || 'Student');
     } catch (err: any) {
-      console.error(err);
+      console.error('Google Sign-In Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Sign in cancelled.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('Popup blocked. Please allow popups for this site.');
       } else {
         setError('Google sign-in failed.');
       }
-    } finally {
       setLoading(false);
     }
   };

@@ -8,7 +8,7 @@ interface ExploreProps {
   onViewPastQuestions: (course?: string, level?: string | null, departmentId?: string) => void;
 }
 
-import { useDepartments, useCourses, useContributors, Course, useUserProfile } from '@/hooks/useData';
+import { useDepartments, useCourses, useContributors, useUserProfile } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 
 export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProps) {

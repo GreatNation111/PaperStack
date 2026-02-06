@@ -1,59 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Anyone can read departments (public data)
-    match /departments/{document=**} {
+
+    // Helper
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // --- USERS ---
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // --- ADMINS ---
+    match /admins/{userId} {
+      allow read: if isAuthenticated(); 
+      allow write: if false; 
+    }
+
+    // --- DATA COLLECTIONS ---
+    // PUBLIC READ: Everyone can see departments, courses, papers, contributors, notifications
+    // WRITE: Only authenticated users (for seeding for now)
+    match /departments/{deptId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated();
     }
-
-    // Anyone can read courses (public data)
-    match /courses/{document=**} {
+    
+    match /courses/{courseId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated();
     }
-
-    // Authenticated users can read and manage their own user data
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
-      
-      // Bookmarks subcollection
-      match /bookmarks/{document=**} {
-        allow read, write: if request.auth.uid == uid;
-      }
-      
-      // Recent courses subcollection
-      match /recent_courses/{document=**} {
-        allow read, write: if request.auth.uid == uid;
-      }
-    }
-
-    // Contributors data (public read, authenticated write)
-    match /contributors/{document=**} {
+    
+    match /contributors/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated();
     }
 
-    // Papers/Past questions (public read, authenticated write)
-    match /papers/{document=**} {
+    match /papers/{paperId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated();
+    }
+    
+    match /feature_interest/{id} {
+      allow read: if true;
+      allow write: if isAuthenticated(); 
     }
 
-    // Notifications (authenticated read/write)
-    match /notifications/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Admins collection (used to mark admin users)
-    match /admins/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
   }
 }

@@ -25,6 +25,9 @@ export interface Course {
     title: string;
     departmentId: string;
     level: string;
+    semester?: string;
+    papers?: number;
+    lecturer?: string;
 }
 
 export interface Contributor {
@@ -35,6 +38,8 @@ export interface Contributor {
     date: string;
     department?: string;
     contributionCount?: number;
+    levelOrYear?: string;
+    badge?: string;
 }
 
 export interface Paper {
@@ -130,17 +135,19 @@ export function useCourses(departmentId: string | undefined) {
 
 export function useContributors() {
     const [contributors, setContributors] = useState<Contributor[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Fetch from Firestore 'contributors' collection
         // For now mock
         setContributors([
-            { name: 'Sarah Wilson', course: 'PHY 314', count: 12, date: '2d ago', department: 'Physics Ed', contributionCount: 15 },
-            { name: 'James Olu', course: 'MTH 211', count: 8, date: '5d ago', department: 'Mathematics', contributionCount: 8 },
+            { id: 'user1', name: 'Sarah Wilson', course: 'PHY 314', count: 12, date: '2d ago', department: 'Physics Ed', contributionCount: 15, levelOrYear: '400L', badge: 'Top Contributor' },
+            { id: 'user2', name: 'James Olu', course: 'MTH 211', count: 8, date: '5d ago', department: 'Mathematics', contributionCount: 8, levelOrYear: '300L' },
         ]);
+        setLoading(false);
     }, []);
 
-    return { contributors };
+    return { contributors, loading };
 }
 
 export function useRecentPapers(departmentId: string | undefined) {
