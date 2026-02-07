@@ -1,66 +1,42 @@
-import { ArrowLeft, Filter, Download, Bookmark, FileText } from 'lucide-react';
+import { ArrowLeft, Filter, Download, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { usePapers, useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
+import { useState } from 'react';
+import { useCourses, useBookmarks, toggleBookmark, Course } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 interface PastQuestionsProps {
     onBack: () => void;
-    courseCode?: string;
-    selectedLevel?: string | null;
     departmentId?: string;
 }
 
-export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentId }: PastQuestionsProps) {
-    const navigate = useNavigate();
-
-    // Always fetch ALL papers for the department
-    // The hook will query all papers in the department, allowing component-level filtering
-    const { papers, loading: loadingPapers } = usePapers(undefined, departmentId);
-
-    const isLoading = loadingPapers;
-
-    // Use real bookmarks
+export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
+    // MVP: Show all courses for the department, user clicks to open Google Drive folder
+    const { courses, loading: loadingCourses } = useCourses(departmentId);
     const { user } = useAuth();
     const { bookmarkIds } = useBookmarks(user?.uid);
-    // const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]); // Removed local state
-    const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
+    const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
     const [showFilter, setShowFilter] = useState(false);
-    const [selectedSemester, setSelectedSemester] = useState<'First' | 'Second'>('First');
 
-    // Record recent course when component mounts/course changes
-    useEffect(() => {
-        // We don't track per-course anymore, showing all papers in department
-        // Can optionally track department viewed if needed
-    }, []);
-
-    const handleToggleBookmark = async (paperId: string) => {
+    const handleToggleBookmark = async (courseId: string) => {
         if (!user) return;
         try {
-            const isBookmarked = bookmarkIds.includes(paperId);
-            await toggleBookmark(user.uid, paperId, isBookmarked);
+            const isBookmarked = bookmarkIds.includes(courseId);
+            await toggleBookmark(user.uid, courseId, isBookmarked);
         } catch (err) {
-            console.error(err);
+            console.error('[PastQuestions] Error toggling bookmark:', err);
         }
     };
 
-    const handleOpenPDF = (paper: Paper) => {
-        if (paper.pdfUrl) {
-            window.open(paper.pdfUrl, '_blank');
-        } else {
-            navigate(`/view-paper/${paper.id}`, { state: { paper } });
+    const handleOpenDriveFolder = (course: Course) => {
+        if (course.driveFolderUrl) {
+            window.open(course.driveFolderUrl, '_blank');
         }
     };
 
-    // Filter papers to match selected semester
-    const filteredPapers = papers.filter(p => {
-        const semesterMatch = p.semester?.toLowerCase().includes(selectedSemester.toLowerCase());
-        return semesterMatch || !p.semester;
-    });
-
-    // Re-calculate unique years based on filtered results
-    const activeUniqueYears = Array.from(new Set(filteredPapers.map(p => p.year))).sort().reverse();
+    // Filter courses by selected level if any
+    const filteredCourses = selectedLevel
+        ? courses.filter(c => c.level === selectedLevel)
+        : courses;
 
     return (
         <div className="pb-24 min-h-screen">
@@ -71,21 +47,6 @@ export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentI
                         <ArrowLeft className="w-6 h-6" strokeWidth={2} />
                     </button>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setSelectedSemester('First')}
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${selectedSemester === 'First' ? 'bg-primary text-primary-foreground' : 'bg-muted text-secondary'}`}
-                        >
-                            1st Sem
-                        </button>
-                        <button
-                            onClick={() => setSelectedSemester('Second')}
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${selectedSemester === 'Second' ? 'bg-primary text-primary-foreground' : 'bg-muted text-secondary'}`}
-                        >
-                            2nd Sem
-                        </button>
-                    </div>
-
                     <button
                         onClick={() => setShowFilter(!showFilter)}
                         className={`p-2 rounded-full transition-colors ${showFilter ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}
@@ -95,13 +56,13 @@ export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentI
                 </div>
 
                 <h1 className="text-2xl font-bold text-foreground">
-                    All Past Questions
+                    All Courses
                 </h1>
-                <p className="text-secondary text-sm">View all papers from your department (100L-400L)</p>
-                {selectedLevel && <p className="text-primary text-xs font-semibold mt-1">Filtered Level: {selectedLevel}</p>}
+                <p className="text-secondary text-sm">Browse all courses in your department</p>
+                {selectedLevel && <p className="text-primary text-xs font-semibold mt-1">Showing: {selectedLevel}</p>}
             </div>
 
-            {/* Filter UI */}
+            {/* Filter UI - Level Selection */}
             <AnimatePresence>
                 {showFilter && (
                     <motion.div
@@ -111,6 +72,12 @@ export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentI
                         className="overflow-hidden bg-muted/30 border-b border-border"
                     >
                         <div className="p-4 flex gap-2 overflow-x-auto scrollbar-hide">
+                            <button
+                                onClick={() => setSelectedLevel(null)}
+                                className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedLevel ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                            >
+                                All Levels
+                            </button>
                             {['100L', '200L', '300L', '400L'].map(level => (
                                 <button
                                     key={level}
@@ -125,92 +92,89 @@ export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentI
                 )}
             </AnimatePresence>
 
-            {/* Papers List */}
+            {/* Courses List - MVP */}
             <div className="px-6 py-6">
-                {isLoading ? (
+                {loadingCourses ? (
                     <div className="space-y-4">
                         {[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
                     </div>
-                ) : activeUniqueYears.length === 0 ? (
+                ) : filteredCourses.length === 0 ? (
                     <div className="text-center py-12">
                         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                             <FileText className="w-8 h-8 text-secondary/40" />
                         </div>
-                        <h3 className="text-lg font-medium text-foreground">No papers found</h3>
+                        <h3 className="text-lg font-medium text-foreground">No courses found</h3>
                         <p className="text-secondary text-sm">
-                            No {selectedSemester} Semester papers found.
+                            {selectedLevel ? `No courses found for level ${selectedLevel}.` : 'No courses available in this department.'}
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-8">
-                        {activeUniqueYears.map((year) => {
-                            const yearPapers = filteredPapers.filter((p) => p.year === year);
-                            if (yearPapers.length === 0) return null;
-
+                    <div className="space-y-3">
+                        {filteredCourses.map((course, index) => {
+                            const isBookmarked = bookmarkIds.includes(course.id);
                             return (
-                                <div key={year}>
-                                    <h2 className="text-lg font-bold text-foreground mb-4 sticky top-32">{year}</h2>
-                                    <div className="space-y-3">
-                                        {yearPapers.map((paper, index) => {
-                                            const isBookmarked = bookmarkIds.includes(paper.id);
-                                            return (
-                                                <motion.div
-                                                    key={paper.id}
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: index * 0.05 }}
-                                                    className="bg-card border border-border rounded-xl p-4 hover:border-primary transition-all group"
-                                                >
-                                                    <div className="flex items-start gap-4">
-                                                        {/* Thumbnail */}
-                                                        <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-border/20">
-                                                            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
-                                                        </div>
+                                <motion.div
+                                    key={course.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="bg-card border border-border rounded-xl p-4 hover:border-primary transition-all group cursor-pointer"
+                                    onClick={() => handleOpenDriveFolder(course)}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        {/* Course Thumbnail */}
+                                        <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-border/20">
+                                            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                                        </div>
 
-                                                        {/* Content */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-start justify-between gap-2 mb-1">
-                                                                <div>
-                                                                    <h3 className="font-semibold text-foreground text-sm">
-                                                                        {paper.semester} Semester
-                                                                    </h3>
-                                                                    <p className="text-xs text-secondary">{paper.type} • {paper.code}</p>
-                                                                </div>
-                                                            </div>
+                                        {/* Course Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-2 mb-1">
+                                                <div>
+                                                    <h3 className="font-semibold text-foreground text-sm">{course.code}</h3>
+                                                    <p className="text-xs text-secondary line-clamp-1">{course.title}</p>
+                                                </div>
+                                                <div className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded whitespace-nowrap">
+                                                    {course.level}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-secondary mb-2">{course.lecturer}</p>
 
-                                                            {/* Actions */}
-                                                            <div className="flex items-center justify-between mt-3">
-                                                                <button
-                                                                    onClick={() => handleOpenPDF(paper)}
-                                                                    className="text-xs text-primary font-medium hover:underline"
-                                                                >
-                                                                    {paper.pdfUrl ? 'Open PDF' : 'View'}
-                                                                </button>
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        onClick={() => handleToggleBookmark(paper.id)}
-                                                                        className={`p-2 rounded-full transition-all ${isBookmarked
-                                                                            ? 'text-primary bg-primary/10'
-                                                                            : 'text-secondary hover:bg-muted'
-                                                                            }`}
-                                                                    >
-                                                                        <Bookmark className="w-4 h-4" strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleOpenPDF(paper)}
-                                                                        className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all shadow-sm"
-                                                                    >
-                                                                        <Download className="w-4 h-4" strokeWidth={2} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        })}
+                                            {/* Actions */}
+                                            <div className="flex items-center justify-between mt-3">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-secondary">{course.papers || 0} papers</span>
+                                                    {course.driveFolderUrl && (
+                                                        <ExternalLink className="w-3 h-3 text-primary/60" strokeWidth={2} />
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleBookmark(course.id);
+                                                        }}
+                                                        className={`p-2 rounded-full transition-all ${isBookmarked
+                                                            ? 'text-primary bg-primary/10'
+                                                            : 'text-secondary hover:bg-muted'
+                                                            }`}
+                                                    >
+                                                        <Bookmark className="w-4 h-4" strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenDriveFolder(course);
+                                                        }}
+                                                        className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all shadow-sm"
+                                                    >
+                                                        <Download className="w-4 h-4" strokeWidth={2} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>

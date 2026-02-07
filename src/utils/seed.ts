@@ -21,20 +21,20 @@ export async function seedDatabase() {
         batch.set(ref, dept);
     });
 
-    // 2. Courses (Sample data for these departments)
+    // 2. Courses (MVP: with driveFolderUrl pointing to Google Drive folder)
     const courses = [
         // Physics Ed
-        { id: 'phy101', code: 'PHY 101', title: 'General Physics I', departmentId: 'physics_ed', level: '100L', semester: 'First', papers: 5, lecturer: 'Dr. Einstein' },
-        { id: 'phy102', code: 'PHY 102', title: 'General Physics II', departmentId: 'physics_ed', level: '100L', semester: 'Second', papers: 3, lecturer: 'Prof. Newton' },
+        { id: 'phy101', code: 'PHY 101', title: 'General Physics I', departmentId: 'physics_ed', level: '100L', semester: 'First', papers: 5, lecturer: 'Dr. Einstein', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-phy101' },
+        { id: 'phy102', code: 'PHY 102', title: 'General Physics II', departmentId: 'physics_ed', level: '100L', semester: 'Second', papers: 3, lecturer: 'Prof. Newton', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-phy102' },
         // Computer Ed
-        { id: 'csc101', code: 'CSC 101', title: 'Introduction to Computer Science', departmentId: 'computer_ed', level: '100L', semester: 'First', papers: 8, lecturer: 'Dr. Lovelace' },
-        { id: 'csc201', code: 'CSC 201', title: 'Programming I', departmentId: 'computer_ed', level: '200L', semester: 'First', papers: 6, lecturer: 'Dr. Turing' },
+        { id: 'csc101', code: 'CSC 101', title: 'Introduction to Computer Science', departmentId: 'computer_ed', level: '100L', semester: 'First', papers: 8, lecturer: 'Dr. Lovelace', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-csc101' },
+        { id: 'csc201', code: 'CSC 201', title: 'Programming I', departmentId: 'computer_ed', level: '200L', semester: 'First', papers: 6, lecturer: 'Dr. Turing', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-csc201' },
         // Industrial Tech
-        { id: 'ind101', code: 'IND 101', title: 'Intro to Industrial Technology', departmentId: 'industrial_tech', level: '100L', semester: 'First', papers: 2, lecturer: 'Engr. Fixit' },
+        { id: 'ind101', code: 'IND 101', title: 'Intro to Industrial Technology', departmentId: 'industrial_tech', level: '100L', semester: 'First', papers: 2, lecturer: 'Engr. Fixit', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-ind101' },
         // Business Ed
-        { id: 'bus101', code: 'BUS 101', title: 'Principles of Business', departmentId: 'business_ed', level: '100L', semester: 'Second', papers: 10, lecturer: 'Dr. Bezos' },
+        { id: 'bus101', code: 'BUS 101', title: 'Principles of Business', departmentId: 'business_ed', level: '100L', semester: 'Second', papers: 10, lecturer: 'Dr. Bezos', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-bus101' },
         // Chemistry
-        { id: 'chm101', code: 'CHM 101', title: 'General Chemistry I', departmentId: 'chemistry', level: '100L', semester: 'First', papers: 7, lecturer: 'Mme. Curie' },
+        { id: 'chm101', code: 'CHM 101', title: 'General Chemistry I', departmentId: 'chemistry', level: '100L', semester: 'First', papers: 7, lecturer: 'Mme. Curie', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-chm101' },
     ];
 
     courses.forEach(course => {
@@ -42,22 +42,7 @@ export async function seedDatabase() {
         batch.set(ref, course);
     });
 
-    // 3. Papers (Sample)
-    const papers = [
-        // PHY 101 Papers
-        { id: 'p1', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p1', thumbnailUrl: '' },
-        { id: 'p2', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2022/2023', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p2', thumbnailUrl: '' },
-        { id: 'p3', courseId: 'phy101', courseCode: 'PHY 101', departmentId: 'physics_ed', year: '2023/2024', semester: 'First', type: 'Test', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p3', thumbnailUrl: '' },
-        // CSC 101 Papers
-        { id: 'p4', courseId: 'csc101', courseCode: 'CSC 101', departmentId: 'computer_ed', year: '2023/2024', semester: 'First', type: 'Exam', isPublished: true, createdAt: new Date(), pdfUrl: 'https://drive.google.com/example-p4', thumbnailUrl: '' },
-    ];
-
-    papers.forEach(paper => {
-        const ref = doc(db, 'papers', paper.id);
-        batch.set(ref, paper);
-    });
-
-    // 4. Contributors
+    // 3. Contributors
     const contributors = [
         { id: 'user1', name: 'Ada Lovelace', department: 'Computer Education', levelOrYear: '400L', contributionCount: 42, badge: 'Top Contributor' },
         { id: 'user2', name: 'Isaac Newton', department: 'Physics Education', levelOrYear: '300L', contributionCount: 28 },
@@ -69,22 +54,15 @@ export async function seedDatabase() {
         batch.set(ref, contributor);
     });
 
-    // Create an admin record.
-    // If a signed-in user exists, create admins/{uid} so the app recognizes them as admin.
-    // Otherwise create a placeholder admin document keyed by email so you can replace it with the real UID later.
-    try {
-        if (auth.currentUser && auth.currentUser.uid) {
-            const adminRef = doc(db, 'admins', auth.currentUser.uid);
-            batch.set(adminRef, { uid: auth.currentUser.uid, email: auth.currentUser.email || null, role: 'admin', grantedAt: new Date() });
-        } else {
-            // Placeholder document - NOTE: Firestore security rules may prevent writing to admins if blocked.
-            const placeholderId = 'seed-admin-babalola';
-            const adminRef = doc(db, 'admins', placeholderId);
-            batch.set(adminRef, { email: 'babalolagreatnation@gmail.com', note: 'Replace document ID with real admin UID created in Firebase Auth', createdAt: new Date() });
-        }
-    } catch (e) {
-        console.warn('Unable to create admin record in batch:', e);
-    }
+    // 4. Notifications (sample)
+    const notifications = [
+        { id: 'notif1', title: 'Welcome to PaperStack!', message: 'Start exploring past questions to prepare for your exams.', type: 'info', createdAt: new Date(), isRead: false },
+    ];
+
+    notifications.forEach(notif => {
+        const ref = doc(db, 'notifications', notif.id);
+        batch.set(ref, notif);
+    });
 
     try {
         await batch.commit();

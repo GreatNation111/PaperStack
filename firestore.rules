@@ -11,20 +11,40 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Development/Seeding: Allow unauthenticated writes to seed collection
+    // This allows the seed script to run without auth issues
+    match /seed/{document=**} {
+      allow read, write: if true;
+    }
+
     // --- ADMINS Collection ---
-    // Store admin UIDs here. If a user exists in admins/{uid}, they have admin rights.
+    // Allow all reads so we can check admin status (not circular)
+    // Only allow writes via Firebase Console for security
     match /admins/{uid} {
-      allow read: if isAdmin();
+      allow read: if true; // Changed from isAdmin() to prevent circular dependency
       allow write: if false; // Admins managed only via Firebase Console for security
     }
 
     // --- USERS ---
     match /users/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // --- USER SUBCOLLECTIONS ---
+      match /bookmarks/{paperId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+      
+      match /read_notifications/{notificationId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
+      
+      match /recent_courses/{courseId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
 
     // --- DATA COLLECTIONS ---
-    // PUBLIC READ: Everyone can see departments, courses, papers, contributors, notifications
+    // PUBLIC READ: Everyone can see departments, courses, contributors, notifications
     // WRITE: Only admins can modify data
     match /departments/{deptId} {
       allow read: if true;
@@ -34,26 +54,27 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if true;
       allow write: if isAdmin();
+      
+      // Future: Empty papers subcollection for in-app viewer
+      match /papers/{paperId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
     
     match /contributors/{id} {
       allow read: if true;
       allow write: if isAdmin();
     }
-
-    match /papers/{paperId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
     
     match /feature_interest/{id} {
       allow read: if true;
-      allow write: if isAuthenticated(); // Users can track their own interests
+      allow write: if isAuthenticated();
     }
 
     match /notifications/{notificationId} {
       allow read: if true;
-      allow write: if isAdmin(); // Only admins create notifications
+      allow write: if isAdmin();
     }
   }
 }

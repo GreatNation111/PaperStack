@@ -28,6 +28,7 @@ export interface Course {
     semester?: string;
     papers?: number;
     lecturer?: string;
+    driveFolderUrl?: string; // MVP: Google Drive folder containing papers
 }
 
 export interface Contributor {
@@ -195,52 +196,64 @@ export function useNotifications(userId: string | undefined) {
 
     useEffect(() => {
         if (!userId) {
+            console.log('[useNotifications] No userId provided');
             setLoading(false);
             return;
         }
 
-        // 1. Listen to global notifications (sent to everyone or broadcast)
-        // Assuming a 'notifications' collection where target is 'all' or userId is in targets.
-        // For simplicity, let's say 'notifications' collection contains global alerts.
-        // AND user-specific notifications would be in users/{uid}/notifications or similar.
-        // Let's implement a simple global feed + read status tracking.
-
-        // Better approach for scaling: 
-        // - 'notifications' collection for broadcast/system messages.
-        // - 'users/{uid}/read_notifications' contains IDs of read notifications.
-
+        console.log('[useNotifications] Setting up listener for userId:', userId);
         const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(20));
 
         const unsubscribe = onSnapshot(q, async (snapshot) => {
-            const notifs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Notification));
+            try {
+                console.log('[useNotifications] Received notifications snapshot:', snapshot.docs.length, 'docs');
+                const notifs = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as Notification));
 
-            // Fetch read status for this user
-            // We can store read status in a subcollection users/{uid}/readReceipts/{notifId}
-            const receipts: Record<string, boolean> = {};
-            if (userId) {
-                // This is a naive read check (N reads). Better to store an array of read IDs in user profile if N is small,
-                // or use subcollection. Let's assume subcollection 'read_notifications'
-                const userReadRef = collection(db, 'users', userId, 'read_notifications');
-                const readSnap = await getDocs(userReadRef);
-                readSnap.docs.forEach(d => {
-                    receipts[d.id] = true;
+                // Fetch read status for this user
+                const receipts: Record<string, boolean> = {};
+                if (userId) {
+                    try {
+                        const userReadRef = collection(db, 'users', userId, 'read_notifications');
+                        const readSnap = await getDocs(userReadRef);
+                        readSnap.docs.forEach(d => {
+                            receipts[d.id] = true;
+                        });
+                        console.log('[useNotifications] Fetched read receipts:', Object.keys(receipts).length);
+                    } catch (e: any) {
+                        console.warn('[useNotifications] Could not fetch read receipts:', e?.code, e?.message);
+                    }
+                }
+
+                const merged = notifs.map(n => ({
+                    ...n,
+                    isRead: !!receipts[n.id]
+                }));
+
+                console.log('[useNotifications] Setting notifications - total:', merged.length, 'unread:', merged.filter(n => !n.isRead).length);
+                setNotifications(merged);
+                setLoading(false);
+            } catch (e: any) {
+                console.error('[useNotifications] ERROR in snapshot handler:', {
+                    message: e?.message,
+                    code: e?.code,
+                    fullError: e
                 });
+                setLoading(false);
             }
-
-            const merged = notifs.map(n => ({
-                ...n,
-                isRead: !!receipts[n.id]
-            }));
-
-            setNotifications(merged);
+        }, (err: any) => {
+            console.error('[useNotifications] ERROR setting up listener:', {
+                message: err?.message,
+                code: err?.code,
+                fullError: err
+            });
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [userId, reading]); // dependency on reading to refresh list when marked read
+    }, [userId, reading]);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -414,19 +427,26 @@ export function useRecentCourses(userId: string | undefined) {
 
     useEffect(() => {
         if (!userId) {
+            console.log('[useRecentCourses] No userId provided');
             setCourses([]);
             setLoading(false);
             return;
         }
 
+        console.log('[useRecentCourses] Fetching for userId:', userId);
         const fetchRecent = async () => {
             try {
                 const q = query(collection(db, 'users', userId, 'recent_courses'), orderBy('viewedAt', 'desc'), limit(10));
                 const snapshot = await getDocs(q);
                 const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+                console.log('[useRecentCourses] Fetched successfully:', fetched.length, 'courses');
                 setCourses(fetched);
-            } catch (e) {
-                console.error("Error fetching recent courses", e);
+            } catch (e: any) {
+                console.error('[useRecentCourses] ERROR fetching recent courses:', {
+                    message: e?.message,
+                    code: e?.code,
+                    fullError: e
+                });
                 setCourses([]);
             } finally {
                 setLoading(false);
