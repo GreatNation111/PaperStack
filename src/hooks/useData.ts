@@ -460,33 +460,47 @@ export function useCourse(courseCode: string | undefined) {
     return { course, loading };
 }
 
-export function usePapers(courseId: string | undefined, departmentId: string | undefined) {
+export function usePapers(_courseId: string | undefined, departmentId: string | undefined) {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!courseId || courseId === 'SKIP') {
+        // If no department provided, can't query
+        if (!departmentId) {
             setPapers([]);
             setLoading(false);
             return;
         }
 
-        const fetchPapers = async () => {
-            try {
-                const staticPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124 },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89 },
-                ];
-                setPapers(staticPapers);
-            } catch (e) {
-                console.error("Error fetching papers", e);
-                setPapers([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchPapers();
-    }, [courseId, departmentId]);
+        // Query all papers for the department (ignore courseId - show ALL papers for department)
+        // This allows filtering by level and semester in the component
+        const q = query(collection(db, 'papers'), where('departmentId', '==', departmentId));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const docs = snapshot.docs.map(d => {
+                const data = d.data() as any;
+                return {
+                    id: d.id,
+                    title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                    code: data.courseCode || data.code || '',
+                    year: data.year || '',
+                    semester: data.semester || '',
+                    type: data.type || '',
+                    pdfUrl: data.pdfUrl || data.url || '',
+                    thumbnailUrl: data.thumbnailUrl || '',
+                    downloads: data.downloads || 0,
+                    courseId: data.courseId || data.course || undefined,
+                } as Paper;
+            });
+            setPapers(docs);
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching papers:', err);
+            setPapers([]);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [departmentId]);
 
     return { papers, loading };
 }

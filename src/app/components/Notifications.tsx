@@ -102,8 +102,12 @@ export function Notifications({ onBack }: NotificationsProps) {
             {[1, 2].map(i => <div key={i} className="h-24 bg-muted/30 rounded-xl animate-pulse" />)}
           </div>
         ) : notifications.length === 0 ? (
-          <div className="text-center py-8 bg-muted/20 rounded-2xl border border-dashed border-border mb-8">
-            <p className="text-secondary text-sm">No new notifications from Admin.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center select-none bg-muted/20 rounded-2xl border border-dashed border-border mb-8">
+            <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+              <Bell className="w-8 h-8 text-muted-foreground/50" />
+            </div>
+            <p className="text-secondary text-sm font-medium mb-2">No notifications yet</p>
+            <p className="text-xs text-secondary/60">Admin will send important updates here</p>
           </div>
         ) : (
           <div className="space-y-3 mb-8">

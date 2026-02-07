@@ -1,7 +1,7 @@
 import { ArrowLeft, Filter, Download, Bookmark, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { useCourse, usePapers, useBookmarks, toggleBookmark, Paper, recordRecentCourse } from '@/hooks/useData';
+import { usePapers, useBookmarks, toggleBookmark, Paper } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,18 +12,14 @@ interface PastQuestionsProps {
     departmentId?: string;
 }
 
-export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel, departmentId }: PastQuestionsProps) {
+export function PastQuestions({ onBack, selectedLevel: initialLevel, departmentId }: PastQuestionsProps) {
     const navigate = useNavigate();
 
-    // Only fetch course info if we have a specific courseCode
-    const { course, loading: loadingCourse } = useCourse(courseCode);
+    // Always fetch ALL papers for the department
+    // The hook will query all papers in the department, allowing component-level filtering
+    const { papers, loading: loadingPapers } = usePapers(undefined, departmentId);
 
-    // Logic to avoid fetching "All Papers" while waiting for specific course ID
-    const skipPapers = courseCode && !course;
-    // Pass departmentId to filter if provided
-    const { papers, loading: loadingPapers } = usePapers(skipPapers ? 'SKIP' : (course?.id), departmentId);
-
-    const isLoading = (courseCode && loadingCourse) || loadingPapers;
+    const isLoading = loadingPapers;
 
     // Use real bookmarks
     const { user } = useAuth();
@@ -35,10 +31,9 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
 
     // Record recent course when component mounts/course changes
     useEffect(() => {
-        if (user && course?.id) {
-            recordRecentCourse(user.uid, course.id);
-        }
-    }, [user, course?.id]);
+        // We don't track per-course anymore, showing all papers in department
+        // Can optionally track department viewed if needed
+    }, []);
 
     const handleToggleBookmark = async (paperId: string) => {
         if (!user) return;
@@ -100,10 +95,10 @@ export function PastQuestions({ onBack, courseCode, selectedLevel: initialLevel,
                 </div>
 
                 <h1 className="text-2xl font-bold text-foreground">
-                    {(courseCode && loadingCourse) ? 'Loading...' : course ? `${course.code} Papers` : 'All Past Questions'}
+                    All Past Questions
                 </h1>
-                {course && <p className="text-secondary text-sm">{course.title}</p>}
-                {selectedLevel && <p className="text-primary text-xs font-semibold mt-1">Level: {selectedLevel}</p>}
+                <p className="text-secondary text-sm">View all papers from your department (100L-400L)</p>
+                {selectedLevel && <p className="text-primary text-xs font-semibold mt-1">Filtered Level: {selectedLevel}</p>}
             </div>
 
             {/* Filter UI */}

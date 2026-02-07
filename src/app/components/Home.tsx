@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useDepartments, useRecentCourses, useNotifications } from '@/hooks/useData';
+import { useDepartments, useRecentCourses, useNotifications, useUserProfile } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface HomeProps {
@@ -12,6 +12,7 @@ interface HomeProps {
 
 export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { user } = useAuth();
+  const { profile } = useUserProfile(user?.uid);
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses: recentCourses, loading: loadingCourses } = useRecentCourses(user?.uid);
   const { unreadCount } = useNotifications(user?.uid);
@@ -51,9 +52,20 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                 <span className="absolute top-2 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-muted" />
               )}
             </button>
-            <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold uppercase">
-              {userName ? userName[0] : 'S'}
-            </div>
+            {/* Avatar: Show user's avatar from settings if available, else show first letter initial */}
+            {profile?.avatar ? (
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary flex items-center justify-center">
+                <img
+                  src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${profile.avatar}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                  alt="User avatar"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold uppercase">
+                {userName ? userName[0] : 'S'}
+              </div>
+            )}
           </div>
         </div>
 

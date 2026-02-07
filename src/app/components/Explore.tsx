@@ -204,7 +204,6 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">
             {searchQuery ? 'Search Results' : 'Courses for you'}
-            {searchQuery ? 'Search Results' : 'Courses for you'}
             {!searchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel || 'All Levels'})</span>}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
