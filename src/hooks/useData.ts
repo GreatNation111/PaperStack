@@ -470,11 +470,19 @@ export async function toggleBookmark(userId: string, courseId: string, isCurrent
     }
 }
 
-export async function recordRecentCourse(userId: string, courseId: string) {
-    if (!userId) return;
-    const ref = doc(db, 'users', userId, 'recent_courses', courseId);
+export async function recordRecentCourse(userId: string, course: Course) {
+    if (!userId || !course.id) return;
+    const ref = doc(db, 'users', userId, 'recent_courses', course.id);
+    // Store full course data for display
     await setDoc(ref, {
-        courseId,
+        courseId: course.id,
+        code: course.code,
+        title: course.title,
+        level: course.level,
+        semester: course.semester,
+        lecturer: course.lecturer,
+        papers: course.papers,
+        driveFolderUrl: course.driveFolderUrl,
         viewedAt: new Date()
     });
 }
@@ -485,32 +493,42 @@ export function useRecentCourses(userId: string | undefined) {
 
     useEffect(() => {
         if (!userId) {
-            console.log('[useRecentCourses] No userId provided');
             setCourses([]);
             setLoading(false);
             return;
         }
 
-        console.log('[useRecentCourses] Fetching for userId:', userId);
-        const fetchRecent = async () => {
-            try {
-                const q = query(collection(db, 'users', userId, 'recent_courses'), orderBy('viewedAt', 'desc'), limit(10));
-                const snapshot = await getDocs(q);
-                const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
-                console.log('[useRecentCourses] Fetched successfully:', fetched.length, 'courses');
-                setCourses(fetched);
-            } catch (e: any) {
-                console.error('[useRecentCourses] ERROR fetching recent courses:', {
-                    message: e?.message,
-                    code: e?.code,
-                    fullError: e
-                });
-                setCourses([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchRecent();
+        // Listen to recent_courses subcollection with real-time updates
+        const q = query(
+            collection(db, 'users', userId, 'recent_courses'),
+            orderBy('viewedAt', 'desc'),
+            limit(10)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetched = snapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    code: data.code || '',
+                    title: data.title || '',
+                    departmentId: data.departmentId || '',
+                    level: data.level || '',
+                    semester: data.semester,
+                    lecturer: data.lecturer,
+                    papers: data.papers || 0,
+                    driveFolderUrl: data.driveFolderUrl
+                } as Course;
+            });
+            setCourses(fetched);
+            setLoading(false);
+        }, (err) => {
+            console.error('[useRecentCourses] Error:', err);
+            setCourses([]);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [userId]);
 
     return { courses, loading };

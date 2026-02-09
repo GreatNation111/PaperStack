@@ -33,7 +33,7 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
         // Record as recently viewed
         if (user) {
             try {
-                await recordRecentCourse(user.uid, course.id);
+                await recordRecentCourse(user.uid, course);
             } catch (err) {
                 console.error('[PastQuestions] Error recording recently viewed:', err);
             }
@@ -120,13 +120,13 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                                 >
                                     All Semesters
                                 </button>
-                                {['1st Semester', '2nd Semester'].map(sem => (
+                                {[{ value: 'First', label: '1st Sem' }, { value: 'Second', label: '2nd Sem' }].map(sem => (
                                     <button
-                                        key={sem}
-                                        onClick={() => setSelectedSemester(sem === selectedSemester ? null : sem)}
-                                        className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedSemester === sem ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                        key={sem.value}
+                                        onClick={() => setSelectedSemester(sem.value === selectedSemester ? null : sem.value)}
+                                        className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedSemester === sem.value ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
                                     >
-                                        {sem}
+                                        {sem.label}
                                     </button>
                                 ))}
                             </div>
@@ -183,7 +183,7 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                                                     </span>
                                                     {course.semester && (
                                                         <span className="text-xs font-medium px-2 py-1 bg-accent/10 text-accent rounded whitespace-nowrap">
-                                                            {course.semester === '1st Semester' ? '1st' : '2nd'}
+                                                            {course.semester === 'First' ? '1st' : '2nd'}
                                                         </span>
                                                     )}
                                                 </div>
