@@ -1,19 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Eye, EyeOff, Layers } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/app/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminLoginProps {
   onComplete: () => void;
 }
 
 export function AdminLogin({ onComplete }: AdminLoginProps) {
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-redirect if already admin
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      navigate('/admin/dashboard');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
 
   const handleLogin = async () => {
     setError('');
@@ -22,11 +33,10 @@ export function AdminLogin({ onComplete }: AdminLoginProps) {
     try {
       // Sign in with email and password
       await signInWithEmailAndPassword(auth, email, password);
-      
+
       // AuthContext will check if user is admin automatically
       // If they are, the RequireAdmin guard will let them through
-      // If not, they'll be redirected to /403
-      
+
       onComplete();
     } catch (err: any) {
       console.error('Admin login error:', err);

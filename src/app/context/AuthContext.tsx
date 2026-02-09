@@ -31,49 +31,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[AuthContext] Setting up auth listener');
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             console.log('[AuthContext] Auth state changed - user:', currentUser?.uid);
+
+            // Set loading to true while we verify profile and admin status
+            setLoading(true);
             setUser(currentUser);
 
             if (currentUser) {
                 // Fetch User Profile
                 try {
-                    console.log('[AuthContext] Fetching user document for:', currentUser.uid);
-                    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                    console.log('[AuthContext] Fetching profile and admin status...');
+                    const [userDoc, adminDoc] = await Promise.all([
+                        getDoc(doc(db, 'users', currentUser.uid)),
+                        getDoc(doc(db, 'admins', currentUser.uid))
+                    ]);
+
                     if (userDoc.exists()) {
-                        console.log('[AuthContext] User profile found');
                         setUserProfile(userDoc.data());
-                    } else {
-                        console.log('[AuthContext] User profile does not exist yet');
                     }
 
-                    // Check Admin Status (Strict 'admins' collection check)
-                    try {
-                        console.log('[AuthContext] Checking admin status');
-                        const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-                        const isAdminUser = adminDoc.exists();
-                        console.log('[AuthContext] Admin status:', isAdminUser);
-                        setIsAdmin(isAdminUser);
-                    } catch (adminErr: any) {
-                        console.error('[AuthContext] Error checking admin status:', {
-                            code: adminErr?.code,
-                            message: adminErr?.message
-                        });
-                        setIsAdmin(false);
-                    }
+                    const isAdminUser = adminDoc.exists();
+                    console.log('[AuthContext] Admin status verified:', isAdminUser);
+                    setIsAdmin(isAdminUser);
                 } catch (error: any) {
-                    console.error("[AuthContext] Error fetching user data:", {
-                        code: error?.code,
-                        message: error?.message,
-                        fullError: error
-                    });
-                    // Don't block auth, just fail gracefully on extended data
+                    console.error("[AuthContext] Error fetching extended user data:", error);
+                    setIsAdmin(false);
                 }
             } else {
-                console.log('[AuthContext] No authenticated user');
                 setUserProfile(null);
                 setIsAdmin(false);
             }
 
-            console.log('[AuthContext] Setting loading to false');
+            console.log('[AuthContext] Verification complete, setting loading to false');
             setLoading(false);
         });
 
