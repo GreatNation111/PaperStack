@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database } from 'lucide-react';
+import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDepartments, useRecentCourses, useNotifications, useUserProfile } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
@@ -170,22 +170,48 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-64 text-left`}
+                    onClick={() => course.driveFolderUrl && window.open(course.driveFolderUrl, '_blank')}
+                    className="flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-72 text-left"
                   >
-                    {/* Mock Question Page Preview */}
-                    <div className="w-full h-32 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl mb-4 flex items-center justify-center overflow-hidden relative border border-border/50 group">
-                      {/* Placeholder background with course code */}
-                      <span className="text-sm font-bold px-3 py-1 bg-primary/10 backdrop-blur-md rounded-lg border border-primary/20 text-primary">
-                        {course.code}
-                      </span>
+                    {/* Skeleton Paper Thumbnail */}
+                    <div className="w-full h-36 bg-muted rounded-xl mb-4 flex items-center justify-center relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+
+                      {/* Paper Skeleton */}
+                      <div className="w-20 h-28 bg-white rounded-md shadow-sm border border-border/50 p-3 space-y-2 relative transform group-hover:scale-105 transition-transform">
+                        <div className="w-3/4 h-2 bg-muted rounded-full animate-pulse" />
+                        <div className="w-full h-1 bg-muted/60 rounded-full" />
+                        <div className="space-y-1 pt-2">
+                          {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="w-full h-1 bg-muted/30 rounded-full" />
+                          ))}
+                        </div>
+                        <div className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-primary/10" />
+                      </div>
+
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-background/80 backdrop-blur rounded text-[10px] font-bold text-foreground">
+                        {course.semester === 'First' ? '1st' : '2nd'} Sem
+                      </div>
                     </div>
+
                     <div>
                       <div className="font-bold text-foreground mb-1">{course.code}</div>
                       <div className="text-sm text-foreground mb-2 line-clamp-1">{course.title}</div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-secondary">
-                          {course.level}
-                        </span>
+
+                      <div className="flex flex-col gap-1.5 mb-3">
+                        <div className="text-xs text-secondary flex items-center gap-1.5">
+                          <UserCircle className="w-3.5 h-3.5" strokeWidth={2} />
+                          <span className="truncate">{course.lecturer || 'Undesignated'}</span>
+                        </div>
+                        <div className="text-xs text-secondary flex items-center gap-2">
+                          <span>{course.level}</span>
+                          <span className="w-1 h-1 bg-secondary/30 rounded-full" />
+                          <span>{course.papers || 0} papers</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-xs text-primary font-semibold">View Papers</span>
                         <ChevronRight className="w-4 h-4 text-primary" strokeWidth={2} />
                       </div>
                     </div>

@@ -1,7 +1,6 @@
 import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Paper, usePaper, recordRecentCourse } from '@/hooks/useData';
-import { useAuth } from '@/app/context/AuthContext';
+import { Paper, usePaper } from '@/hooks/useData';
 import { useState, useEffect } from 'react';
 
 // Mock PDF component since we can't easily embed real PDFs without a library or file URL
@@ -58,7 +57,6 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   // Try to get paper from state (fast), otherwise fetch (refresh)
   const { paper: fetchedPaper, loading } = usePaper(paperId);
   const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
-  const { user } = useAuth();
 
   // If paper has pdfUrl, open it directly and go back
   useEffect(() => {
@@ -68,12 +66,8 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     }
   }, [paper?.pdfUrl, loading, navigate]);
 
-  useEffect(() => {
-    if (user && paper?.courseId) {
-      // Record the COURSE of this paper as recently viewed
-      recordRecentCourse(user.uid, paper.courseId);
-    }
-  }, [user, paper]);
+  // Note: Recently viewed is recorded when clicking on a course in PastQuestions page
+  // This viewer is for paper-level viewing, not course-level
 
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);

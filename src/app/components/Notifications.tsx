@@ -150,12 +150,13 @@ export function Notifications({ onBack }: NotificationsProps) {
                         className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
                           }`}
                       >
-                        {notification.type === 'alert' ? <AlertCircle className="w-5 h-5 text-red-500" /> :
-                          notification.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-500" /> :
-                            <Bell
-                              className={`w-5 h-5 transition-colors duration-300 ${isRead ? 'text-secondary' : 'text-primary'}`}
-                              strokeWidth={1.5}
-                            />}
+                        {isRead ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : notification.type === 'alert' ? (
+                          <AlertCircle className="w-5 h-5 text-red-500" />
+                        ) : (
+                          <Bell className="w-5 h-5 text-primary" strokeWidth={1.5} />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">

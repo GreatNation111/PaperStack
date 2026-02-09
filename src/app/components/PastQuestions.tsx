@@ -7,14 +7,16 @@ import { useAuth } from '@/app/context/AuthContext';
 interface PastQuestionsProps {
     onBack: () => void;
     departmentId?: string;
+    courseCode?: string;
+    selectedLevel?: string | null;
 }
 
-export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
+export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel: initialLevel }: PastQuestionsProps) {
     // MVP: Show all courses for the department, user clicks to open Google Drive folder
     const { courses, loading: loadingCourses } = useCourses(departmentId);
     const { user } = useAuth();
     const { bookmarkIds } = useBookmarks(user?.uid);
-    const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+    const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
     const [showFilter, setShowFilter] = useState(false);
 
