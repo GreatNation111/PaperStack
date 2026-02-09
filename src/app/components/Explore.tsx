@@ -185,7 +185,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => onViewPastQuestions(undefined, selectedLevel)}
+            onClick={() => onViewPastQuestions(undefined, selectedLevel, departmentId)}
             className="relative bg-indigo-600 rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px] col-span-2"
           >
             {/* Overlapping Illustration */}
