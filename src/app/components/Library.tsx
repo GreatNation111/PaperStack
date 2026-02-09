@@ -1,22 +1,22 @@
-import { Search, Bookmark, Download, X, FileText } from 'lucide-react';
+import { Search, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/app/context/AuthContext';
-import { useBookmarkedPapers, toggleBookmark, Paper } from '@/hooks/useData';
-import { useNavigate } from 'react-router-dom';
+import { useBookmarkedCourses, toggleBookmark, Course } from '@/hooks/useData';
 
 export function Library() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { bookmarks, loading } = useBookmarkedPapers(user?.uid);
+  const { courses, loading } = useBookmarkedCourses(user?.uid);
 
-  const handleRemoveBookmark = async (id: string) => {
+  const handleRemoveBookmark = async (courseId: string) => {
     if (user?.uid) {
-      await toggleBookmark(user.uid, id, true);
+      await toggleBookmark(user.uid, courseId, true); // true = currently bookmarked, so remove
     }
   };
 
-  const handleOpenPaper = (paper: Paper) => {
-    navigate(`/view-paper/${paper.id}`, { state: { paper } });
+  const handleOpenCourse = (course: Course) => {
+    if (course.driveFolderUrl) {
+      window.open(course.driveFolderUrl, '_blank');
+    }
   };
 
   const EmptyState = () => (
@@ -26,7 +26,7 @@ export function Library() {
       </div>
       <h3 className="text-lg font-semibold text-foreground mb-2">No bookmarks yet</h3>
       <p className="text-sm text-secondary text-center max-w-xs leading-relaxed">
-        Start bookmarking your favorite past questions for quick access
+        Bookmark courses from the Past Questions page for quick access
       </p>
     </div>
   );
@@ -44,48 +44,60 @@ export function Library() {
 
         {/* Bookmarks Section */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-foreground mb-4">Bookmarks</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Saved Courses</h2>
           {loading ? (
             <div className="space-y-4">
               {[1, 2].map(i => <div key={i} className="h-20 bg-muted/50 rounded-xl animate-pulse" />)}
             </div>
-          ) : bookmarks.length === 0 ? (
+          ) : courses.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {bookmarks.map((paper, index) => (
+              {courses.map((course, index) => (
                 <motion.div
-                  key={paper.id}
+                  key={course.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  onClick={() => handleOpenPaper(paper)}
+                  onClick={() => handleOpenCourse(course)}
                   className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-primary transition-colors group"
                 >
-                  <div className="w-16 h-20 bg-muted rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-colors">
-                    <FileText className="w-7 h-7 text-secondary group-hover:text-primary transition-colors" strokeWidth={1.5} />
+                  <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-foreground mb-1">
-                      {paper.code}
+                      {course.code}
                     </div>
-                    <div className="text-sm text-secondary mb-2">
-                      {paper.year} • {paper.semester} Sem
+                    <div className="text-sm text-secondary mb-1 line-clamp-1">
+                      {course.title}
                     </div>
-                    <div className="text-xs text-secondary bg-secondary/10 inline-block px-2 py-0.5 rounded">
-                      {paper.type}
+                    <div className="flex gap-2">
+                      <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded font-medium">
+                        {course.level}
+                      </span>
+                      {course.semester && (
+                        <span className="text-xs text-accent bg-accent/10 px-2 py-0.5 rounded font-medium">
+                          {course.semester === '1st Semester' ? '1st Sem' : '2nd Sem'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => handleRemoveBookmark(paper.id)}
-                      className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-all"
+                      onClick={() => handleRemoveBookmark(course.id)}
+                      className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-destructive/10 hover:text-destructive transition-all"
                     >
-                      <X className="w-4 h-4" strokeWidth={2} />
+                      <Bookmark className="w-4 h-4" strokeWidth={2} fill="currentColor" />
                     </button>
-                    <button className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center hover:opacity-90 transition-all shadow-sm">
-                      <Download className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
-                    </button>
+                    {course.driveFolderUrl && (
+                      <button
+                        onClick={() => handleOpenCourse(course)}
+                        className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center hover:opacity-90 transition-all shadow-sm"
+                      >
+                        <ExternalLink className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -93,21 +105,16 @@ export function Library() {
           )}
         </div>
 
-        {/* Downloads Section */}
+        {/* Coming Soon - Downloads Section */}
         <div>
           <h2 className="text-xl font-bold text-foreground mb-4">Downloads</h2>
           <div className="bg-card border border-border rounded-2xl p-8">
             <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-4">
-                <Download className="w-8 h-8 text-accent" strokeWidth={1.5} />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-secondary/50" strokeWidth={1.5} />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Offline Packs</h3>
-              <p className="text-sm text-secondary mb-4 max-w-xs leading-relaxed">
-                Download entire course packs for offline access
-              </p>
-              <span className="inline-block px-4 py-2 bg-accent/10 text-accent text-sm font-medium rounded-full">
-                Coming Soon
-              </span>
+              <p className="text-secondary text-sm font-medium mb-1">Coming Soon</p>
+              <p className="text-xs text-secondary/60">Offline downloads will be available in a future update</p>
             </div>
           </div>
         </div>

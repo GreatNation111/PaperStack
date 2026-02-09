@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotifications, markNotificationRead, markAllNotificationsAsRead, recordFeatureInterest, useFeatureInterests } from '@/hooks/useData';
@@ -9,8 +10,11 @@ interface NotificationsProps {
 
 export function Notifications({ onBack }: NotificationsProps) {
   const { user } = useAuth();
-  const { notifications, loading, unreadCount } = useNotifications(user?.uid);
+  const { notifications, loading, unreadCount, setReading } = useNotifications(user?.uid);
   const { interests } = useFeatureInterests(user?.uid);
+
+  // Local state for optimistic UI updates
+  const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
 
   const handleNotifyInterest = async (title: string) => {
     if (!user) return;
@@ -20,14 +24,30 @@ export function Notifications({ onBack }: NotificationsProps) {
 
   const handleMarkRead = async (id: string, isRead: boolean) => {
     if (isRead || !user) return;
+    // Optimistic update
+    setLocalReadIds(prev => new Set(prev).add(id));
     await markNotificationRead(user.uid, id);
+    // Trigger hook refresh
+    setReading(r => !r);
   };
 
   const handleMarkAll = async () => {
     if (!user) return;
+    // Optimistic update - mark all as read locally
+    const allIds = new Set(notifications.map(n => n.id));
+    setLocalReadIds(allIds);
     const ids = notifications.map(n => n.id);
     await markAllNotificationsAsRead(user.uid, ids);
+    // Trigger hook refresh
+    setReading(r => !r);
   };
+
+  // Merge local read state with fetched state for immediate UI feedback
+  const isNotificationRead = (notif: typeof notifications[0]) => {
+    return notif.isRead || localReadIds.has(notif.id);
+  };
+
+  const effectiveUnreadCount = notifications.filter(n => !isNotificationRead(n)).length;
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return '';
@@ -86,7 +106,7 @@ export function Notifications({ onBack }: NotificationsProps) {
           </button>
           <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
         </div>
-        {unreadCount > 0 && (
+        {effectiveUnreadCount > 0 && (
           <button onClick={handleMarkAll} className="text-xs font-semibold text-primary hover:underline">
             Mark all read
           </button>
@@ -112,42 +132,49 @@ export function Notifications({ onBack }: NotificationsProps) {
         ) : (
           <div className="space-y-3 mb-8">
             <AnimatePresence>
-              {notifications.map((notification, index) => (
-                <motion.div
-                  key={notification.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => handleMarkRead(notification.id, notification.isRead)}
-                  className={`bg-card border rounded-xl p-4 cursor-pointer transition-colors ${notification.isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
-                    }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notification.isRead ? 'bg-muted' : 'bg-primary/10'
-                        }`}
-                    >
-                      {notification.type === 'alert' ? <AlertCircle className="w-5 h-5 text-red-500" /> :
-                        notification.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-500" /> :
-                          <Bell
-                            className={`w-5 h-5 ${notification.isRead ? 'text-secondary' : 'text-primary'}`}
-                            strokeWidth={1.5}
-                          />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className={`font-semibold ${notification.isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
-                        {!notification.isRead && (
-                          <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
-                        )}
+              {notifications.map((notification, index) => {
+                const isRead = isNotificationRead(notification);
+                return (
+                  <motion.div
+                    key={notification.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleMarkRead(notification.id, isRead)}
+                    className={`bg-card border rounded-xl p-4 cursor-pointer transition-all duration-300 ${isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
+                      }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
+                          }`}
+                      >
+                        {notification.type === 'alert' ? <AlertCircle className="w-5 h-5 text-red-500" /> :
+                          notification.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-500" /> :
+                            <Bell
+                              className={`w-5 h-5 transition-colors duration-300 ${isRead ? 'text-secondary' : 'text-primary'}`}
+                              strokeWidth={1.5}
+                            />}
                       </div>
-                      <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.message}</p>
-                      <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className={`font-semibold transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
+                          {!isRead && (
+                            <motion.div
+                              initial={{ scale: 1 }}
+                              exit={{ scale: 0 }}
+                              className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
+                            />
+                          )}
+                        </div>
+                        <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.message}</p>
+                        <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}

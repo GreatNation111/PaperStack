@@ -30,8 +30,8 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   };
 
   const filteredCourses = recentCourses.filter(course =>
-    course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (course.code?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (course.title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
   return (

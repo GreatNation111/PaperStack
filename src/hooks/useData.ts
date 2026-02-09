@@ -268,9 +268,14 @@ export async function markNotificationRead(userId: string, notificationId: strin
     // Snapshot on 'read_notifications' subcollection would be better but simple refresh by prop works.
 }
 
-export async function markAllNotificationsAsRead(_userId: string, _notificationIds: string[]) {
-    // Batch write
-    // ...
+export async function markAllNotificationsAsRead(userId: string, notificationIds: string[]) {
+    if (!userId || notificationIds.length === 0) return;
+    // Write each notification as read
+    const promises = notificationIds.map(id => {
+        const userReadRef = doc(db, 'users', userId, 'read_notifications', id);
+        return setDoc(userReadRef, { readAt: new Date() });
+    });
+    await Promise.all(promises);
 }
 
 export function useUserProfile(userId: string | undefined) {
@@ -361,6 +366,62 @@ export function useBookmarks(userId: string | undefined) {
     return { bookmarkIds, loading };
 }
 
+export function useBookmarkedCourses(userId: string | undefined) {
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!userId) {
+            setCourses([]);
+            setLoading(false);
+            return;
+        }
+
+        // Listen to bookmarks subcollection
+        const bookmarksRef = collection(db, 'users', userId, 'bookmarks');
+        const unsubscribe = onSnapshot(bookmarksRef, async (snapshot) => {
+            try {
+                const bookmarkedIds = snapshot.docs.map(doc => doc.id);
+
+                if (bookmarkedIds.length === 0) {
+                    setCourses([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch actual course data for each bookmarked ID
+                const coursesData: Course[] = [];
+                for (const id of bookmarkedIds) {
+                    try {
+                        const courseDoc = await getDocs(query(collection(db, 'courses'), where('__name__', '==', id)));
+                        if (!courseDoc.empty) {
+                            const data = courseDoc.docs[0].data();
+                            coursesData.push({
+                                id: courseDoc.docs[0].id,
+                                ...data
+                            } as Course);
+                        }
+                    } catch (err) {
+                        console.warn('[useBookmarkedCourses] Error fetching course:', id, err);
+                    }
+                }
+
+                setCourses(coursesData);
+            } catch (e) {
+                console.error('[useBookmarkedCourses] Error:', e);
+                setCourses([]);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [userId]);
+
+    return { courses, loading };
+}
+
+// Legacy - keeping for backwards compatibility but not used in MVP
 export function useBookmarkedPapers(userId: string | undefined) {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [loading, setLoading] = useState(true);
@@ -376,14 +437,9 @@ export function useBookmarkedPapers(userId: string | undefined) {
             try {
                 const q = collection(db, 'users', userId, 'bookmarks');
                 const snapshot = await getDocs(q);
-                // For now, return mock papers based on bookmark IDs
-                const bookmarkedPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124, courseId: '1' },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89, courseId: '1' },
-                ];
-                // Filter to only bookmarked ones
-                const bookmarkedIds = snapshot.docs.map(doc => doc.id);
-                setPapers(bookmarkedPapers.filter(p => bookmarkedIds.includes(p.id)));
+                const _bookmarkedIds = snapshot.docs.map(doc => doc.id);
+                // For MVP, papers aren't used - courses are primary entity
+                setPapers([]);
             } catch (e) {
                 console.error("Error fetching bookmarked papers:", e);
                 setPapers([]);
@@ -398,17 +454,19 @@ export function useBookmarkedPapers(userId: string | undefined) {
     return { bookmarks: papers, loading };
 }
 
-export async function toggleBookmark(userId: string, paperId: string, isBookmarked: boolean) {
+export async function toggleBookmark(userId: string, courseId: string, isCurrentlyBookmarked: boolean) {
     if (!userId) return;
-    const ref = doc(db, 'users', userId, 'bookmarks', paperId);
-    if (isBookmarked) {
-        await setDoc(ref, { paperId, savedAt: new Date() });
-    } else {
+    const ref = doc(db, 'users', userId, 'bookmarks', courseId);
+    if (isCurrentlyBookmarked) {
+        // Currently bookmarked, so REMOVE it
         try {
             await deleteDoc(ref);
         } catch (e) {
             // Already deleted or doesn't exist
         }
+    } else {
+        // Not bookmarked, so ADD it
+        await setDoc(ref, { courseId, savedAt: new Date() });
     }
 }
 

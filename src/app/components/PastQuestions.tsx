@@ -1,7 +1,7 @@
-import { ArrowLeft, Filter, Download, Bookmark, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Filter, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { useCourses, useBookmarks, toggleBookmark, Course } from '@/hooks/useData';
+import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface PastQuestionsProps {
@@ -15,28 +15,41 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
     const { user } = useAuth();
     const { bookmarkIds } = useBookmarks(user?.uid);
     const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+    const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
     const [showFilter, setShowFilter] = useState(false);
 
-    const handleToggleBookmark = async (courseId: string) => {
+    const handleToggleBookmark = async (e: React.MouseEvent, courseId: string) => {
+        e.stopPropagation();
         if (!user) return;
         try {
-            const isBookmarked = bookmarkIds.includes(courseId);
-            await toggleBookmark(user.uid, courseId, isBookmarked);
+            const isCurrentlyBookmarked = bookmarkIds.includes(courseId);
+            await toggleBookmark(user.uid, courseId, isCurrentlyBookmarked);
         } catch (err) {
             console.error('[PastQuestions] Error toggling bookmark:', err);
         }
     };
 
-    const handleOpenDriveFolder = (course: Course) => {
+    const handleOpenDriveFolder = async (course: Course) => {
+        // Record as recently viewed
+        if (user) {
+            try {
+                await recordRecentCourse(user.uid, course.id);
+            } catch (err) {
+                console.error('[PastQuestions] Error recording recently viewed:', err);
+            }
+        }
+        // Open the drive folder
         if (course.driveFolderUrl) {
             window.open(course.driveFolderUrl, '_blank');
         }
     };
 
-    // Filter courses by selected level if any
-    const filteredCourses = selectedLevel
-        ? courses.filter(c => c.level === selectedLevel)
-        : courses;
+    // Filter courses by selected level and semester
+    const filteredCourses = courses.filter(c => {
+        if (selectedLevel && c.level !== selectedLevel) return false;
+        if (selectedSemester && c.semester !== selectedSemester) return false;
+        return true;
+    });
 
     return (
         <div className="pb-24 min-h-screen">
@@ -59,10 +72,14 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                     All Courses
                 </h1>
                 <p className="text-secondary text-sm">Browse all courses in your department</p>
-                {selectedLevel && <p className="text-primary text-xs font-semibold mt-1">Showing: {selectedLevel}</p>}
+                <div className="flex gap-2 mt-1">
+                    {selectedLevel && <span className="text-primary text-xs font-semibold">{selectedLevel}</span>}
+                    {selectedLevel && selectedSemester && <span className="text-secondary text-xs">•</span>}
+                    {selectedSemester && <span className="text-primary text-xs font-semibold">{selectedSemester}</span>}
+                </div>
             </div>
 
-            {/* Filter UI - Level Selection */}
+            {/* Filter UI - Level & Semester Selection */}
             <AnimatePresence>
                 {showFilter && (
                     <motion.div
@@ -71,22 +88,48 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden bg-muted/30 border-b border-border"
                     >
-                        <div className="p-4 flex gap-2 overflow-x-auto scrollbar-hide">
-                            <button
-                                onClick={() => setSelectedLevel(null)}
-                                className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedLevel ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
-                            >
-                                All Levels
-                            </button>
-                            {['100L', '200L', '300L', '400L'].map(level => (
+                        {/* Level Filter */}
+                        <div className="p-4 pb-2">
+                            <p className="text-xs text-secondary mb-2 font-medium">Level</p>
+                            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                                 <button
-                                    key={level}
-                                    onClick={() => setSelectedLevel(level === selectedLevel ? null : level)}
-                                    className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedLevel === level ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                    onClick={() => setSelectedLevel(null)}
+                                    className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedLevel ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
                                 >
-                                    {level}
+                                    All Levels
                                 </button>
-                            ))}
+                                {['100L', '200L', '300L', '400L'].map(level => (
+                                    <button
+                                        key={level}
+                                        onClick={() => setSelectedLevel(level === selectedLevel ? null : level)}
+                                        className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedLevel === level ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                    >
+                                        {level}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Semester Filter */}
+                        <div className="p-4 pt-2">
+                            <p className="text-xs text-secondary mb-2 font-medium">Semester</p>
+                            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                                <button
+                                    onClick={() => setSelectedSemester(null)}
+                                    className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedSemester ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                >
+                                    All Semesters
+                                </button>
+                                {['1st Semester', '2nd Semester'].map(sem => (
+                                    <button
+                                        key={sem}
+                                        onClick={() => setSelectedSemester(sem === selectedSemester ? null : sem)}
+                                        className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedSemester === sem ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                    >
+                                        {sem}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -105,7 +148,7 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                         </div>
                         <h3 className="text-lg font-medium text-foreground">No courses found</h3>
                         <p className="text-secondary text-sm">
-                            {selectedLevel ? `No courses found for level ${selectedLevel}.` : 'No courses available in this department.'}
+                            {selectedLevel || selectedSemester ? `No courses match your filters.` : 'No courses available in this department.'}
                         </p>
                     </div>
                 ) : (
@@ -134,15 +177,22 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                                                     <h3 className="font-semibold text-foreground text-sm">{course.code}</h3>
                                                     <p className="text-xs text-secondary line-clamp-1">{course.title}</p>
                                                 </div>
-                                                <div className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded whitespace-nowrap">
-                                                    {course.level}
+                                                <div className="flex gap-1.5 items-center">
+                                                    <span className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded whitespace-nowrap">
+                                                        {course.level}
+                                                    </span>
+                                                    {course.semester && (
+                                                        <span className="text-xs font-medium px-2 py-1 bg-accent/10 text-accent rounded whitespace-nowrap">
+                                                            {course.semester === '1st Semester' ? '1st' : '2nd'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-secondary mb-2">{course.lecturer}</p>
+                                            {course.lecturer && <p className="text-xs text-secondary mb-2">{course.lecturer}</p>}
 
                                             {/* Actions */}
                                             <div className="flex items-center justify-between mt-3">
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-1.5">
                                                     <span className="text-xs text-secondary">{course.papers || 0} papers</span>
                                                     {course.driveFolderUrl && (
                                                         <ExternalLink className="w-3 h-3 text-primary/60" strokeWidth={2} />
@@ -150,10 +200,7 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleBookmark(course.id);
-                                                        }}
+                                                        onClick={(e) => handleToggleBookmark(e, course.id)}
                                                         className={`p-2 rounded-full transition-all ${isBookmarked
                                                             ? 'text-primary bg-primary/10'
                                                             : 'text-secondary hover:bg-muted'
@@ -166,9 +213,10 @@ export function PastQuestions({ onBack, departmentId }: PastQuestionsProps) {
                                                             e.stopPropagation();
                                                             handleOpenDriveFolder(course);
                                                         }}
-                                                        className="p-2 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all shadow-sm"
+                                                        className="px-3 py-1.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all shadow-sm text-xs font-medium flex items-center gap-1"
                                                     >
-                                                        <Download className="w-4 h-4" strokeWidth={2} />
+                                                        <ExternalLink className="w-3 h-3" strokeWidth={2} />
+                                                        Preview
                                                     </button>
                                                 </div>
                                             </div>
