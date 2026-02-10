@@ -287,16 +287,16 @@ export function NotificationsManager() {
             />
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-2xl bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
             >
-              <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between">
+              <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between flex-shrink-0">
                 <h2 className="text-lg font-semibold text-[#E5E5E5]">{editingId ? 'Edit Notification' : 'New Notification'}</h2>
                 <button onClick={() => setShowCreateForm(false)} className="text-[#666] hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1">
                 <div>
                   <label className="block text-sm font-medium text-[#AAA] mb-2">Title</label>
                   <input
@@ -396,7 +396,7 @@ export function NotificationsManager() {
                 </div>
               </div>
 
-              <div className="bg-[#15151A] px-6 py-4 flex gap-3 justify-end border-t border-[#2A2A2F]">
+              <div className="bg-[#15151A] px-6 py-4 flex gap-3 justify-end border-t border-[#2A2A2F] flex-shrink-0">
                 {/* Logic: 
                     If scheduledDate set -> "Schedule"
                     Else -> "Send Now" or "Save Draft"
