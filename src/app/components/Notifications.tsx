@@ -152,11 +152,13 @@ export function Notifications({ onBack }: NotificationsProps) {
                       >
                         {isRead ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : notification.type === 'alert' || notification.type === 'warning' ? (
-                          <AlertCircle className={`w-5 h-5 ${notification.type === 'alert' ? 'text-red-500' : 'text-amber-500'}`} />
-                        ) : notification.type === 'success' ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
+                          <AlertCircle className={`w-5 h-5 ${notification.type === 'alert' ? 'text-red-500' :
+                              notification.type === 'warning' ? 'text-amber-500' :
+                                'text-blue-500'
+                            }`} />
                         ) : (
+                          // Fallback
                           <Bell className="w-5 h-5 text-primary" strokeWidth={1.5} />
                         )}
                       </div>

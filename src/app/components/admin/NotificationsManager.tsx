@@ -322,7 +322,7 @@ export function NotificationsManager() {
                   <div>
                     <label className="block text-sm font-medium text-[#AAA] mb-2">Type</label>
                     <div className="flex gap-2">
-                      {['info', 'warning', 'success', 'alert'].map((t) => (
+                      {['info', 'warning', 'alert'].map((t) => (
                         <button
                           key={t}
                           onClick={() => setFormData({ ...formData, type: t as any })}
@@ -346,7 +346,6 @@ export function NotificationsManager() {
                     >
                       <option value="global">All Students</option>
                       <option value="department">Specific Department</option>
-                      <option value="course">Specific Course</option>
                     </select>
                   </div>
                 </div>
@@ -367,21 +366,7 @@ export function NotificationsManager() {
                     </select>
                   </div>
                 )}
-                {formData.target === 'course' && (
-                  <div>
-                    <label className="block text-sm font-medium text-[#AAA] mb-2">Select Course</label>
-                    <select
-                      value={formData.targetId}
-                      onChange={e => setFormData({ ...formData, targetId: e.target.value })}
-                      className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-4 py-3 text-[#E5E5E5] focus:border-[#4F46E5] outline-none"
-                    >
-                      <option value="">Choose...</option>
-                      {courses.map(c => (
-                        <option key={c.id} value={c.id}>{c.code}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+
 
                 {/* Schedule Integration */}
                 <div>

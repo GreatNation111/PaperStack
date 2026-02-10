@@ -71,8 +71,8 @@ export interface Notification {
     title: string;
     body: string; // Changed from message to body to match Admin
     message?: string; // Backwards compatibility
-    type: 'info' | 'alert' | 'success' | 'warning';
-    target?: 'global' | 'department' | 'course';
+    type: 'info' | 'alert' | 'warning';
+    target?: 'global' | 'department';
     targetId?: string;
     createdAt: any;
     isRead: boolean;
@@ -240,23 +240,6 @@ export function useNotifications(userId: string | undefined) {
                     // 2. Department: Show if matches user's department
                     if (n.target === 'department') {
                         return profile?.departmentId === n.targetId;
-                    }
-
-                    // 3. Course: For now, show if user is in the same department 
-                    // (Assumption: Course targetId usually implies a department, but we can't easily check course's dept here without another fetch.
-                    //  MVP: Show if the course targetId is in user's recent/bookmarks? 
-                    //  Or relax it: If target is course, just show it? 
-                    //  The user said "selecting phy101... would only show to physics students".
-                    //  So let's optimistically show it for now, OR filter if we can.
-                    //  Let's SHOW ALL course notifications for now unless we have a better way, 
-                    //  OR better: Hide it if we can't verify.
-                    //  Let's Assume if target is course, we show it (Global visibility for specific course updates isn't terrible).
-                    //  ACTUALLY, User's complaint: "why is everyone else... able to see".
-                    //  Safe bet: strict filtering.
-                    //  If we can't verify 'enrollment', maybe we just check if the user has INTERACTED with it?
-                    //  Let's leave Course visible to all for a moment, but fix Department first as that's broken.)
-                    if (n.target === 'course') {
-                        return true; // MVP: visible to all. Refine later with 'enrolled' logic.
                     }
 
                     return true;
