@@ -82,10 +82,11 @@ function AppContent() {
   };
 
   const showBottomNav = ['/home', '/explore', '/library', '/profile'].includes(location.pathname);
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
-      <div className="max-w-md mx-auto bg-background min-h-screen relative">
+      <div className={`${isAdminRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
         <Routes location={location} key={location.pathname}>
           {/* Public Routes */}
           <Route element={<PublicOnly />}>

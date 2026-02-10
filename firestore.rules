@@ -43,6 +43,20 @@ service cloud.firestore {
       }
     }
 
+    // --- ADMIN COLLECTIONS ---
+    match /admin_submissions/{submissionId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /admin_notifications_queue/{notificationId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admin_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
     // --- DATA COLLECTIONS ---
     // PUBLIC READ: Everyone can see departments, courses, contributors, notifications
     // WRITE: Only admins can modify data

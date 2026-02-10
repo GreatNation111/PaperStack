@@ -1,3 +1,4 @@
+import { SeedAdminData } from './SeedAdminData';
 import { motion } from 'motion/react';
 import { Clock, CheckCircle, FileText, Users, TrendingUp, ArrowUpRight } from 'lucide-react';
 
@@ -59,9 +60,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   return (
     <div className="min-h-screen p-4 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Dashboard</h1>
-        <p className="text-sm text-[#AAA]">Overview of content moderation activity</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Dashboard</h1>
+          <p className="text-sm text-[#AAA]">Overview of content moderation activity</p>
+        </div>
+        <SeedAdminData />
       </div>
 
       {/* Stats Grid */}
@@ -151,26 +155,24 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             >
               <div className="flex items-start gap-4">
                 <div
-                  className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                    activity.type === 'approved'
-                      ? 'bg-[#10B981]'
-                      : activity.type === 'rejected'
+                  className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${activity.type === 'approved'
+                    ? 'bg-[#10B981]'
+                    : activity.type === 'rejected'
                       ? 'bg-[#EF4444]'
                       : activity.type === 'flagged'
-                      ? 'bg-[#F59E0B]'
-                      : 'bg-[#4F46E5]'
-                  }`}
+                        ? 'bg-[#F59E0B]'
+                        : 'bg-[#4F46E5]'
+                    }`}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-4 mb-1">
                     <span
-                      className={`text-sm font-medium ${
-                        activity.type === 'approved'
-                          ? 'text-[#10B981]'
-                          : activity.type === 'rejected'
+                      className={`text-sm font-medium ${activity.type === 'approved'
+                        ? 'text-[#10B981]'
+                        : activity.type === 'rejected'
                           ? 'text-[#EF4444]'
                           : 'text-[#E5E5E5]'
-                      }`}
+                        }`}
                     >
                       {activity.action}
                     </span>
