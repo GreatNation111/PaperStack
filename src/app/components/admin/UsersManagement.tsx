@@ -24,6 +24,7 @@ export function UsersManagement() {
   // Contributor Modal State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showContributorModal, setShowContributorModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [contributorForm, setContributorForm] = useState({
     badge: 'Rising Star',
     contributionCount: 0
@@ -82,6 +83,11 @@ export function UsersManagement() {
     }
   };
 
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch =
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -97,7 +103,7 @@ export function UsersManagement() {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
@@ -182,10 +188,10 @@ export function UsersManagement() {
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${user.role === 'admin'
-                            ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
-                            : user.role === 'contributor'
-                              ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
-                              : 'bg-[#666]/10 text-[#AAA]'
+                          ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
+                          : user.role === 'contributor'
+                            ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
+                            : 'bg-[#666]/10 text-[#AAA]'
                           }`}
                       >
                         {user.role === 'admin' && <Shield className="w-3 h-3" strokeWidth={2} />}
@@ -208,7 +214,10 @@ export function UsersManagement() {
                             Promote
                           </button>
                         )}
-                        <button className="w-8 h-8 flex items-center justify-center text-[#AAA] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 rounded-lg transition-colors">
+                        <button
+                          onClick={() => handleViewUser(user)}
+                          className="w-8 h-8 flex items-center justify-center text-[#AAA] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 rounded-lg transition-colors"
+                        >
                           <MoreVertical className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                       </div>
@@ -221,7 +230,133 @@ export function UsersManagement() {
         </div>
       </div>
 
+      {/* Mobile View */}
+      <div className="lg:hidden space-y-4">
+        {loading ? (
+          <div className="p-8 text-center text-[#666]">Loading users...</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="p-8 text-center text-[#666]">No users found.</div>
+        ) : (
+          filteredUsers.map((user, index) => (
+            <motion.div
+              key={user.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-4 flex flex-col gap-4"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-[#E5E5E5] mb-0.5">{user.name}</h3>
+                  <p className="text-xs text-[#AAA] mb-2">{user.email}</p>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.role === 'admin'
+                      ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
+                      : user.role === 'contributor'
+                        ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
+                        : 'bg-[#666]/10 text-[#AAA]'
+                      }`}
+                  >
+                    {user.role === 'admin' && <Shield className="w-2.5 h-2.5" strokeWidth={2.5} />}
+                    {user.role === 'contributor' && <UserCheck className="w-2.5 h-2.5" strokeWidth={2.5} />}
+                    {user.role || 'student'}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="text-[10px] text-[#555] font-medium uppercase tracking-tighter">Joined {formatDate(user.createdAt)}</div>
+                  <div className="text-[10px] text-[#888] font-bold">{user.department || user.departmentId || 'GENERAL'}</div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#2A2A2F] flex items-center justify-between">
+                <div className="flex gap-2">
+                  {(!user.role || user.role === 'student') && (
+                    <button
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowContributorModal(true);
+                      }}
+                      className="px-4 py-2 bg-[#F59E0B]/10 text-[#F59E0B] rounded-xl text-xs font-semibold active:scale-95 transition-transform"
+                    >
+                      Promote
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleViewUser(user)}
+                    className="px-4 py-2 bg-[#333] text-[#AAA] rounded-xl text-xs font-semibold active:scale-95 transition-transform"
+                  >
+                    View
+                  </button>
+                </div>
+                <button
+                  onClick={() => handleViewUser(user)}
+                  className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+
       <AnimatePresence>
+        {/* Detail Modal */}
+        {showDetailModal && selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[#E5E5E5]">User Profile</h3>
+                <button onClick={() => setShowDetailModal(false)} className="text-[#AAA] hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex flex-col items-center text-center p-4 bg-[#0F1115] rounded-2xl mb-2">
+                  <div className="w-16 h-16 rounded-full bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5] mb-3 text-2xl font-bold">
+                    {selectedUser.name.charAt(0)}
+                  </div>
+                  <div className="text-lg font-bold text-[#E5E5E5]">{selectedUser.name}</div>
+                  <div className="text-sm text-[#AAA]">{selectedUser.email}</div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666]">Role</span>
+                    <span className="text-[#E5E5E5] capitalize">{selectedUser.role || 'student'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666]">Department</span>
+                    <span className="text-[#E5E5E5]">{selectedUser.department || selectedUser.departmentId || 'Unassigned'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666]">Level</span>
+                    <span className="text-[#E5E5E5]">{selectedUser.level || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#666]">Member Since</span>
+                    <span className="text-[#E5E5E5]">{formatDate(selectedUser.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-[#2A2A2F] flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="w-full bg-[#333] text-[#E5E5E5] py-2 rounded-xl text-sm font-medium hover:bg-[#444] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Contributor Modal */}
         {showContributorModal && selectedUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div

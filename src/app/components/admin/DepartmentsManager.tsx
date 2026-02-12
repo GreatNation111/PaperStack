@@ -20,7 +20,7 @@ import {
 import {
     collection,
     onSnapshot,
-    addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     doc,
@@ -108,6 +108,15 @@ export function DepartmentsManager() {
         setShowModal(true);
     };
 
+    const slugify = (text: string) => {
+        return text
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '_')
+            .replace(/^-+|-+$/g, '');
+    };
+
     const handleSave = async () => {
         setFormError('');
         if (!formData.name.trim()) return setFormError('Department name is required');
@@ -123,7 +132,11 @@ export function DepartmentsManager() {
                     updatedAt: serverTimestamp()
                 });
             } else {
-                await addDoc(collection(db, 'departments'), {
+                const slug = slugify(formData.name);
+                // Check if already exists to avoid overwriting
+                const deptRef = doc(db, 'departments', slug);
+                await setDoc(deptRef, {
+                    id: slug,
                     name: formData.name.trim(),
                     code: formData.code.trim().toUpperCase(),
                     icon: formData.icon,

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Menu,
@@ -13,6 +13,8 @@ import {
   Layers,
   LogOut,
 } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -21,18 +23,26 @@ interface AdminLayoutProps {
   onLogout: () => void;
 }
 
-const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'departments', label: 'Departments', icon: Building2 }, // Renamed from schools
-  { id: 'courses', label: 'Courses', icon: BookOpen },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'reports', label: 'Feature Requests', icon: Flag, badge: 0 }, // Renamed label
-  { id: 'settings', label: 'Settings', icon: Settings },
-];
-
 export function AdminLayout({ children, currentPage, onNavigate, onLogout }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [featureRequestCount, setFeatureRequestCount] = useState(0);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'feature_interest'), (snap) => {
+      setFeatureRequestCount(snap.size);
+    });
+    return () => unsub();
+  }, []);
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'departments', label: 'Departments', icon: Building2 },
+    { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'reports', label: 'Feature Requests', icon: Flag, badge: featureRequestCount },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
 
   return (
     <div className="min-h-screen bg-[#0F1115] lg:flex">
@@ -74,9 +84,9 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout }: Adm
               >
                 <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
                 <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-                {item.badge && (
-                  <span className="px-2 py-0.5 bg-[#4F46E5] text-white text-xs font-medium rounded-full">
-                    {item.badge}
+                {item.id === 'reports' && featureRequestCount > 0 && (
+                  <span className="px-2 py-0.5 bg-[#EC4899] text-white text-[10px] font-bold rounded-full">
+                    {featureRequestCount}
                   </span>
                 )}
               </button>
@@ -147,9 +157,9 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout }: Adm
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
                       <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <span className="px-2 py-0.5 bg-[#4F46E5] text-white text-xs font-medium rounded-full">
-                          {item.badge}
+                      {item.id === 'reports' && featureRequestCount > 0 && (
+                        <span className="px-2 py-0.5 bg-[#EC4899] text-white text-[10px] font-bold rounded-full">
+                          {featureRequestCount}
                         </span>
                       )}
                     </button>
