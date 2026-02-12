@@ -14,7 +14,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     departments: 0,
     courses: 0,
     contributors: 0,
-    requests: 0
+    requests: 0,
+    notifications: 0
   });
 
   useEffect(() => {
@@ -30,12 +31,16 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     const unsubRequests = onSnapshot(collection(db, 'feature_interest'), snap =>
       setCounts(prev => ({ ...prev, requests: snap.size }))
     );
+    const unsubNotifs = onSnapshot(collection(db, 'notifications'), snap =>
+      setCounts(prev => ({ ...prev, notifications: snap.size }))
+    );
 
     return () => {
       unsubDepts();
       unsubCourses();
       unsubContributors();
       unsubRequests();
+      unsubNotifs();
     };
   }, []);
 
@@ -44,6 +49,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     { label: 'Total Courses', value: counts.courses.toString(), icon: BookOpen, color: '#10B981' },
     { label: 'Contributors', value: counts.contributors.toString(), icon: Users, color: '#F59E0B' },
     { label: 'Feature Requests', value: counts.requests.toString(), icon: Flag, color: '#EC4899' },
+    { label: 'Total Notifications', value: counts.notifications.toString(), icon: ArrowUpRight, color: '#F43F5E' },
   ];
 
   return (
