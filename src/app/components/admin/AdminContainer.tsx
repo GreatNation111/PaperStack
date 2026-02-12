@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { AdminDashboard } from './AdminDashboard';
-import { PendingSubmissions } from './PendingSubmissions';
-import { SubmissionDetailModal } from './SubmissionDetailModal';
 import { NotificationsManager } from './NotificationsManager';
 import { CoursesManagement } from './CoursesManagement';
-import { SchoolsManagement } from './SchoolsManagement';
 import { UsersManagement } from './UsersManagement';
-import { ReportedContent } from './ReportedContent';
 import { AdminSettings } from './AdminSettings';
+import { DepartmentsManager } from './DepartmentsManager';
+import { FeatureRequestsViewer } from './FeatureRequestsViewer';
 
 interface AdminContainerProps {
   onLogout: () => void;
@@ -16,35 +14,15 @@ interface AdminContainerProps {
 
 type AdminPage =
   | 'dashboard'
-  | 'pending'
   | 'notifications'
   | 'courses'
-  | 'schools'
+  | 'departments' // Renamed from schools
   | 'users'
-  | 'reports'
+  | 'reports' // Will be Feature Requests
   | 'settings';
 
 export function AdminContainer({ onLogout }: AdminContainerProps) {
   const [currentPage, setCurrentPage] = useState<AdminPage>('dashboard');
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
-
-  const handleViewSubmissionDetail = (id: string) => {
-    setSelectedSubmissionId(id);
-  };
-
-  const handleCloseSubmissionDetail = () => {
-    setSelectedSubmissionId(null);
-  };
-
-  const handleApproveSubmission = (id: string) => {
-    console.log('Approved submission:', id);
-    // Show toast notification
-  };
-
-  const handleRejectSubmission = (id: string, reason: string) => {
-    console.log('Rejected submission:', id, 'Reason:', reason);
-    // Show toast notification
-  };
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as AdminPage);
@@ -54,18 +32,16 @@ export function AdminContainer({ onLogout }: AdminContainerProps) {
     switch (currentPage) {
       case 'dashboard':
         return <AdminDashboard onNavigate={handleNavigate} />;
-      case 'pending':
-        return <PendingSubmissions onViewDetail={handleViewSubmissionDetail} />;
       case 'notifications':
         return <NotificationsManager />;
       case 'courses':
         return <CoursesManagement />;
-      case 'schools':
-        return <SchoolsManagement />;
+      case 'departments':
+        return <DepartmentsManager />;
       case 'users':
         return <UsersManagement />;
       case 'reports':
-        return <ReportedContent />;
+        return <FeatureRequestsViewer />;
       case 'settings':
         return <AdminSettings />;
       default:
@@ -74,19 +50,8 @@ export function AdminContainer({ onLogout }: AdminContainerProps) {
   };
 
   return (
-    <>
-      <AdminLayout currentPage={currentPage} onNavigate={handleNavigate} onLogout={onLogout}>
-        {renderPage()}
-      </AdminLayout>
-
-      {/* Submission Detail Modal */}
-      <SubmissionDetailModal
-        submissionId={selectedSubmissionId || ''}
-        isOpen={selectedSubmissionId !== null}
-        onClose={handleCloseSubmissionDetail}
-        onApprove={handleApproveSubmission}
-        onReject={handleRejectSubmission}
-      />
-    </>
+    <AdminLayout currentPage={currentPage} onNavigate={handleNavigate} onLogout={onLogout}>
+      {renderPage()}
+    </AdminLayout>
   );
 }

@@ -4,7 +4,6 @@ import {
   Menu,
   X,
   LayoutDashboard,
-  Clock,
   Bell,
   BookOpen,
   Building2,
@@ -24,12 +23,11 @@ interface AdminLayoutProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'pending', label: 'Pending Reviews', icon: Clock, badge: 47 },
   { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'departments', label: 'Departments', icon: Building2 }, // Renamed from schools
   { id: 'courses', label: 'Courses', icon: BookOpen },
-  { id: 'schools', label: 'Schools & Departments', icon: Building2 },
   { id: 'users', label: 'Users', icon: Users },
-  { id: 'reports', label: 'Reports & Flags', icon: Flag, badge: 8 },
+  { id: 'reports', label: 'Feature Requests', icon: Flag, badge: 0 }, // Renamed label
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -69,11 +67,10 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout }: Adm
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`w-full h-11 px-3 rounded-lg flex items-center gap-3 mb-1 transition-colors ${
-                  isActive
-                    ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
-                    : 'text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#222227]'
-                }`}
+                className={`w-full h-11 px-3 rounded-lg flex items-center gap-3 mb-1 transition-colors ${isActive
+                  ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
+                  : 'text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#222227]'
+                  }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
                 <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
@@ -143,11 +140,10 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout }: Adm
                         onNavigate(item.id);
                         setIsSidebarOpen(false);
                       }}
-                      className={`w-full h-12 px-3 rounded-lg flex items-center gap-3 mb-1 transition-colors ${
-                        isActive
-                          ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
-                          : 'text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#222227]'
-                      }`}
+                      className={`w-full h-12 px-3 rounded-lg flex items-center gap-3 mb-1 transition-colors ${isActive
+                        ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
+                        : 'text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#222227]'
+                        }`}
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
                       <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
