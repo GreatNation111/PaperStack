@@ -17,6 +17,8 @@ import { db } from '@/lib/firebase';
 export interface Department {
     id: string;
     name: string;
+    code?: string;
+    icon?: string;
 }
 
 export interface Course {

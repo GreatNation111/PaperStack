@@ -6,7 +6,6 @@ import {
     Edit3,
     Trash2,
     X,
-    CheckCircle,
     Building2,
     BookOpen,
     Cpu,
@@ -16,8 +15,7 @@ import {
     Activity,
     Briefcase,
     Music,
-    Palette,
-    MoreVertical
+    Palette
 } from 'lucide-react';
 import {
     collection,
@@ -35,10 +33,8 @@ import { db } from '@/lib/firebase';
 interface Department {
     id: string;
     name: string;
-    code: string; // e.g., 'CSC'
+    code: string;
     icon: string;
-    active: boolean;
-    createdAt?: any;
 }
 
 const ICON_PRESETS = [
@@ -66,8 +62,7 @@ export function DepartmentsManager() {
     const [formData, setFormData] = useState({
         name: '',
         code: '',
-        icon: 'Building2',
-        active: true
+        icon: 'Building2'
     });
     const [formError, setFormError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -95,8 +90,7 @@ export function DepartmentsManager() {
         setFormData({
             name: '',
             code: '',
-            icon: 'Building2',
-            active: true
+            icon: 'Building2'
         });
         setFormError('');
         setShowModal(true);
@@ -108,8 +102,7 @@ export function DepartmentsManager() {
         setFormData({
             name: dept.name,
             code: dept.code || '',
-            icon: dept.icon || 'Building2',
-            active: dept.active
+            icon: dept.icon || 'Building2'
         });
         setFormError('');
         setShowModal(true);
@@ -127,7 +120,6 @@ export function DepartmentsManager() {
                     name: formData.name.trim(),
                     code: formData.code.trim().toUpperCase(),
                     icon: formData.icon,
-                    active: formData.active,
                     updatedAt: serverTimestamp()
                 });
             } else {
@@ -135,7 +127,6 @@ export function DepartmentsManager() {
                     name: formData.name.trim(),
                     code: formData.code.trim().toUpperCase(),
                     icon: formData.icon,
-                    active: formData.active,
                     createdAt: serverTimestamp()
                 });
             }
@@ -232,14 +223,6 @@ export function DepartmentsManager() {
                                 <h3 className="text-lg font-semibold text-[#E5E5E5] mb-1">{dept.name}</h3>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="px-2 py-0.5 bg-[#333] rounded text-xs text-[#AAA] font-medium">{dept.code}</span>
-                                    {dept.active ? (
-                                        <span className="flex items-center gap-1 text-xs text-[#10B981]">
-                                            <CheckCircle className="w-3 h-3" />
-                                            Active
-                                        </span>
-                                    ) : (
-                                        <span className="text-xs text-[#666]">Inactive</span>
-                                    )}
                                 </div>
                             </motion.div>
                         );
@@ -300,31 +283,14 @@ export function DepartmentsManager() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#AAA] mb-2">Code</label>
-                                        <input
-                                            value={formData.code}
-                                            onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                            placeholder="e.g. CSC"
-                                            className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-4 py-3 text-[#E5E5E5] focus:border-[#4F46E5] outline-none transition-colors"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#AAA] mb-2">Status</label>
-                                        <div className="flex items-center h-[50px] px-2">
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.active}
-                                                    onChange={e => setFormData({ ...formData, active: e.target.checked })}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4F46E5]"></div>
-                                                <span className="ml-3 text-sm font-medium text-[#AAA]">{formData.active ? 'Active' : 'Hidden'}</span>
-                                            </label>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[#AAA] mb-2">Code</label>
+                                    <input
+                                        value={formData.code}
+                                        onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                                        placeholder="e.g. CSC"
+                                        className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-4 py-3 text-[#E5E5E5] focus:border-[#4F46E5] outline-none transition-colors"
+                                    />
                                 </div>
 
                                 <div>
@@ -339,8 +305,8 @@ export function DepartmentsManager() {
                                                     onClick={() => setFormData({ ...formData, icon: preset.name })}
                                                     type="button"
                                                     className={`aspect-square rounded-xl flex items-center justify-center border transition-all ${isSelected
-                                                            ? 'bg-[#4F46E5]/20 border-[#4F46E5] text-[#4F46E5]'
-                                                            : 'bg-[#0F1115] border-[#333] text-[#666] hover:border-[#666] hover:text-[#AAA]'
+                                                        ? 'bg-[#4F46E5]/20 border-[#4F46E5] text-[#4F46E5]'
+                                                        : 'bg-[#0F1115] border-[#333] text-[#666] hover:border-[#666] hover:text-[#AAA]'
                                                         }`}
                                                     title={preset.name}
                                                 >

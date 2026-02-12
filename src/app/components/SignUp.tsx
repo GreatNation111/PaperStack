@@ -30,9 +30,12 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
       await setDoc(doc(db, 'users', user.uid), {
         name: fullName,
         email: email,
-        department: 'General',
+        departmentId: 'General',
         level: '100L',
+        role: 'student',
         bookmarks: [],
+        readNotifications: [],
+        recentCourses: [],
         createdAt: serverTimestamp(),
       });
       onComplete(fullName);
@@ -58,9 +61,12 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
       await setDoc(doc(db, 'users', user.uid), {
         name: user.displayName || 'Student',
         email: user.email,
-        department: 'General',
+        departmentId: 'General',
         level: '100L',
+        role: 'student',
         bookmarks: [],
+        readNotifications: [],
+        recentCourses: [],
         createdAt: serverTimestamp(),
       }, { merge: true });
       onComplete(user.displayName || 'Student');

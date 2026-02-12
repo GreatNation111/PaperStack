@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Flag, Search } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface FeatureRequest {
     id: string;
     userId: string;
-    featureKey: string;
-    createdAt: any;
+    feature: string;
+    timestamp: any;
 }
 
 interface GroupedRequest {
@@ -22,14 +22,13 @@ export function FeatureRequestsViewer() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Fetch Requests
     useEffect(() => {
-        const q = query(collection(db, 'feature_interest'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'feature_interest'), orderBy('timestamp', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetched = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            } as FeatureRequest));
+            } as any));
             setRequests(fetched);
             setLoading(false);
         }, (error) => {
@@ -39,24 +38,22 @@ export function FeatureRequestsViewer() {
         return () => unsubscribe();
     }, []);
 
-    // Group by featureKey
-    const groupedRequests: GroupedRequest[] = Object.values(requests.reduce((acc, curr) => {
-        if (!acc[curr.featureKey]) {
-            acc[curr.featureKey] = {
-                featureKey: curr.featureKey,
+    const groupedRequests: GroupedRequest[] = Object.values(requests.reduce((acc, curr: any) => {
+        const key = curr.feature || 'unknown';
+        if (!acc[key]) {
+            acc[key] = {
+                featureKey: key,
                 count: 0,
-                lastRequested: curr.createdAt
+                lastRequested: curr.timestamp
             };
         }
-        acc[curr.featureKey].count += 1;
-        // Keep the most recent date
-        if (curr.createdAt > acc[curr.featureKey].lastRequested) {
-            acc[curr.featureKey].lastRequested = curr.createdAt;
+        acc[key].count += 1;
+        if (curr.timestamp > acc[key].lastRequested) {
+            acc[key].lastRequested = curr.timestamp;
         }
         return acc;
     }, {} as Record<string, GroupedRequest>));
 
-    // Sort by count (popular first)
     const sortedRequests = groupedRequests
         .sort((a, b) => b.count - a.count)
         .filter(r => r.featureKey.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -68,8 +65,6 @@ export function FeatureRequestsViewer() {
     };
 
     const formatFeatureName = (key: string) => {
-        // Basic formatting to make keys look nicer
-        // e.g. "course_request_csc101" -> "Course Request: CSC101"
         return key
             .replace(/_/g, ' ')
             .replace(/(\w)(\w*)/g, (_, g1, g2) => g1.toUpperCase() + g2.toLowerCase());
@@ -77,13 +72,11 @@ export function FeatureRequestsViewer() {
 
     return (
         <div className="min-h-screen p-4 lg:p-8">
-            {/* Header */}
             <div className="mb-6">
                 <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Feature Requests</h1>
                 <p className="text-sm text-[#AAA]">Users explicitly requested these features via "Notify Me"</p>
             </div>
 
-            {/* Search */}
             <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-4 mb-4">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#666]" strokeWidth={1.5} />
@@ -97,7 +90,6 @@ export function FeatureRequestsViewer() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-5">
                     <div className="text-sm text-[#AAA] mb-1">Total Requests</div>
@@ -109,7 +101,6 @@ export function FeatureRequestsViewer() {
                 </div>
             </div>
 
-            {/* Table */}
             <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -152,7 +143,7 @@ export function FeatureRequestsViewer() {
                                                 <div className="h-2 w-24 bg-[#333] rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full bg-[#EC4899]"
-                                                        style={{ width: `${Math.min((item.count / 50) * 100, 100)}%` }} // Arbitrary scale for now
+                                                        style={{ width: `${Math.min((item.count / 50) * 100, 100)}%` }}
                                                     />
                                                 </div>
                                                 <span className="text-sm font-medium text-[#E5E5E5]">{item.count}</span>

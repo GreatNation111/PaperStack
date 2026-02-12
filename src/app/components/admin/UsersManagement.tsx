@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Filter, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role?: 'student' | 'admin' | 'contributor';
+  departmentId?: string;
   department?: string;
   level?: string;
-  joinDate?: any; // Timestamp
+  role?: 'student' | 'contributor' | 'admin';
   createdAt?: any;
 }
 
@@ -32,13 +32,20 @@ export function UsersManagement() {
 
   // Fetch Users
   useEffect(() => {
-    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as User));
-      setUsers(fetched);
+
+      const sorted = fetched.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || a.createdAt || 0;
+        const timeB = b.createdAt?.toMillis?.() || b.createdAt || 0;
+        return timeB - timeA;
+      });
+
+      setUsers(sorted);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching users:", error);
@@ -51,22 +58,18 @@ export function UsersManagement() {
     if (!selectedUser) return;
     setIsPromoting(true);
     try {
-      // 1. Update User Role
       const userRef = doc(db, 'users', selectedUser.id);
       await updateDoc(userRef, {
         role: 'contributor'
       });
 
-      // 2. Create/Update Contributor Doc
-      // We use the same ID as the user for easy lookup
       const contributorRef = doc(db, 'contributors', selectedUser.id);
       await setDoc(contributorRef, {
         name: selectedUser.name,
-        department: selectedUser.department || 'Unassigned',
+        department: selectedUser.department || selectedUser.departmentId || 'Unassigned',
         levelOrYear: selectedUser.level || 'Unknown',
         contributionCount: contributorForm.contributionCount,
-        badge: contributorForm.badge,
-        updatedAt: serverTimestamp()
+        badge: contributorForm.badge
       }, { merge: true });
 
       setShowContributorModal(false);
@@ -83,6 +86,7 @@ export function UsersManagement() {
     const matchesSearch =
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.departmentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.department?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesRole = roleFilter === 'all' || (user.role || 'student') === roleFilter;
@@ -92,20 +96,17 @@ export function UsersManagement() {
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'N/A';
-    // Handle Firestore Timestamp or Date object
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
   };
 
   return (
     <div className="min-h-screen p-4 lg:p-8">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Users Management</h1>
         <p className="text-sm text-[#AAA]">{users.length} total users</p>
       </div>
 
-      {/* Search & Filter */}
       <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-4 mb-4">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1 relative">
@@ -129,7 +130,6 @@ export function UsersManagement() {
                 <span>Role: {roleFilter === 'all' ? 'All' : roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)}</span>
                 <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
               </button>
-              {/* Simple Dropdown for MVP */}
               <div className="absolute right-0 top-full mt-2 w-40 bg-[#1A1A1F] border border-[#333] rounded-lg shadow-xl hidden group-hover:block z-20">
                 {['all', 'student', 'contributor', 'admin'].map(r => (
                   <button
@@ -146,7 +146,6 @@ export function UsersManagement() {
         </div>
       </div>
 
-      {/* Desktop Table */}
       <div className="hidden lg:block bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -183,10 +182,10 @@ export function UsersManagement() {
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${user.role === 'admin'
-                          ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
-                          : user.role === 'contributor'
-                            ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
-                            : 'bg-[#666]/10 text-[#AAA]'
+                            ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
+                            : user.role === 'contributor'
+                              ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
+                              : 'bg-[#666]/10 text-[#AAA]'
                           }`}
                       >
                         {user.role === 'admin' && <Shield className="w-3 h-3" strokeWidth={2} />}
@@ -194,8 +193,8 @@ export function UsersManagement() {
                         {(user.role || 'Student').charAt(0).toUpperCase() + (user.role || 'student').slice(1)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-[#AAA]">{user.department || 'N/A'}</td>
-                    <td className="px-4 py-4 text-sm text-[#AAA]">{formatDate(user.createdAt || user.joinDate)}</td>
+                    <td className="px-4 py-4 text-sm text-[#AAA]">{user.department || user.departmentId || 'N/A'}</td>
+                    <td className="px-4 py-4 text-sm text-[#AAA]">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
                         {(!user.role || user.role === 'student') && (
@@ -222,7 +221,6 @@ export function UsersManagement() {
         </div>
       </div>
 
-      {/* Contributor Modal */}
       <AnimatePresence>
         {showContributorModal && selectedUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
