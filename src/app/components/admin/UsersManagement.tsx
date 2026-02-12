@@ -319,9 +319,9 @@ export function UsersManagement() {
               <div className="p-6 space-y-4">
                 <div className="flex flex-col items-center text-center p-4 bg-[#0F1115] rounded-2xl mb-2">
                   <div className="w-16 h-16 rounded-full bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5] mb-3 text-2xl font-bold">
-                    {selectedUser.name.charAt(0)}
+                    {selectedUser.name?.charAt(0) || 'U'}
                   </div>
-                  <div className="text-lg font-bold text-[#E5E5E5]">{selectedUser.name}</div>
+                  <div className="text-lg font-bold text-[#E5E5E5]">{selectedUser.name || 'Unknown User'}</div>
                   <div className="text-sm text-[#AAA]">{selectedUser.email}</div>
                 </div>
 
