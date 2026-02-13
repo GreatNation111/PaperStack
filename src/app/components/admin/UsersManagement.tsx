@@ -83,17 +83,49 @@ export function UsersManagement() {
     }
   };
 
+  // Actions
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
     setShowDetailModal(true);
   };
 
+  const handleDemoteUser = async (user: User) => {
+    if (!window.confirm(`Are you sure you want to demote ${user.name || 'this user'} back to Student?`)) return;
+    try {
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, { role: 'student' });
+
+      // Also delete from contributors collection if they exist there
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'contributors', user.id));
+
+      alert(user.name + " demoted to student.");
+    } catch (error) {
+      console.error("Error demoting user:", error);
+      alert("Demotion failed.");
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (!window.confirm(`CRITICAL: Are you sure you want to DELETE ${user.name || 'this user'}? This will remove their entire account. This cannot be undone.`)) return;
+    try {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'users', user.id));
+      await deleteDoc(doc(db, 'contributors', user.id));
+      alert("User deleted successfully.");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Deletion failed.");
+    }
+  };
+
   const filteredUsers = users.filter(user => {
-    const matchesSearch =
-      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.departmentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.department?.toLowerCase().includes(searchQuery.toLowerCase());
+    const s = searchQuery.toLowerCase();
+    const matchesSearch = !s ||
+      user.name?.toLowerCase().includes(s) ||
+      user.email?.toLowerCase().includes(s) ||
+      user.departmentId?.toLowerCase().includes(s) ||
+      user.department?.toLowerCase().includes(s);
 
     const matchesRole = roleFilter === 'all' || (user.role || 'student') === roleFilter;
 
@@ -110,7 +142,10 @@ export function UsersManagement() {
     <div className="min-h-screen p-4 lg:p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Users Management</h1>
-        <p className="text-sm text-[#AAA]">{users.length} total users</p>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-[#AAA]">{users.length} total users</span>
+          {roleFilter !== 'all' && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full capitalize">{roleFilter}s only</span>}
+        </div>
       </div>
 
       <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-4 mb-4">
@@ -127,17 +162,13 @@ export function UsersManagement() {
           </div>
 
           <div className="flex gap-2">
-            <button className="h-11 px-4 bg-[#0F1115] border border-[#333] rounded-lg text-[#AAA] hover:text-[#E5E5E5] hover:border-[#4F46E5] transition-colors flex items-center gap-2">
-              <Filter className="w-5 h-5" strokeWidth={1.5} />
-              <span className="hidden sm:inline">Filter</span>
-            </button>
             <div className="relative group">
               <button className="h-11 px-4 bg-[#0F1115] border border-[#333] rounded-lg text-[#AAA] hover:text-[#E5E5E5] hover:border-[#4F46E5] transition-colors flex items-center gap-2">
                 <span>Role: {roleFilter === 'all' ? 'All' : roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)}</span>
                 <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
               </button>
               <div className="absolute right-0 top-full mt-2 w-40 bg-[#1A1A1F] border border-[#333] rounded-lg shadow-xl hidden group-hover:block z-20">
-                {['all', 'student', 'contributor', 'admin'].map(r => (
+                {['all', 'student', 'contributor'].map(r => (
                   <button
                     key={r}
                     onClick={() => setRoleFilter(r as any)}
@@ -172,7 +203,7 @@ export function UsersManagement() {
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[#666]">No users found.</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#666]">No users found for this filter.</td>
                 </tr>
               ) : (
                 filteredUsers.map((user, index) => (
@@ -183,7 +214,7 @@ export function UsersManagement() {
                     transition={{ delay: index * 0.05 }}
                     className="hover:bg-[#222227] transition-colors"
                   >
-                    <td className="px-4 py-4 text-sm font-medium text-[#E5E5E5]">{user.name}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-[#E5E5E5]">{user.name || 'Unknown'}</td>
                     <td className="px-4 py-4 text-sm text-[#AAA]">{user.email}</td>
                     <td className="px-4 py-4">
                       <span
@@ -199,11 +230,11 @@ export function UsersManagement() {
                         {(user.role || 'Student').charAt(0).toUpperCase() + (user.role || 'student').slice(1)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-[#AAA]">{user.department || user.departmentId || 'N/A'}</td>
+                    <td className="px-4 py-4 text-sm text-[#AAA]">{user.department || user.departmentId || 'GENERAL'}</td>
                     <td className="px-4 py-4 text-sm text-[#AAA]">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        {(!user.role || user.role === 'student') && (
+                        {(!user.role || user.role === 'student') ? (
                           <button
                             onClick={() => {
                               setSelectedUser(user);
@@ -213,13 +244,25 @@ export function UsersManagement() {
                           >
                             Promote
                           </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDemoteUser(user)}
+                            className="text-xs bg-red-500/10 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                          >
+                            Demote
+                          </button>
                         )}
-                        <button
-                          onClick={() => handleViewUser(user)}
-                          className="w-8 h-8 flex items-center justify-center text-[#AAA] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 rounded-lg transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4" strokeWidth={1.5} />
-                        </button>
+                        <div className="relative group/menu">
+                          <button
+                            className="w-8 h-8 flex items-center justify-center text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#333] rounded-lg transition-colors"
+                          >
+                            <MoreVertical className="w-4 h-4" strokeWidth={1.5} />
+                          </button>
+                          <div className="absolute right-0 top-full mt-1 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-hover/menu:block z-[60] overflow-hidden">
+                            <button onClick={() => handleViewUser(user)} className="w-full text-left px-4 py-2 text-xs text-[#AAA] hover:bg-[#333] hover:text-white">View Details</button>
+                            <button onClick={() => handleDeleteUser(user)} className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2A2A2F]">Delete Account</button>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </motion.tr>
@@ -246,9 +289,9 @@ export function UsersManagement() {
               className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-4 flex flex-col gap-4"
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-[#E5E5E5] mb-0.5">{user.name}</h3>
-                  <p className="text-xs text-[#AAA] mb-2">{user.email}</p>
+                <div className="flex-1 min-w-0 pr-2">
+                  <h3 className="text-base font-semibold text-[#E5E5E5] truncate mb-0.5">{user.name || 'Unknown'}</h3>
+                  <p className="text-xs text-[#AAA] truncate mb-2">{user.email}</p>
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.role === 'admin'
                       ? 'bg-[#4F46E5]/10 text-[#4F46E5]'
@@ -262,38 +305,43 @@ export function UsersManagement() {
                     {user.role || 'student'}
                   </span>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-[10px] text-[#555] font-medium uppercase tracking-tighter">Joined {formatDate(user.createdAt)}</div>
-                  <div className="text-[10px] text-[#888] font-bold">{user.department || user.departmentId || 'GENERAL'}</div>
+                <div className="flex flex-col items-end gap-1.5 text-right shrink-0">
+                  <div className="text-[9px] text-[#555] font-bold uppercase tracking-widest">{formatDate(user.createdAt)}</div>
+                  <div className="text-[10px] text-primary/80 font-bold max-w-[100px] truncate">{(user.department || user.departmentId || 'GENERAL').toUpperCase()}</div>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-[#2A2A2F] flex items-center justify-between">
                 <div className="flex gap-2">
-                  {(!user.role || user.role === 'student') && (
+                  {(!user.role || user.role === 'student') ? (
                     <button
                       onClick={() => {
                         setSelectedUser(user);
                         setShowContributorModal(true);
                       }}
-                      className="px-4 py-2 bg-[#F59E0B]/10 text-[#F59E0B] rounded-xl text-xs font-semibold active:scale-95 transition-transform"
+                      className="px-4 py-2 bg-[#F59E0B]/10 text-[#F59E0B] rounded-xl text-xs font-bold active:scale-95 transition-transform"
                     >
                       Promote
                     </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDemoteUser(user)}
+                      className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                    >
+                      Demote
+                    </button>
                   )}
-                  <button
-                    onClick={() => handleViewUser(user)}
-                    className="px-4 py-2 bg-[#333] text-[#AAA] rounded-xl text-xs font-semibold active:scale-95 transition-transform"
-                  >
-                    View
-                  </button>
                 </div>
-                <button
-                  onClick={() => handleViewUser(user)}
-                  className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform"
-                >
-                  <MoreVertical className="w-5 h-5" />
-                </button>
+
+                <div className="relative group">
+                  <button className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform">
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                  <div className="absolute right-0 bottom-full mb-2 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-focus-within:block z-[60] overflow-hidden">
+                    <button onClick={() => handleViewUser(user)} className="w-full text-left px-4 py-3 text-xs text-[#AAA] active:bg-[#333]">View Details</button>
+                    <button onClick={() => handleDeleteUser(user)} className="w-full text-left px-4 py-3 text-xs text-red-500 active:bg-red-500/10 border-t border-[#2A2A2F]">Delete User</button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ))
@@ -303,53 +351,53 @@ export function UsersManagement() {
       <AnimatePresence>
         {/* Detail Modal */}
         {showDetailModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
             >
-              <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-[#E5E5E5]">User Profile</h3>
-                <button onClick={() => setShowDetailModal(false)} className="text-[#AAA] hover:text-white">
-                  <X className="w-5 h-5" />
+              <div className="px-6 py-5 border-b border-[#2A2A2F] flex items-center justify-between bg-[#15151A]">
+                <h3 className="text-lg font-bold text-[#E5E5E5]">User Profile</h3>
+                <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#333] transition-colors">
+                  <X className="w-5 h-5 text-[#AAA]" />
                 </button>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="flex flex-col items-center text-center p-4 bg-[#0F1115] rounded-2xl mb-2">
-                  <div className="w-16 h-16 rounded-full bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5] mb-3 text-2xl font-bold">
+              <div className="p-6 space-y-6">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-full bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5] mb-4 text-3xl font-black shadow-inner">
                     {selectedUser.name?.charAt(0) || 'U'}
                   </div>
-                  <div className="text-lg font-bold text-[#E5E5E5]">{selectedUser.name || 'Unknown User'}</div>
-                  <div className="text-sm text-[#AAA]">{selectedUser.email}</div>
+                  <div className="text-xl font-black text-[#E5E5E5] leading-tight mb-1">{selectedUser.name || 'Unknown User'}</div>
+                  <div className="text-sm text-[#888] font-medium">{selectedUser.email}</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#666]">Role</span>
-                    <span className="text-[#E5E5E5] capitalize">{selectedUser.role || 'student'}</span>
+                <div className="bg-[#0F1115] rounded-2xl p-4 space-y-4">
+                  <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                    <span className="text-[#666] font-semibold uppercase tracking-tighter">Current Role</span>
+                    <span className="text-primary font-bold capitalize">{selectedUser.role || 'student'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#666]">Department</span>
-                    <span className="text-[#E5E5E5]">{selectedUser.department || selectedUser.departmentId || 'Unassigned'}</span>
+                  <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                    <span className="text-[#666] font-semibold uppercase tracking-tighter">Department</span>
+                    <span className="text-[#E5E5E5] font-bold">{selectedUser.department || selectedUser.departmentId || 'Unassigned'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#666]">Level</span>
-                    <span className="text-[#E5E5E5]">{selectedUser.level || 'N/A'}</span>
+                  <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                    <span className="text-[#666] font-semibold uppercase tracking-tighter">Level/Year</span>
+                    <span className="text-[#E5E5E5] font-bold">{selectedUser.level || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#666]">Member Since</span>
-                    <span className="text-[#E5E5E5]">{formatDate(selectedUser.createdAt)}</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-[#666] font-semibold uppercase tracking-tighter">Registered On</span>
+                    <span className="text-[#AAA] font-bold">{formatDate(selectedUser.createdAt)}</span>
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-[#2A2A2F] flex justify-end gap-3">
+              <div className="px-6 py-5 bg-[#15151A] border-t border-[#2A2A2F]">
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="w-full bg-[#333] text-[#E5E5E5] py-2 rounded-xl text-sm font-medium hover:bg-[#444] transition-colors"
+                  className="w-full bg-[#333] text-white py-3.5 rounded-2xl text-sm font-bold hover:bg-[#444] active:scale-[0.98] transition-all"
                 >
-                  Close
+                  Return
                 </button>
               </div>
             </motion.div>
@@ -358,45 +406,63 @@ export function UsersManagement() {
 
         {/* Contributor Modal */}
         {showContributorModal && selectedUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
             >
-              <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-[#E5E5E5]">Make Contributor</h3>
-                <button onClick={() => setShowContributorModal(false)} className="text-[#AAA] hover:text-white">
-                  <X className="w-5 h-5" />
+              <div className="px-6 py-5 border-b border-[#2A2A2F] flex items-center justify-between bg-[#15151A]">
+                <h3 className="text-lg font-bold text-[#E5E5E5]">Promote User</h3>
+                <button onClick={() => setShowContributorModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#333] transition-colors">
+                  <X className="w-5 h-5 text-[#AAA]" />
                 </button>
               </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-[#AAA]">
-                  Promoting <strong>{selectedUser.name}</strong> to Contributor will allow them to be recognized in the app.
-                </p>
+              <div className="p-6 space-y-5">
+                <div className="bg-[#F59E0B]/10 p-4 rounded-2xl border border-[#F59E0B]/20">
+                  <p className="text-sm text-[#F59E0B] font-medium leading-relaxed">
+                    Promoting <strong>{selectedUser.name}</strong> will grant them contributor status and visibility in public sections.
+                  </p>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#AAA] mb-1">Badge Title</label>
+                  <label className="block text-xs font-black text-[#666] uppercase tracking-widest mb-2.5 ml-1">Badge Title</label>
                   <select
                     value={contributorForm.badge}
                     onChange={(e) => setContributorForm({ ...contributorForm, badge: e.target.value })}
-                    className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-3 py-2 text-[#E5E5E5] outline-none focus:border-[#F59E0B]"
+                    className="w-full bg-[#0F1115] border border-[#333] rounded-2xl px-4 py-3.5 text-[#E5E5E5] font-bold outline-none focus:border-[#F59E0B] transition-colors appearance-none"
                   >
                     <option value="Rising Star">Rising Star</option>
                     <option value="Top Contributor">Top Contributor</option>
                     <option value="Verified Tutor">Verified Tutor</option>
+                    <option value="Senior Editor">Senior Editor</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-xs font-black text-[#666] uppercase tracking-widest mb-2.5 ml-1">Papers Contributed</label>
+                  <input
+                    type="number"
+                    value={contributorForm.contributionCount}
+                    onChange={(e) => setContributorForm({ ...contributorForm, contributionCount: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-[#0F1115] border border-[#333] rounded-2xl px-4 py-3.5 text-[#E5E5E5] font-bold outline-none focus:border-[#F59E0B] transition-colors"
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
               </div>
-              <div className="px-6 py-4 border-t border-[#2A2A2F] flex justify-end gap-3">
-                <button onClick={() => setShowContributorModal(false)} className="text-[#AAA] text-sm hover:text-white">Cancel</button>
+              <div className="px-6 py-5 bg-[#15151A] border-t border-[#2A2A2F] flex gap-3">
+                <button
+                  onClick={() => setShowContributorModal(false)}
+                  className="flex-1 px-4 py-3.5 text-sm font-bold text-[#AAA] hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handlePromoteToContributor}
                   disabled={isPromoting}
-                  className="bg-[#F59E0B] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#D97706] disabled:opacity-50 flex items-center gap-2"
+                  className="flex-[1.5] bg-[#F59E0B] text-black px-6 py-3.5 rounded-2xl text-sm font-bold hover:bg-[#D97706] disabled:opacity-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
-                  {isPromoting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Confirm
+                  {isPromoting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm Promotion"}
                 </button>
               </div>
             </motion.div>
