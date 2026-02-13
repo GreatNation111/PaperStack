@@ -125,16 +125,19 @@ export function CoursesManagement() {
       };
 
       if (isEditing && editingId) {
-        await updateDoc(doc(db, 'courses', editingId), payload);
+        // For editing, we keep the existing ID
+        await updateDoc(doc(db, 'courses', editingId), {
+          ...payload,
+          id: editingId // Ensure ID field stays in sync
+        });
       } else {
-        // Generate custom ID from code (e.g. 'PHY 101' -> 'phy101')
+        // Create custom readable ID (e.g. 'BUS 101' -> 'bus101')
         const customId = formData.code.toLowerCase().replace(/[^a-z0-9]/g, '');
-        // Check if exists
-        // simplified for now, just overwrite or fail? setDoc overwrites.
-        // Better to check existence but setDoc is fine for "upsert" behavior if we want that, 
-        // or we can just use setDoc. The user wants it consistent with seed data.
+
+        // Save with custom ID and include id field in body
         await setDoc(doc(db, 'courses', customId), {
           ...payload,
+          id: customId,
           papers: formData.papers || 0
         });
       }

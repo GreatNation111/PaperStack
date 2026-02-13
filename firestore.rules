@@ -12,35 +12,40 @@ service cloud.firestore {
     }
 
     // Development/Seeding: Allow unauthenticated writes to seed collection
-    // This allows the seed script to run without auth issues
     match /seed/{document=**} {
       allow read, write: if true;
     }
 
     // --- ADMINS Collection ---
-    // Allow all reads so we can check admin status (not circular)
-    // Only allow writes via Firebase Console for security
     match /admins/{uid} {
-      allow read: if true; // Changed from isAdmin() to prevent circular dependency
-      allow write: if false; // Admins managed only via Firebase Console for security
+      allow read: if true; 
+      allow write: if false; 
     }
 
     // --- USERS ---
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // FIX: Added || isAdmin() to allow you to see other user profiles in management
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       
       // --- USER SUBCOLLECTIONS ---
       match /bookmarks/{paperId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       }
       
       match /read_notifications/{notificationId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       }
       
       match /recent_courses/{courseId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       }
+    }
+
+    // --- SYSTEM CONFIG ---
+    // Added rule to allow everyone to read global config, but only admins to modify it
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // --- ADMIN COLLECTIONS ---
@@ -58,8 +63,6 @@ service cloud.firestore {
     }
 
     // --- DATA COLLECTIONS ---
-    // PUBLIC READ: Everyone can see departments, courses, contributors, notifications
-    // WRITE: Only admins can modify data
     match /departments/{deptId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -69,7 +72,6 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
       
-      // Future: Empty papers subcollection for in-app viewer
       match /papers/{paperId} {
         allow read: if true;
         allow write: if isAdmin();

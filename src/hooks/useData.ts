@@ -641,6 +641,25 @@ export function usePaper(paperId: string | undefined) {
     return { paper, loading };
 }
 
+export function useUserCount() {
+    const [count, setCount] = useState<number>(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, 'users'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCount(snapshot.size);
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching user count:', err);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    return { count, loading };
+}
+
 export async function createGlobalNotification(title: string, message: string, type: 'info' | 'alert' | 'success') {
     try {
         await addDoc(collection(db, 'notifications'), {
@@ -654,4 +673,47 @@ export async function createGlobalNotification(title: string, message: string, t
         console.error('Error creating notification:', e);
         throw e;
     }
+}
+
+export interface GlobalConfig {
+    maintenanceMode: boolean;
+    currentSemester: string;
+    currentSession: string;
+    platformName: string;
+}
+
+export function useGlobalConfig() {
+    const [config, setConfig] = useState<GlobalConfig>({
+        maintenanceMode: false,
+        currentSemester: '1st',
+        currentSession: '2023/2024',
+        platformName: 'PaperStack'
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, 'config', 'global'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as GlobalConfig;
+                // Normalize semester for consistent filtering across components
+                // "1st" -> "First", "2nd" -> "Second"
+                const normalized = data.currentSemester === '1st' ? 'First' :
+                    data.currentSemester === '2nd' ? 'Second' :
+                        data.currentSemester;
+
+                setConfig({
+                    ...data,
+                    currentSemester: normalized
+                });
+            }
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching global config:', err);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { config, loading };
 }
