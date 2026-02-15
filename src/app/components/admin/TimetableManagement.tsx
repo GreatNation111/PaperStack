@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Calendar, Clock, Save, Loader2, AlertCircle, CheckCircle, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, Save, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDepartments, Timetable, Exam } from '@/hooks/useData';
@@ -13,7 +13,7 @@ export function TimetableManagement() {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // Form for adding/editing exams in the list
+    // Form for adding/editing exams
     const [newExam, setNewExam] = useState<Exam>({
         courseCode: '',
         title: '',
@@ -52,7 +52,7 @@ export function TimetableManagement() {
             );
             setTimetable({ ...timetable, exams: updatedExams });
             setNewExam({ courseCode: '', title: '', date: '', time: '' });
-            setMessage({ type: 'success', text: `Staged ${newExam.courseCode}. Remember to Publish!` });
+            setMessage({ type: 'success', text: `Exam for ${newExam.courseCode} added to list.` });
             setTimeout(() => setMessage(null), 4000);
         }
     };
@@ -70,11 +70,11 @@ export function TimetableManagement() {
         setMessage(null);
         try {
             await setDoc(doc(db, 'timetables', selectedDeptId), timetable);
-            setMessage({ type: 'success', text: 'Timetable published live!' });
+            setMessage({ type: 'success', text: 'Timetable published successfully!' });
             setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             console.error('Error saving timetable:', error);
-            setMessage({ type: 'error', text: 'Failed to publish updates.' });
+            setMessage({ type: 'error', text: 'Failed to publish timetable.' });
         } finally {
             setIsSaving(false);
         }
@@ -82,200 +82,175 @@ export function TimetableManagement() {
 
     return (
         <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 pb-32">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card border border-border p-8 rounded-[3rem] shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <Calendar className="w-24 h-24 rotate-12" />
-                </div>
+            {/* Header Section - Simplified */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-card border border-border p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden">
                 <div className="relative z-10">
-                    <h1 className="text-4xl font-black text-foreground uppercase tracking-tighter mb-1">Registry</h1>
-                    <p className="text-secondary text-xs font-black uppercase tracking-[0.3em] opacity-40">Exam Schedule Management</p>
+                    <h1 className="text-3xl font-black text-foreground tracking-tight mb-1">Timetable Manager</h1>
+                    <p className="text-secondary text-xs font-bold uppercase tracking-widest opacity-60">Manage Exam Schedules by Department</p>
                 </div>
                 {timetable && (
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="h-16 px-10 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 shadow-2xl shadow-primary/20"
+                        className="h-14 px-8 bg-primary text-primary-foreground rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/10"
                     >
-                        {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
-                        Deploy Updates
+                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        Publish Changes
                     </button>
                 )}
             </div>
 
-            {/* Selection Engine */}
-            <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-sm">
+            {/* Department Selection */}
+            <div className="bg-card border border-border rounded-[2rem] p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-secondary" />
-                    </div>
-                    <label className="text-xs font-black text-secondary uppercase tracking-[0.2em]">Context Override</label>
+                    <Calendar className="w-5 h-5 text-secondary opacity-60" />
+                    <label className="text-[11px] font-bold text-secondary uppercase tracking-widest">Select Department</label>
                 </div>
-                <div className="flex gap-4">
-                    <select
-                        value={selectedDeptId}
-                        onChange={(e) => setSelectedDeptId(e.target.value)}
-                        className="flex-1 h-16 px-8 bg-muted/40 border-2 border-transparent focus:border-primary/50 focus:bg-background rounded-2xl text-foreground font-black outline-none transition-all appearance-none cursor-pointer text-sm"
-                    >
-                        <option value="">-- INITIALIZE DEPARTMENT INTERFACE --</option>
-                        {departments.map((dept) => (
-                            <option key={dept.id} value={dept.id}>{dept.name}</option>
-                        ))}
-                    </select>
-                </div>
+                <select
+                    value={selectedDeptId}
+                    onChange={(e) => setSelectedDeptId(e.target.value)}
+                    className="w-full h-14 px-6 bg-muted/40 border-2 border-transparent focus:border-primary/40 rounded-xl text-foreground font-bold outline-none transition-all appearance-none cursor-pointer text-sm"
+                >
+                    <option value="">-- Choose a Department --</option>
+                    {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                </select>
             </div>
 
             <AnimatePresence mode="wait">
                 {!selectedDeptId ? (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 1.05 }}
-                        className="py-40 text-center bg-muted/5 rounded-[4rem] border-2 border-dashed border-border/30"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="py-32 text-center bg-muted/5 rounded-[3rem] border-2 border-dashed border-border/30"
                     >
-                        <Sparkles className="w-20 h-20 text-secondary/10 mx-auto mb-8 animate-pulse" />
-                        <h2 className="text-2xl font-black text-secondary/20 uppercase tracking-[0.4em]">Standby</h2>
-                        <p className="text-secondary/30 text-[10px] font-black uppercase tracking-widest mt-4">Select a department to activate management protocols</p>
+                        <Calendar className="w-16 h-16 text-secondary/10 mx-auto mb-6" />
+                        <h2 className="text-xl font-bold text-secondary/40 uppercase tracking-widest">Waiting for Selection</h2>
+                        <p className="text-secondary/30 text-[11px] font-bold uppercase tracking-widest mt-2">Pick a department to manage its exam timetable</p>
                     </motion.div>
                 ) : loading ? (
-                    <div className="flex flex-col items-center justify-center py-40 space-y-6">
-                        <div className="relative w-16 h-16">
-                            <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-                            <div className="absolute inset-4 rounded-full border-4 border-accent/10 border-b-accent animate-spin-slow" />
-                        </div>
-                        <span className="text-[10px] font-black text-secondary uppercase tracking-widest animate-pulse">Syncing Departmental Data...</span>
+                    <div className="flex flex-col items-center justify-center py-40 space-y-4">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        <span className="text-[11px] font-bold text-secondary uppercase tracking-widest opacity-60">Loading Schedule...</span>
                     </div>
                 ) : (
                     <motion.div
-                        initial={{ opacity: 0, y: 40 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-8"
                     >
-                        {/* Status Feedback */}
+                        {/* Status Message */}
                         {message && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
-                                className={`p-6 rounded-[2rem] border-2 flex items-center gap-4 ${message.type === 'success' ? 'bg-green-500/5 border-green-500/10 text-green-600' : 'bg-red-500/5 border-red-500/10 text-red-600'
-                                    }`}
+                                className={`p-4 rounded-2xl border flex items-center gap-3 ${message.type === 'success' ? 'bg-green-500/5 border-green-500/10 text-green-600' : 'bg-red-500/5 border-red-500/10 text-red-600'}`}
                             >
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${message.type === 'success' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                                    {message.type === 'success' ? <CheckCircle className="w-6 h-6 shadow-sm" /> : <AlertCircle className="w-6 h-6 shadow-sm" />}
-                                </div>
-                                <span className="font-black text-xs uppercase tracking-tight">{message.text}</span>
+                                {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                                <span className="font-bold text-xs uppercase tracking-tight">{message.text}</span>
                             </motion.div>
                         )}
 
-                        {/* Split Workstation Layout */}
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-                            {/* Input Form Column */}
-                            <div className="xl:col-span-4 bg-card border border-border rounded-[3.5rem] p-10 shadow-2xl relative overflow-hidden">
-                                <h3 className="text-sm font-black text-foreground uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
-                                    <div className="w-3 h-3 rounded-full bg-primary" />
-                                    Stage Exam Instance
+                            {/* Entry Form */}
+                            <div className="xl:col-span-4 bg-card border border-border rounded-[2.5rem] p-8 shadow-sm">
+                                <h3 className="text-xs font-black text-foreground uppercase tracking-widest mb-8 flex items-center gap-2">
+                                    <Plus className="w-4 h-4 text-primary" />
+                                    Add New Exam
                                 </h3>
-                                <div className="space-y-8">
+                                <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] ml-2">Course Identifier</label>
+                                        <label className="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">Course Code</label>
                                         <input
-                                            placeholder="E.G. PHY 101"
+                                            placeholder="PHY 101"
                                             value={newExam.courseCode}
                                             onChange={(e) => setNewExam({ ...newExam, courseCode: e.target.value.toUpperCase() })}
-                                            className="w-full h-16 px-8 bg-muted/30 border-2 border-transparent focus:border-primary/40 rounded-[1.5rem] text-sm font-black placeholder:text-secondary focus:bg-background outline-none transition-all shadow-inner"
+                                            className="w-full h-12 px-5 bg-muted/30 border border-border focus:border-primary/40 rounded-xl text-sm font-bold outline-none transition-all"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] ml-2">Full Course Title</label>
+                                        <label className="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">Course Title</label>
                                         <input
-                                            placeholder="E.G. INTRO TO PHYSICS"
+                                            placeholder="Introduction to Physics"
                                             value={newExam.title}
                                             onChange={(e) => setNewExam({ ...newExam, title: e.target.value })}
-                                            className="w-full h-16 px-8 bg-muted/30 border-2 border-transparent focus:border-primary/40 rounded-[1.5rem] text-sm font-black placeholder:text-secondary focus:bg-background outline-none transition-all shadow-inner"
+                                            className="w-full h-12 px-5 bg-muted/30 border border-border focus:border-primary/40 rounded-xl text-sm font-bold outline-none transition-all"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] ml-2">Exam Date</label>
+                                            <label className="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">Date</label>
                                             <input
                                                 type="date"
                                                 value={newExam.date}
                                                 onChange={(e) => setNewExam({ ...newExam, date: e.target.value })}
-                                                className="w-full h-16 px-8 bg-muted/30 border-2 border-transparent focus:border-primary/40 rounded-[1.5rem] text-sm font-black focus:bg-background outline-none transition-all shadow-inner"
+                                                className="w-full h-12 px-4 bg-muted/30 border border-border focus:border-primary/40 rounded-xl text-sm font-bold outline-none transition-all"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] ml-2">Start Time</label>
+                                            <label className="text-[10px] font-bold text-secondary uppercase tracking-widest ml-1">Time</label>
                                             <input
                                                 type="time"
                                                 value={newExam.time}
                                                 onChange={(e) => setNewExam({ ...newExam, time: e.target.value })}
-                                                className="w-full h-16 px-8 bg-muted/30 border-2 border-transparent focus:border-primary/40 rounded-[1.5rem] text-sm font-black focus:bg-background outline-none transition-all shadow-inner"
+                                                className="w-full h-12 px-4 bg-muted/30 border border-border focus:border-primary/40 rounded-xl text-sm font-bold outline-none transition-all"
                                             />
                                         </div>
                                     </div>
                                     <button
                                         onClick={handleAddExam}
                                         disabled={!newExam.courseCode || !newExam.date || !newExam.time}
-                                        className="w-full h-16 bg-muted/40 hover:bg-primary text-foreground hover:text-primary-foreground rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-20 flex items-center justify-center gap-3 group active:scale-95"
+                                        className="w-full h-14 bg-muted hover:bg-primary text-secondary hover:text-white rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                                     >
-                                        <Plus className="w-5 h-5 transition-transform group-hover:rotate-90" />
-                                        Commit to Registry
+                                        <Plus className="w-4 h-4" />
+                                        Add to List
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Registry List Column */}
-                            <div className="xl:col-span-8 space-y-8">
-                                <div className="flex items-center justify-between px-8">
-                                    <h3 className="text-sm font-black text-secondary uppercase tracking-[0.3em] opacity-40">Live Registry Logs</h3>
-                                    <div className="flex items-center gap-2 px-6 py-2 bg-primary/5 rounded-full border border-primary/10">
-                                        <div className="w-2 h-2 rounded-full bg-primary" />
-                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest leading-none mt-0.5">
-                                            {timetable?.exams.length || 0} Entries
-                                        </span>
+                            {/* Exam List */}
+                            <div className="xl:col-span-8 space-y-6">
+                                <div className="flex items-center justify-between px-4">
+                                    <h3 className="text-[11px] font-bold text-secondary uppercase tracking-widest opacity-60">Scheduled Exams</h3>
+                                    <div className="text-[10px] font-bold text-primary bg-primary/5 border border-primary/10 px-4 py-1 rounded-full uppercase tracking-widest">
+                                        {timetable?.exams.length || 0} Total
                                     </div>
                                 </div>
 
-                                <div className="space-y-5 max-h-[800px] overflow-y-auto pr-4 custom-scrollbar scroll-smooth">
+                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                     {timetable?.exams.length === 0 ? (
-                                        <div className="py-32 text-center bg-card/30 rounded-[3.5rem] border-2 border-dashed border-border/50">
-                                            <div className="text-secondary/20 font-black uppercase tracking-[0.2em] text-sm">Registry is Empty</div>
-                                            <div className="text-secondary/10 text-[10px] font-bold uppercase tracking-widest mt-2">Stage an exam instance to populate</div>
+                                        <div className="py-20 text-center bg-muted/5 rounded-[2.5rem] border border-dashed border-border">
+                                            <p className="text-secondary/40 font-bold uppercase tracking-widest text-xs">No exams added yet</p>
                                         </div>
                                     ) : (
                                         timetable?.exams.map((exam, idx) => (
                                             <motion.div
                                                 layout
-                                                initial={{ opacity: 0, x: 30 }}
-                                                animate={{ opacity: 1, x: 0 }}
                                                 key={`${exam.courseCode}-${idx}`}
-                                                className="bg-card border-2 border-border/40 hover:border-primary/20 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center gap-8 group transition-all hover:shadow-2xl hover:shadow-primary/5"
+                                                className="bg-card border border-border hover:border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 group transition-all"
                                             >
-                                                <div className="w-20 h-20 rounded-[2rem] bg-muted/40 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-all group-hover:rotate-3">
-                                                    <Calendar className="w-10 h-10 text-primary opacity-20 group-hover:opacity-100 transition-all" strokeWidth={1} />
+                                                <div className="w-14 h-14 rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                                                    <Calendar className="w-7 h-7 text-primary/30 group-hover:text-primary transition-colors" />
                                                 </div>
-                                                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-                                                    <div className="space-y-1">
-                                                        <div className="font-black text-foreground text-2xl tracking-tighter uppercase">{exam.courseCode}</div>
-                                                        <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60 truncate">{exam.title}</div>
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                                    <div>
+                                                        <div className="font-black text-foreground text-xl tracking-tight uppercase leading-tight">{exam.courseCode}</div>
+                                                        <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60 truncate">{exam.title}</div>
                                                     </div>
-                                                    <div className="flex flex-col lg:items-end justify-center space-y-2">
-                                                        <div className="flex items-center gap-3 px-5 py-2.5 bg-muted/30 rounded-2xl border border-transparent group-hover:border-primary/10 transition-all">
-                                                            <Clock className="w-4 h-4 text-primary" />
-                                                            <span className="text-xs font-black text-foreground uppercase tracking-tight">
-                                                                {exam.date} <span className="text-secondary mx-2 font-black">•</span> {exam.time}
-                                                            </span>
+                                                    <div className="flex items-center md:justify-end gap-3">
+                                                        <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 rounded-xl border border-transparent group-hover:border-primary/10 transition-all text-xs font-bold text-foreground italic">
+                                                            <Clock className="w-3.5 h-3.5 text-primary" />
+                                                            {exam.date} • {exam.time}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex-shrink-0">
-                                                    <button
-                                                        onClick={() => handleRemoveExam(idx)}
-                                                        className="w-14 h-14 flex items-center justify-center text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-3xl transition-all active:scale-75 border border-transparent hover:border-red-500/20"
-                                                    >
-                                                        <Trash2 className="w-6 h-6" />
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => handleRemoveExam(idx)}
+                                                    className="w-10 h-10 flex items-center justify-center text-red-500/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
                                             </motion.div>
                                         ))
                                     )}
