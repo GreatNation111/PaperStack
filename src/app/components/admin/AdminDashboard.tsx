@@ -124,6 +124,28 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </div>
           <ArrowUpRight className="w-5 h-5 text-[#EC4899] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
         </button>
+
+        <button
+          onClick={() => onNavigate('timetable')}
+          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-amber-500 hover:bg-amber-500/5 transition-all group"
+        >
+          <div>
+            <div className="text-base font-medium text-[#E5E5E5] mb-1">Timetable Manager</div>
+            <div className="text-xs text-[#AAA]">Manage exam schedules</div>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+        </button>
+
+        <button
+          onClick={() => onNavigate('repeated-questions')}
+          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-indigo-400 hover:bg-indigo-400/5 transition-all group"
+        >
+          <div>
+            <div className="text-base font-medium text-[#E5E5E5] mb-1">Question Curator</div>
+            <div className="text-xs text-[#AAA]">Manage repeat patterns</div>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+        </button>
       </div>
 
       {/* Keyboard Shortcuts Hint - Desktop only */}

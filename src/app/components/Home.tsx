@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useDepartments, useRecentCourses, useNotifications, useUserProfile } from '@/hooks/useData';
+import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
+import { PremiumLock } from './PremiumLock';
+import { useNavigate } from 'react-router-dom';
+import { differenceInDays, parseISO, isAfter } from 'date-fns';
 
 interface HomeProps {
   userName: string;
@@ -12,10 +15,12 @@ interface HomeProps {
 
 export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { profile } = useUserProfile(user?.uid);
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses: recentCourses, loading: loadingCourses } = useRecentCourses(user?.uid);
   const { unreadCount } = useNotifications(user?.uid);
+  const { timetable, loading: loadingTimetable } = useTimetable(profile?.departmentId);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Helper for department styling and icons
@@ -33,6 +38,13 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
     (course.code?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (course.title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
+
+  // Logic to find the next imminent exam
+  const nextExam = timetable?.exams
+    ?.filter(exam => isAfter(parseISO(exam.date), new Date()))
+    ?.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())[0];
+
+  const daysTilExam = nextExam ? differenceInDays(parseISO(nextExam.date), new Date()) : null;
 
   return (
     <div className="pb-24 min-h-screen">
@@ -113,25 +125,48 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
           )}
         </div>
 
-        {/* Upcoming Exams Highlight - Hide when searching to focus on results */}
+        {/* Upcoming Exams Highlight - Department Scoped & Premium Gated */}
         {!searchQuery && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-primary rounded-2xl p-6 mb-8"
+            className="mb-8"
           >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="text-xl font-bold text-primary-foreground mb-1">Upcoming Exams</h3>
-                <p className="text-primary-foreground/80 text-sm">First Semester 2024/2025</p>
+            <PremiumLock
+              isPremium={!!profile?.isPremium}
+              featureName="Exam Countdown"
+              onAction={() => navigate('/premium')}
+            >
+              <div className="bg-primary rounded-2xl p-6 relative overflow-hidden">
+                {/* Visual Background Accent */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -mr-16 -mt-16 rounded-full" />
+
+                <div className="flex items-start justify-between mb-3 relative z-10">
+                  <div>
+                    <h3 className="text-xl font-bold text-primary-foreground mb-1">Upcoming Exams</h3>
+                    <p className="text-primary-foreground/70 text-sm font-medium">
+                      {nextExam ? `${nextExam.courseCode}: ${nextExam.title}` : 'No upcoming exams'}
+                    </p>
+                  </div>
+                  <Calendar className="w-6 h-6 text-primary-foreground opacity-80" strokeWidth={1.5} />
+                </div>
+
+                <div className="flex items-baseline gap-2 mb-4 relative z-10">
+                  <span className="text-primary-foreground text-4xl font-black">
+                    {daysTilExam !== null ? daysTilExam : '--'}
+                  </span>
+                  <span className="text-primary-foreground/80 text-sm font-bold uppercase tracking-widest">Days Left</span>
+                </div>
+
+                <button
+                  onClick={() => navigate('/timetable')}
+                  className="w-full h-12 bg-primary-foreground text-primary rounded-xl font-black text-xs uppercase tracking-widest hover:bg-opacity-90 transition-all relative z-10 shadow-lg"
+                >
+                  View Full Timetable
+                </button>
               </div>
-              <Calendar className="w-6 h-6 text-primary-foreground" strokeWidth={1.5} />
-            </div>
-            <div className="text-primary-foreground/90 text-2xl font-bold mb-4">14 Days</div>
-            <button className="w-full h-12 bg-primary-foreground text-primary rounded-xl font-semibold hover:opacity-90 transition-all">
-              Prepare Now
-            </button>
+            </PremiumLock>
           </motion.div>
         )}
 

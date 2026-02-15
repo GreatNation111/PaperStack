@@ -19,6 +19,7 @@ import { HelpSupport } from '@/app/components/HelpSupport';
 import { TermsPrivacy } from '@/app/components/TermsPrivacy';
 import { AdminContainer, AdminLogin } from '@/app/components/admin';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
+import { PremiumPlans } from '@/app/components/PremiumPlans';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
@@ -121,6 +122,7 @@ function AppContent() {
               <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} departmentId={location.state?.departmentId} />} />
               <Route path="/view-paper/:paperId" element={<PastQuestionsViewer onBack={() => navigate(-1)} />} />
               <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
+              <Route path="/premium" element={<PremiumPlans />} />
               <Route path="/repeated-questions" element={<RepeatedQuestions />} />
               <Route path="/help" element={<HelpSupport />} />
               <Route path="/terms" element={<TermsPrivacy />} />

@@ -12,6 +12,8 @@ import {
   Settings,
   Layers,
   LogOut,
+  Calendar,
+  MessageCircleQuestion,
 } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -39,6 +41,8 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout }: Adm
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'departments', label: 'Departments', icon: Building2 },
     { id: 'courses', label: 'Courses', icon: BookOpen },
+    { id: 'timetable', label: 'Timetable', icon: Calendar },
+    { id: 'repeated-questions', label: 'Question Curator', icon: MessageCircleQuestion },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'reports', label: 'Feature Requests', icon: Flag, badge: featureRequestCount },
     { id: 'settings', label: 'Settings', icon: Settings },

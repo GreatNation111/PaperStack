@@ -1,8 +1,10 @@
 import { ArrowLeft, Filter, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
-import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, useGlobalConfig } from '@/hooks/useData';
+import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, useGlobalConfig, useUserProfile } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Crown, AlertCircle, X } from 'lucide-react';
 
 interface PastQuestionsProps {
     onBack: () => void;
@@ -15,8 +17,11 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
     const { config } = useGlobalConfig();
     const { courses, loading: loadingCourses } = useCourses(departmentId);
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const { profile } = useUserProfile(user?.uid);
     const { bookmarkIds } = useBookmarks(user?.uid);
     const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
+    const [showUpsell, setShowUpsell] = useState(false);
 
     // Default semester logic: Sync with global settings until user manually chooses a semester
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
@@ -33,8 +38,16 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
     const handleToggleBookmark = async (e: React.MouseEvent, courseId: string) => {
         e.stopPropagation();
         if (!user) return;
+
+        const isCurrentlyBookmarked = bookmarkIds.includes(courseId);
+
+        // Premium Limit Check: Max 3 for free users
+        if (!isCurrentlyBookmarked && !profile?.isPremium && bookmarkIds.length >= 3) {
+            setShowUpsell(true);
+            return;
+        }
+
         try {
-            const isCurrentlyBookmarked = bookmarkIds.includes(courseId);
             await toggleBookmark(user.uid, courseId, isCurrentlyBookmarked);
         } catch (err) {
             console.error('[PastQuestions] Error toggling bookmark:', err);
@@ -212,6 +225,63 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                     </div>
                 )}
             </div>
+
+            {/* Premium Upsell Modal */}
+            <AnimatePresence>
+                {showUpsell && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowUpsell(false)}
+                            className="absolute inset-0 bg-background/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-sm bg-card border border-border rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        >
+                            {/* Visual Accent */}
+                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <Crown className="w-24 h-24 text-primary" />
+                            </div>
+
+                            <button
+                                onClick={() => setShowUpsell(false)}
+                                className="absolute top-6 right-6 p-2 hover:bg-muted rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 text-secondary" />
+                            </button>
+
+                            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
+                                <Crown className="w-8 h-8 text-primary" />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-foreground mb-2">Limit Reached!</h3>
+                            <p className="text-secondary text-sm font-medium leading-relaxed mb-8">
+                                Free users can save up to <span className="text-foreground font-bold">3 courses</span>. Upgrade to Premium for unlimited bookmarks and more academic tools.
+                            </p>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => navigate('/premium')}
+                                    className="w-full h-14 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
+                                >
+                                    Unlock Premium
+                                </button>
+                                <button
+                                    onClick={() => setShowUpsell(false)}
+                                    className="w-full h-14 bg-muted/50 text-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-muted transition-colors"
+                                >
+                                    Maybe Later
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

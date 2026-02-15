@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Settings, Shield, Bell, Database, Crown, Loader2, Save, AlertTriangle, RefreshCw, Calendar } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { useGlobalConfig, GlobalConfig, useUserCount } from '@/hooks/useData';
 
 export function AdminSettings() {
@@ -10,6 +10,7 @@ export function AdminSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { count: userCount } = useUserCount();
+  const [pricingStats, setPricingStats] = useState({ '1000': 0, '2000': 0, '3000': 0, total: 0 });
 
   // Local state for immediate UI feedback before blur/save
   const [localConfig, setLocalConfig] = useState<GlobalConfig | null>(null);
@@ -20,6 +21,21 @@ export function AdminSettings() {
       setLocalConfig(config);
     }
   }, [config, loading]);
+
+  // Fetch pricing feedback stats
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'pricingFeedback'), (snap) => {
+      const stats = { '1000': 0, '2000': 0, '3000': 0, total: snap.size };
+      snap.docs.forEach(doc => {
+        const choice = doc.data().suggestedPrice?.toString();
+        if (choice && choice in stats) {
+          stats[choice as keyof typeof stats]++;
+        }
+      });
+      setPricingStats(stats);
+    });
+    return () => unsub();
+  }, []);
 
   const handleUpdateConfig = async (updates: Partial<GlobalConfig>) => {
     if (!localConfig) return;
@@ -186,50 +202,65 @@ export function AdminSettings() {
               </div>
             </div>
 
-            {/* System Integrity */}
-            <div className="bg-primary/5 border border-primary/10 rounded-[2.5rem] p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8">
-                <Crown className="w-6 h-6 text-primary opacity-20" />
-              </div>
-              <div className="h-full flex flex-col justify-between relative z-10">
-                <h3 className="text-sm font-black text-primary uppercase tracking-widest mb-8">System Integrity</h3>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <p className="text-[10px] font-black text-[#555] uppercase tracking-widest mb-2">Active Users</p>
-                    <p className="text-2xl font-black text-white">{userCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-[#555] uppercase tracking-widest mb-2">Database Read</p>
-                    <p className="text-2xl font-black text-white">0.2ms</p>
-                  </div>
-                </div>
-                <div className="pt-6">
-                  <div className="w-full bg-primary/10 h-1 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: '94%' }}
-                      className="bg-primary h-full"
-                    ></motion.div>
-                  </div>
-                  <p className="text-[8px] font-black text-primary uppercase tracking-[0.3em] mt-3">Platform_Stability_Optimal</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Quick Actions Footer */}
-          <div className="flex flex-wrap items-center gap-4 bg-[#111] border border-[#1a1a1a] rounded-3xl p-6">
-            <div className="flex items-center gap-3 px-4 border-r border-[#222]">
-              <Database className="w-4 h-4 text-[#444]" />
-              <span className="text-[10px] font-black text-[#444] uppercase tracking-widest">Database Backup</span>
-            </div>
-            <button className="text-[10px] font-black text-[#666] hover:text-white uppercase tracking-widest px-4 transition-colors">Export Logs</button>
-            <button className="text-[10px] font-black text-[#666] hover:text-white uppercase tracking-widest px-4 transition-colors">Clear Cache</button>
-            <button className="text-[10px] font-black text-[#EF4444] hover:text-red-400 uppercase tracking-widest px-4 transition-colors ml-auto">Hard Reset System</button>
           </div>
 
         </div>
+
+        {/* Pricing Feedback Analytics */}
+        <div className="bg-[#080808] border border-[#151515] rounded-[2.5rem] p-10">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-sm font-black text-[#444] uppercase tracking-[0.2em] mb-2">Pricing Intel</h3>
+              <p className="text-xs text-[#666] font-medium leading-relaxed">Aggregated semester pricing feedback from users.</p>
+            </div>
+            <div className="bg-primary/5 px-4 py-2 rounded-xl text-[10px] font-black text-primary uppercase tracking-widest border border-primary/10">
+              {pricingStats.total} responses
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {['1000', '2000', '3000'].map((price) => {
+              const count = pricingStats[price as keyof typeof pricingStats] as number;
+              const percentage = pricingStats.total > 0 ? (count / pricingStats.total) * 100 : 0;
+              return (
+                <div key={price} className="bg-[#111] border border-[#1a1a1a] rounded-[2rem] p-8 flex flex-col items-center text-center space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-muted/20 flex items-center justify-center">
+                    <Database className="w-5 h-5 text-secondary" />
+                  </div>
+                  <div>
+                    <h4 className="text-2xl font-black text-white">₦{parseInt(price).toLocaleString()}</h4>
+                    <p className="text-[10px] font-black text-[#444] uppercase tracking-widest">Target Price</p>
+                  </div>
+                  <div className="w-full space-y-2">
+                    <div className="w-full bg-[#1a1a1a] h-1.5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        className="bg-primary h-full"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-black text-[#666] uppercase tracking-tighter">
+                      <span>{count} votes</span>
+                      <span>{percentage.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Actions Footer */}
+        <div className="flex flex-wrap items-center gap-4 bg-[#111] border border-[#1a1a1a] rounded-3xl p-6">
+          <div className="flex items-center gap-3 px-4 border-r border-[#222]">
+            <Database className="w-4 h-4 text-[#444]" />
+            <span className="text-[10px] font-black text-[#444] uppercase tracking-widest">Database Backup</span>
+          </div>
+          <button className="text-[10px] font-black text-[#666] hover:text-white uppercase tracking-widest px-4 transition-colors">Export Logs</button>
+          <button className="text-[10px] font-black text-[#666] hover:text-white uppercase tracking-widest px-4 transition-colors">Clear Cache</button>
+          <button className="text-[10px] font-black text-[#EF4444] hover:text-red-400 uppercase tracking-widest px-4 transition-colors ml-auto">Hard Reset System</button>
+        </div>
+
       </div>
     </div>
   );

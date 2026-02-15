@@ -66,6 +66,8 @@ export interface UserProfile {
     level?: string;
     avatar?: string;
     savedPapers?: string[]; // Array of paper IDs
+    isPremium: boolean;
+    premiumExpiresAt?: any; // Firestore Timestamp
 }
 
 export interface Notification {
@@ -716,4 +718,98 @@ export function useGlobalConfig() {
     }, []);
 
     return { config, loading };
+}
+
+// PREMIUM ARCHITECTURE HOOKS & FUNCTIONS
+
+export interface Exam {
+    courseId?: string;
+    courseCode: string;
+    title: string;
+    date: string;
+    time: string;
+}
+
+export interface Timetable {
+    departmentId: string;
+    exams: Exam[];
+}
+
+export function useTimetable(departmentId: string | undefined) {
+    const [timetable, setTimetable] = useState<Timetable | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!departmentId) {
+            setTimetable(null);
+            setLoading(false);
+            return;
+        }
+
+        const unsub = onSnapshot(doc(db, 'timetables', departmentId), (snap) => {
+            if (snap.exists()) {
+                setTimetable(snap.data() as Timetable);
+            } else {
+                setTimetable(null);
+            }
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching timetable:', err);
+            setLoading(false);
+        });
+
+        return () => unsub();
+    }, [departmentId]);
+
+    return { timetable, loading };
+}
+
+export interface RepeatedQuestion {
+    courseId?: string;
+    courseCode: string;
+    questions: string;
+    updatedAt: any;
+}
+
+export interface RepeatedQuestionsData {
+    departmentId: string;
+    items: RepeatedQuestion[];
+}
+
+export function useRepeatedQuestions(departmentId: string | undefined) {
+    const [data, setData] = useState<RepeatedQuestionsData | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!departmentId) {
+            setData(null);
+            setLoading(false);
+            return;
+        }
+
+        const unsub = onSnapshot(doc(db, 'repeated_questions', departmentId), (snap) => {
+            if (snap.exists()) {
+                setData(snap.data() as RepeatedQuestionsData);
+            } else {
+                setData(null);
+            }
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching repeated questions:', err);
+            setLoading(false);
+        });
+
+        return () => unsub();
+    }, [departmentId]);
+
+    return { data, loading };
+}
+
+export async function submitPricingFeedback(userId: string, selectedAmount: number) {
+    if (!userId) return;
+    await setDoc(doc(db, 'pricingFeedback', userId), {
+        userId,
+        selectedAmount,
+        createdAt: new Date()
+    });
 }
