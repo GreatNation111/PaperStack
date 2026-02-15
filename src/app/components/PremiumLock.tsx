@@ -25,7 +25,7 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
             </div>
 
             {/* Frosted Glass Overlay with adaptive padding */}
-            <div className={`absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/30 backdrop-blur-[6px] ${compact ? 'p-4' : 'p-6 lg:p-10'}`}>
+            <div className={`absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/30 backdrop-blur-[6px] ${compact ? 'p-3' : 'p-6 lg:p-10'}`}>
                 {/* Decorative background elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-30">
                     <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[60px] rounded-full animate-pulse" />
@@ -39,15 +39,15 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                     className="relative z-20 flex flex-col items-center text-center max-w-[280px]"
                 >
                     {/* Icon Shield Container */}
-                    <div className={`relative ${compact ? 'mb-4' : 'mb-6'}`}>
-                        <div className={`${compact ? 'w-12 h-12' : 'w-14 h-14 lg:w-16 lg:h-16'} rounded-2xl lg:rounded-3xl flex items-center justify-center rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-2xl overflow-visible ${isComingSoon
+                    <div className={`relative ${compact ? 'mb-3' : 'mb-6'}`}>
+                        <div className={`${compact ? 'w-10 h-10' : 'w-14 h-14 lg:w-16 lg:h-16'} rounded-2xl lg:rounded-3xl flex items-center justify-center rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-2xl overflow-visible ${isComingSoon
                             ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20'
                             : 'bg-primary/10 text-primary border border-primary/20'
                             }`}>
                             {isComingSoon ? (
-                                <BellRing className={`${compact ? 'w-5 h-5' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
+                                <BellRing className={`${compact ? 'w-4 h-4' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
                             ) : (
-                                <Lock className={`${compact ? 'w-5 h-5' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
+                                <Lock className={`${compact ? 'w-4 h-4' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
                             )}
                         </div>
                         {/* Floating sparkle */}
@@ -63,8 +63,8 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                         </motion.div>
                     </div>
 
-                    <div className={`${compact ? 'space-y-0.5 mb-4' : 'space-y-1 mb-6'}`}>
-                        <h3 className={`${compact ? 'text-base' : 'text-lg lg:text-xl'} font-black text-foreground tracking-tight uppercase`}>
+                    <div className={`${compact ? 'space-y-0 mb-3' : 'space-y-1 mb-6'}`}>
+                        <h3 className={`${compact ? 'text-sm' : 'text-lg lg:text-xl'} font-black text-foreground tracking-tight uppercase`}>
                             {isComingSoon ? 'Roadmap' : 'Locked'}
                         </h3>
                         <p className="text-secondary text-[10px] lg:text-xs font-bold leading-relaxed uppercase tracking-widest opacity-80">
@@ -76,7 +76,7 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
 
                     <button
                         onClick={onAction}
-                        className={`group/btn w-full ${compact ? 'h-10' : 'h-14'} rounded-2xl flex items-center justify-center px-8 gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden active:scale-95 ${isComingSoon
+                        className={`group/btn w-full ${compact ? 'h-9' : 'h-14'} rounded-2xl flex items-center justify-center px-8 gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden active:scale-95 ${isComingSoon
                             ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/20'
                             : 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
                             }`}

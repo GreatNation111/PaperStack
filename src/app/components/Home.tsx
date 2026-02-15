@@ -139,7 +139,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
               onAction={() => navigate('/premium')}
               compact={true}
             >
-              <div className="bg-primary rounded-2xl p-6 relative overflow-hidden">
+              <div className="bg-primary rounded-2xl p-8 min-h-[240px] flex flex-col justify-between relative overflow-hidden">
                 {/* Visual Background Accent */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -mr-16 -mt-16 rounded-full" />
 
