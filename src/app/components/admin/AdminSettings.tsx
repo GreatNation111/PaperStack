@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, Shield, Bell, Database, Crown, Loader2, Save, AlertTriangle, RefreshCw, Calendar, TrendingUp, Users, CheckCircle } from 'lucide-react';
+import { Settings, Shield, Bell, Loader2, Save, AlertTriangle, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { useGlobalConfig, GlobalConfig, useUserCount } from '@/hooks/useData';
@@ -192,7 +192,7 @@ export function AdminSettings() {
 
           <div className="bg-card border border-border rounded-[3rem] p-8 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {prices.map((price, idx) => {
+              {prices.map((price, _idx) => {
                 const count = pricingStats[price as keyof typeof pricingStats] as number;
                 const percentage = pricingStats.total > 0 ? (count / pricingStats.total) * 100 : 0;
                 const isLeader = price === marketLeader;
@@ -219,7 +219,7 @@ export function AdminSettings() {
 
                     <div className="space-y-4">
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Share</span>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Popularity</span>
                         <span className={`text-sm font-black ${isLeader ? 'text-primary' : 'text-foreground opacity-60'}`}>{percentage.toFixed(0)}%</span>
                       </div>
                       <div className="h-2 bg-muted/60 rounded-full overflow-hidden border border-border">

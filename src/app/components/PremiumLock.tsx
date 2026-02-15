@@ -7,9 +7,10 @@ interface PremiumLockProps {
     type?: 'premium' | 'coming_soon';
     featureName: string;
     onAction?: () => void;
+    compact?: boolean;
 }
 
-export function PremiumLock({ children, isPremium, type = 'premium', featureName, onAction }: PremiumLockProps) {
+export function PremiumLock({ children, isPremium, type = 'premium', featureName, onAction, compact = false }: PremiumLockProps) {
     if (isPremium && type === 'premium') {
         return <>{children}</>;
     }
@@ -23,8 +24,8 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                 {children}
             </div>
 
-            {/* Frosted Glass Overlay */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 bg-background/30 backdrop-blur-[6px]">
+            {/* Frosted Glass Overlay with adaptive padding */}
+            <div className={`absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/30 backdrop-blur-[6px] ${compact ? 'p-4' : 'p-6 lg:p-10'}`}>
                 {/* Decorative background elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-30">
                     <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[60px] rounded-full animate-pulse" />
@@ -38,15 +39,15 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                     className="relative z-20 flex flex-col items-center text-center max-w-[280px]"
                 >
                     {/* Icon Shield Container */}
-                    <div className="relative mb-6">
-                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-2xl ${isComingSoon
+                    <div className={`relative ${compact ? 'mb-4' : 'mb-6'}`}>
+                        <div className={`${compact ? 'w-12 h-12' : 'w-14 h-14 lg:w-16 lg:h-16'} rounded-2xl lg:rounded-3xl flex items-center justify-center rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-2xl overflow-visible ${isComingSoon
                             ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20'
                             : 'bg-primary/10 text-primary border border-primary/20'
                             }`}>
                             {isComingSoon ? (
-                                <BellRing className="w-10 h-10" strokeWidth={1.5} />
+                                <BellRing className={`${compact ? 'w-5 h-5' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
                             ) : (
-                                <Lock className="w-10 h-10" strokeWidth={1.5} />
+                                <Lock className={`${compact ? 'w-5 h-5' : 'w-6 h-6 lg:w-8 lg:h-8'}`} strokeWidth={1.5} />
                             )}
                         </div>
                         {/* Floating sparkle */}
@@ -56,26 +57,26 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                                 rotate: [0, 90, 0]
                             }}
                             transition={{ duration: 4, repeat: Infinity }}
-                            className="absolute -top-2 -right-2 text-primary"
+                            className={`absolute text-primary ${compact ? '-top-0.5 -right-0.5' : '-top-1 -right-1'}`}
                         >
-                            <Sparkles className="w-6 h-6" />
+                            <Sparkles className={`${compact ? 'w-3 h-3' : 'w-4 h-4 lg:w-5 lg:h-5'}`} />
                         </motion.div>
                     </div>
 
-                    <div className="space-y-2 mb-8">
-                        <h3 className="text-xl font-black text-foreground tracking-tight uppercase">
+                    <div className={`${compact ? 'space-y-0.5 mb-4' : 'space-y-1 mb-6'}`}>
+                        <h3 className={`${compact ? 'text-base' : 'text-lg lg:text-xl'} font-black text-foreground tracking-tight uppercase`}>
                             {isComingSoon ? 'Roadmap' : 'Locked'}
                         </h3>
-                        <p className="text-secondary text-xs font-bold leading-relaxed uppercase tracking-widest opacity-80">
+                        <p className="text-secondary text-[10px] lg:text-xs font-bold leading-relaxed uppercase tracking-widest opacity-80">
                             {isComingSoon
-                                ? `${featureName} is currently in final development.`
-                                : `Unlock ${featureName} with Pro Access.`}
+                                ? `${featureName} is in dev.`
+                                : `Unlock ${featureName} with Pro.`}
                         </p>
                     </div>
 
                     <button
                         onClick={onAction}
-                        className={`group/btn w-full h-14 rounded-2xl flex items-center justify-center gap-3 text-xs font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden active:scale-95 ${isComingSoon
+                        className={`group/btn w-full ${compact ? 'h-10' : 'h-14'} rounded-2xl flex items-center justify-center px-8 gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden active:scale-95 ${isComingSoon
                             ? 'bg-indigo-500 text-white shadow-xl shadow-indigo-500/20'
                             : 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
                             }`}
@@ -98,7 +99,7 @@ export function PremiumLock({ children, isPremium, type = 'premium', featureName
                     </button>
 
                     {!isComingSoon && (
-                        <p className="mt-6 text-[10px] font-black text-secondary uppercase tracking-widest opacity-40">
+                        <p className={`mt-6 text-[10px] font-black text-secondary uppercase tracking-widest opacity-40 ${compact ? 'hidden' : 'block'}`}>
                             PaperStack Premium Access
                         </p>
                     )}

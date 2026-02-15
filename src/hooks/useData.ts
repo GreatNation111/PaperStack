@@ -805,11 +805,11 @@ export function useRepeatedQuestions(departmentId: string | undefined) {
     return { data, loading };
 }
 
-export async function submitPricingFeedback(userId: string, selectedAmount: number) {
+export async function submitPricingFeedback(userId: string, suggestedPrice: number) {
     if (!userId) return;
     await setDoc(doc(db, 'pricingFeedback', userId), {
         userId,
-        selectedAmount,
+        suggestedPrice,
         createdAt: new Date()
     });
 }

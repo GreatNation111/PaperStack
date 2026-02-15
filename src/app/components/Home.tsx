@@ -137,6 +137,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
               isPremium={!!profile?.isPremium}
               featureName="Exam Countdown"
               onAction={() => navigate('/premium')}
+              compact={true}
             >
               <div className="bg-primary rounded-2xl p-6 relative overflow-hidden">
                 {/* Visual Background Accent */}
