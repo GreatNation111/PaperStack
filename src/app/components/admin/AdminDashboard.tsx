@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SeedAdminData } from './SeedAdminData';
 import { motion } from 'motion/react';
-import { Building2, BookOpen, Users, Flag, ArrowUpRight } from 'lucide-react';
+import { Building2, BookOpen, Users, Flag, ArrowUpRight, LayoutDashboard, Bell } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -53,18 +53,23 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   ];
 
   return (
-    <div className="min-h-screen p-4 lg:p-8">
+    <div className="p-4 lg:p-8 space-y-10">
       {/* Header */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Dashboard</h1>
-          <p className="text-sm text-[#AAA]">Overview of platform content</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-card border border-border p-10 rounded-[3rem] shadow-sm relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-10 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+          <LayoutDashboard className="w-32 h-32 rotate-12" />
         </div>
-        <SeedAdminData />
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black text-foreground uppercase tracking-tighter mb-1 italic">Intel View</h1>
+          <p className="text-secondary text-xs font-black uppercase tracking-[0.3em] opacity-40">Operational Platform Overview</p>
+        </div>
+        <div className="relative z-10">
+          <SeedAdminData />
+        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -73,88 +78,129 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-6 hover:border-[#333] transition-colors"
+              className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-primary/20 transition-all group overflow-hidden relative"
             >
-              <div className="flex items-start justify-between mb-4">
+              <div
+                className="absolute -top-4 -right-4 w-24 h-24 blur-3xl opacity-10 rounded-full"
+                style={{ backgroundColor: stat.color }}
+              />
+              <div className="flex items-center gap-4 mb-8">
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:-rotate-6"
                   style={{ backgroundColor: `${stat.color}15` }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: stat.color }} strokeWidth={1.5} />
+                  <Icon className="w-6 h-6" style={{ color: stat.color }} strokeWidth={2.5} />
                 </div>
               </div>
-              <div className="text-3xl font-semibold text-[#E5E5E5] mb-1">{stat.value}</div>
-              <div className="text-sm text-[#AAA] mb-1">{stat.label}</div>
+              <div>
+                <div className="text-4xl font-black text-foreground tracking-tighter mb-1 italic">{stat.value}</div>
+                <div className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] opacity-60">{stat.label}</div>
+              </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-        <button
-          onClick={() => onNavigate('notifications')}
-          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-[#4F46E5] hover:bg-[#4F46E5]/5 transition-all group"
-        >
-          <div>
-            <div className="text-base font-medium text-[#E5E5E5] mb-1">Send Notification</div>
-            <div className="text-xs text-[#AAA]">Announce to students</div>
-          </div>
-          <ArrowUpRight className="w-5 h-5 text-[#4F46E5] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-        </button>
+      {/* Primary Management Hub */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-black text-secondary uppercase tracking-[0.3em] px-4 opacity-40">Precision Management</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <button
+            onClick={() => onNavigate('notifications')}
+            className="group relative h-32 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 transition-all overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+              <Bell className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-xl font-black text-foreground uppercase tracking-tighter mb-1">Satellite Broadcast</div>
+              <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60">Global Push Notifications</div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary text-primary group-hover:text-white transition-all shadow-xl shadow-primary/10">
+              <ArrowUpRight className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+          </button>
 
-        <button
-          onClick={() => onNavigate('courses')}
-          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-[#10B981] hover:bg-[#10B981]/5 transition-all group"
-        >
-          <div>
-            <div className="text-base font-medium text-[#E5E5E5] mb-1">Manage Courses</div>
-            <div className="text-xs text-[#AAA]">Add or edit courses</div>
-          </div>
-          <ArrowUpRight className="w-5 h-5 text-[#10B981] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-        </button>
+          <button
+            onClick={() => onNavigate('courses')}
+            className="group relative h-32 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-green-500/40 hover:shadow-2xl hover:shadow-green-500/5 transition-all overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+              <BookOpen className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-xl font-black text-foreground uppercase tracking-tighter mb-1">Catalog Control</div>
+              <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60">Course Registry & Data</div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center group-hover:bg-green-500 text-green-600 group-hover:text-white transition-all shadow-xl shadow-green-500/10">
+              <ArrowUpRight className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+          </button>
 
-        <button
-          onClick={() => onNavigate('reports')}
-          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-[#EC4899] hover:bg-[#EC4899]/5 transition-all group"
-        >
-          <div>
-            <div className="text-base font-medium text-[#E5E5E5] mb-1">View Requests</div>
-            <div className="text-xs text-[#AAA]">See feature requests</div>
-          </div>
-          <ArrowUpRight className="w-5 h-5 text-[#EC4899] opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-        </button>
+          <button
+            onClick={() => onNavigate('timetable')}
+            className="group relative h-32 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-amber-500/40 hover:shadow-2xl hover:shadow-amber-500/5 transition-all overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+              <Building2 className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-xl font-black text-foreground uppercase tracking-tighter mb-1">Schedule Engine</div>
+              <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60">Exam Timetable Logistics</div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/5 flex items-center justify-center group-hover:bg-amber-500 text-amber-600 group-hover:text-white transition-all shadow-xl shadow-amber-500/10">
+              <ArrowUpRight className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+          </button>
 
-        <button
-          onClick={() => onNavigate('timetable')}
-          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-amber-500 hover:bg-amber-500/5 transition-all group"
-        >
-          <div>
-            <div className="text-base font-medium text-[#E5E5E5] mb-1">Timetable Manager</div>
-            <div className="text-xs text-[#AAA]">Manage exam schedules</div>
-          </div>
-          <ArrowUpRight className="w-5 h-5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-        </button>
+          <button
+            onClick={() => onNavigate('repeated-questions')}
+            className="group relative h-32 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-indigo-400/40 hover:shadow-2xl hover:shadow-indigo-400/5 transition-all overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+              <Users className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-xl font-black text-foreground uppercase tracking-tighter mb-1">Intel Curator</div>
+              <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60">Repeat Pattern Analysis</div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/5 flex items-center justify-center group-hover:bg-indigo-500 text-indigo-600 group-hover:text-white transition-all shadow-xl shadow-indigo-500/10">
+              <ArrowUpRight className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+          </button>
 
-        <button
-          onClick={() => onNavigate('repeated-questions')}
-          className="h-20 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-6 flex items-center justify-between text-left hover:border-indigo-400 hover:bg-indigo-400/5 transition-all group"
-        >
-          <div>
-            <div className="text-base font-medium text-[#E5E5E5] mb-1">Question Curator</div>
-            <div className="text-xs text-[#AAA]">Manage repeat patterns</div>
-          </div>
-          <ArrowUpRight className="w-5 h-5 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-        </button>
+          <button
+            onClick={() => onNavigate('reports')}
+            className="group relative h-32 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-pink-500/40 hover:shadow-2xl hover:shadow-pink-500/5 transition-all overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+              <Flag className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-xl font-black text-foreground uppercase tracking-tighter mb-1">Feedback Loop</div>
+              <div className="text-[10px] font-black text-secondary uppercase tracking-widest opacity-60">Community Interest Signals</div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-pink-500/5 flex items-center justify-center group-hover:bg-pink-500 text-pink-600 group-hover:text-white transition-all shadow-xl shadow-pink-500/10">
+              <ArrowUpRight className="w-6 h-6" strokeWidth={2.5} />
+            </div>
+          </button>
+        </div>
       </div>
 
-      {/* Keyboard Shortcuts Hint - Desktop only */}
-      <div className="hidden lg:block mt-6">
-        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl px-4 py-3">
-          <div className="flex items-center gap-6 text-xs text-[#666]">
-            <span>Keyboard shortcuts:</span>
-            <span><kbd className="px-2 py-1 bg-[#0F1115] rounded text-[#AAA]">N</kbd> Notifications</span>
-            <span><kbd className="px-2 py-1 bg-[#0F1115] rounded text-[#AAA]">C</kbd> Courses</span>
+      {/* Logic Console Hint */}
+      <div className="flex items-center gap-6 p-8 bg-card/40 border border-border rounded-[2.5rem] backdrop-blur-sm">
+        <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center">
+          <LayoutDashboard className="w-5 h-5 text-secondary opacity-40" />
+        </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <span className="text-[10px] font-black text-secondary/40 uppercase tracking-[0.2em]">Console Shortcuts</span>
+          <div className="flex items-center gap-2">
+            <kbd className="px-2 py-1 bg-muted rounded-lg text-[10px] font-black text-secondary">N</kbd>
+            <span className="text-[9px] font-black text-secondary/30 uppercase tracking-widest">Global Comms</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <kbd className="px-2 py-1 bg-muted rounded-lg text-[10px] font-black text-secondary">C</kbd>
+            <span className="text-[9px] font-black text-secondary/30 uppercase tracking-widest">Knowledge Base</span>
           </div>
         </div>
       </div>

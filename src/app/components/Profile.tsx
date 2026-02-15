@@ -83,11 +83,10 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   };
 
   const premiumFeatures = [
-    'Lecturer Repeat Insights',
-    'Most Likely Questions Packs',
-    'Detailed Solutions',
-    'Unlimited Bookmarks & Downloads',
-    'Ad-Free Experience',
+    'Department Exam Timetables',
+    'Curated Repeated Questions',
+    'Unlimited Course Bookmarks',
+    'Priority Beta Access',
   ];
 
 
@@ -241,27 +240,35 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
         </div>
 
         {/* Premium Card */}
-        <div className="bg-gradient-to-br from-primary to-accent rounded-2xl p-6 mb-8 text-primary-foreground">
-          <div className="flex items-start gap-3 mb-4">
-            <Crown className="w-7 h-7 flex-shrink-0" strokeWidth={1.5} />
-            <div>
-              <h3 className="text-xl font-bold mb-1">Unlock Premium</h3>
-              <p className="text-sm text-primary-foreground/90">
-                Get access to exclusive features
-              </p>
-            </div>
+        <div className="bg-gradient-to-br from-primary to-accent rounded-[2.5rem] p-8 mb-8 text-primary-foreground relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-20 rotate-12 group-hover:rotate-0 transition-transform duration-500">
+            <Crown className="w-16 h-16" />
           </div>
-          <ul className="space-y-2 mb-5">
-            {premiumFeatures.map((feature, index) => (
-              <li key={index} className="text-sm text-primary-foreground/90 flex items-start gap-2">
-                <span className="text-primary-foreground mt-0.5">•</span>
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-          <button className="w-full h-12 bg-card text-primary rounded-xl font-semibold hover:opacity-90 transition-all">
-            See Plans
-          </button>
+          <div className="relative z-10">
+            <div className="flex items-start gap-3 mb-6">
+              <Crown className="w-8 h-8 flex-shrink-0" strokeWidth={2.5} />
+              <div>
+                <h3 className="text-xl font-black mb-1 uppercase tracking-tight">PaperStack Pro</h3>
+                <p className="text-xs text-primary-foreground/80 font-bold uppercase tracking-widest">
+                  Unlock Your Potential
+                </p>
+              </div>
+            </div>
+            <ul className="space-y-3 mb-8">
+              {premiumFeatures.map((feature, index) => (
+                <li key={index} className="text-xs font-bold uppercase tracking-wider flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => navigate('/premium')}
+              className="w-full h-14 bg-card text-primary rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
+            >
+              See Pro Plans
+            </button>
+          </div>
         </div>
 
         {/* Contributions */}

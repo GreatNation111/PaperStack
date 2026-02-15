@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Crown, Check, MessageSquare, Heart, Sparkles, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/app/context/AuthContext';
@@ -12,6 +12,7 @@ export function PremiumPlans() {
     const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [isLoadingVote, setIsLoadingVote] = useState(true);
 
     const benefits = [
         { title: 'Full Department Timetables', description: 'Never miss an exam with synced schedules.', icon: Sparkles },
@@ -26,14 +27,41 @@ export function PremiumPlans() {
         { amount: 3000, label: '₦3,000 / Semester' },
     ];
 
+    // Check if user has already voted on mount
+    useEffect(() => {
+        if (!user) {
+            setIsLoadingVote(false);
+            return;
+        }
+
+        const fetchVote = async () => {
+            try {
+                const { getDoc, doc } = await import('firebase/firestore');
+                const { db } = await import('@/lib/firebase');
+                const snap = await getDoc(doc(db, 'pricingFeedback', user.uid));
+                if (snap.exists()) {
+                    setSelectedPrice(snap.data().suggestedPrice);
+                    setSubmitted(true);
+                }
+            } catch (err) {
+                console.error('Error fetching vote:', err);
+            } finally {
+                setIsLoadingVote(false);
+            }
+        };
+
+        fetchVote();
+    }, [user]);
+
     const handleSubmitFeedback = async () => {
-        if (!user || !selectedPrice) return;
+        if (!user || !selectedPrice || submitted) return;
         setIsSubmitting(true);
         try {
             await submitPricingFeedback(user.uid, selectedPrice);
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting feedback:', error);
+            alert("Something went wrong. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -103,8 +131,8 @@ export function PremiumPlans() {
                                         key={opt.amount}
                                         onClick={() => setSelectedPrice(opt.amount)}
                                         className={`w-full h-14 rounded-2xl border transition-all flex items-center px-6 gap-4 ${selectedPrice === opt.amount
-                                                ? 'border-primary bg-primary/5 text-primary shadow-lg shadow-primary/5'
-                                                : 'border-border bg-muted/20 text-foreground hover:bg-muted/40'
+                                            ? 'border-primary bg-primary/5 text-primary shadow-lg shadow-primary/5'
+                                            : 'border-border bg-muted/20 text-foreground hover:bg-muted/40'
                                             }`}
                                     >
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPrice === opt.amount ? 'border-primary' : 'border-border'

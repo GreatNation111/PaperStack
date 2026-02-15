@@ -92,5 +92,21 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // --- PREMIUM & FEEDBACK ---
+    match /pricingFeedback/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /timetables/{deptId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /repeated_questions/{deptId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
