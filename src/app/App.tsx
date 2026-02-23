@@ -17,6 +17,8 @@ import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
 import { HelpSupport } from '@/app/components/HelpSupport';
 import { TermsPrivacy } from '@/app/components/TermsPrivacy';
+import PrivacyPolicy from '@/app/components/PrivacyPolicy';
+import TermsOfService from '@/app/components/TermsOfService';
 import { AdminContainer, AdminLogin } from '@/app/components/admin';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
 import { PremiumPlans } from '@/app/components/PremiumPlans';
@@ -103,6 +105,10 @@ function AppContent() {
               <Route path="/welcome" element={<Welcome onSignIn={handleSignInStart} onSignUp={handleSignUpStart} />} />
               <Route path="/signin" element={<SignIn onBack={handleBackToWelcome} onSignUp={handleSignUpStart} onComplete={handleAuthComplete} />} />
               <Route path="/signup" element={<SignUp onBack={handleBackToWelcome} onSignIn={handleSignInStart} onComplete={handleAuthComplete} />} />
+              {/* Public Legal Pages */}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/tos" element={<TermsOfService />} />
+              <Route path="/terms" element={<TermsPrivacy />} />
             </Route>
 
             {/* Splash/Index */}

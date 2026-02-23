@@ -264,7 +264,7 @@ export function Welcome({ onSignIn, onSignUp }: WelcomeProps) {
 
         {/* Buttons - Fixed at bottom */}
         <div className="flex-shrink-0 px-4 pb-6 pt-2 border-t border-white/10">
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-3">
             <button
               onClick={onSignIn}
               className="flex-1 h-14 bg-white text-[#0A2540] rounded-xl font-semibold hover:opacity-90 transition-all duration-300"
@@ -277,6 +277,11 @@ export function Welcome({ onSignIn, onSignUp }: WelcomeProps) {
             >
               Sign Up
             </button>
+          </div>
+          <div className="flex items-center justify-center gap-4 text-xs text-white/70">
+            <a className="hover:underline" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            <span>•</span>
+            <a className="hover:underline" href="/tos" target="_blank" rel="noopener noreferrer">Terms of Service</a>
           </div>
         </div>
       </motion.div>
