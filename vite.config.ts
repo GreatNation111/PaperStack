@@ -37,6 +37,37 @@ export default defineConfig({
             purpose: 'any maskable'
           }
         ]
+      },
+      // Ensure SW never intercepts Firebase Auth handlers/iframes
+      workbox: {
+        // Do not apply SPA navigation fallback to auth handlers
+        navigateFallbackDenylist: [/^\/__\/auth\//],
+        runtimeCaching: [
+          {
+            // Bypass same-origin requests to /__/auth/* (if any)
+            urlPattern: ({ url }) => url.pathname.startsWith('/__/auth/'),
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'firebase-auth-bypass-local',
+            },
+          },
+          {
+            // Bypass cross-origin Firebase Auth handler/iframe
+            urlPattern: /^https?:\/\/([a-zA-Z0-9-]+\.)?firebaseapp\.com\/__\/auth\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'firebase-auth-bypass',
+            },
+          },
+          {
+            // As a safeguard, bypass all requests to *.firebaseapp.com
+            urlPattern: /^https?:\/\/([a-zA-Z0-9-]+\.)?firebaseapp\.com\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'firebaseapp-bypass',
+            },
+          },
+        ],
       }
     })
   ],
