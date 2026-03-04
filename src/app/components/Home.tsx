@@ -96,19 +96,25 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
               )}
             </button>
             {/* Avatar: Show user's avatar from settings if available, else show first letter initial */}
-            {profile?.avatar ? (
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary flex items-center justify-center">
-                <img
-                  src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${profile.avatar}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
-                  alt="User avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold uppercase">
-                {userName ? userName[0] : 'S'}
-              </div>
-            )}
+            <div
+              onDoubleClick={() => navigate('/admin')}
+              className="cursor-default"
+              title="Profile"
+            >
+              {profile?.avatar ? (
+                <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary flex items-center justify-center">
+                  <img
+                    src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${profile.avatar}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                    alt="User avatar"
+                    className="w-full h-full object-cover select-none"
+                  />
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold uppercase select-none">
+                  {userName ? userName[0] : 'S'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
