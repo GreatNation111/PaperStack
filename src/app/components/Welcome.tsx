@@ -124,7 +124,7 @@ export function Welcome({ onSignIn, onSignUp }: WelcomeProps) {
     <div className="fixed inset-0 bg-white overflow-hidden">
       {/* Top Section - Logo and Tagline - Centered in the top space */}
       <motion.div
-        className="absolute top-0 left-0 right-0 bottom-[55vh] flex flex-col items-center justify-center px-8 z-0 bg-cover bg-center bg-no-repeat before:content-[''] before:absolute before:inset-0 before:bg-[rgba(255,255,255,0.70)] before:backdrop-blur-[2px] before:brightness-105 before:-z-10"
+        className="absolute top-0 left-0 right-0 bottom-[55vh] flex flex-col items-center justify-center px-8 z-0 bg-cover bg-center bg-no-repeat before:content-[''] before:absolute before:inset-0 before:bg-[rgba(255,255,255,0.55)] before:backdrop-blur-[1px] before:brightness-105 before:-z-10"
         style={{ backgroundImage: 'url(/background-image.jpeg)' }}
         animate={{
           opacity: isPanelExpanded ? 0 : 1,
