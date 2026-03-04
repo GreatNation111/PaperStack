@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable } from '@/hooks/useData';
@@ -6,6 +6,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { PremiumLock } from './PremiumLock';
 import { useNavigate } from 'react-router-dom';
 import { differenceInDays, parseISO, isAfter } from 'date-fns';
+import { requestNotificationPermissionAndSaveToken } from '@/services/messaging';
 
 interface HomeProps {
   userName: string;
@@ -22,6 +23,36 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { unreadCount } = useNotifications(user?.uid);
   const { timetable, loading: loadingTimetable } = useTimetable(profile?.departmentId);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNotificationBanner, setShowNotificationBanner] = useState(false);
+
+  // Check notification permission status on mount
+  useEffect(() => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        setShowNotificationBanner(true);
+      }
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    if (!user) return;
+    const success = await requestNotificationPermissionAndSaveToken(user.uid);
+    if (success) {
+      setShowNotificationBanner(false);
+    }
+  };
+
+  const handleDismissBanner = () => {
+    setShowNotificationBanner(false);
+    // Optionally save to local storage not to ask again
+    localStorage.setItem('hideNotificationBanner', 'true');
+  };
+
+  useEffect(() => {
+    if (localStorage.getItem('hideNotificationBanner')) {
+      setShowNotificationBanner(false);
+    }
+  }, []);
 
   // Helper for department styling and icons
   const getDeptConfig = (name: string) => {
@@ -80,6 +111,40 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
             )}
           </div>
         </div>
+
+        {/* Push Notification Banner */}
+        {showNotificationBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-card border border-border rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between relative overflow-hidden shadow-sm"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+            <div className="flex gap-3 items-start relative z-10">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Bell className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-foreground font-semibold">Enable Push Notifications</h3>
+                <p className="text-secondary text-sm">Get real-time alerts for new past questions and department updates.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto relative z-10">
+              <button
+                onClick={handleDismissBanner}
+                className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-secondary hover:text-foreground transition-colors"
+              >
+                Not Now
+              </button>
+              <button
+                onClick={handleEnableNotifications}
+                className="flex-1 sm:flex-none px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Enable
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Search Bar */}
         <div className="relative mb-8">

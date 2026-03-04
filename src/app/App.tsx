@@ -1,4 +1,6 @@
-import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react-router-dom';
+import { lazy, Suspense, useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Splash } from '@/app/components/Splash';
 import { Welcome } from '@/app/components/Welcome';
 import { SignIn } from '@/app/components/SignIn';
@@ -8,24 +10,32 @@ import { Explore } from '@/app/components/Explore';
 import { Library } from '@/app/components/Library';
 import { Profile } from '@/app/components/Profile';
 import { Notifications } from '@/app/components/Notifications';
-import { PastQuestionsViewer } from '@/app/components/PastQuestionsViewer';
 import { PastQuestions } from '@/app/components/PastQuestions';
-import { Timetable } from '@/app/components/Timetable';
-import { RepeatedQuestions } from '@/app/components/RepeatedQuestions';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
-import { HelpSupport } from '@/app/components/HelpSupport';
-import { TermsPrivacy } from '@/app/components/TermsPrivacy';
-import PrivacyPolicy from '@/app/components/PrivacyPolicy';
-import TermsOfService from '@/app/components/TermsOfService';
-import { AdminContainer, AdminLogin } from '@/app/components/admin';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
-import { PremiumPlans } from '@/app/components/PremiumPlans';
-import { useState, useEffect } from 'react';
+
+// --- Lazy Loaded Heavyweight/Secondary Routes ---
+const AdminLogin = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminLogin })));
+const AdminContainer = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminContainer })));
+const PastQuestionsViewer = lazy(() => import('@/app/components/PastQuestionsViewer').then(m => ({ default: m.PastQuestionsViewer })));
+const Timetable = lazy(() => import('@/app/components/Timetable').then(m => ({ default: m.Timetable })));
+const RepeatedQuestions = lazy(() => import('@/app/components/RepeatedQuestions').then(m => ({ default: m.RepeatedQuestions })));
+const HelpSupport = lazy(() => import('@/app/components/HelpSupport').then(m => ({ default: m.HelpSupport })));
+const TermsPrivacy = lazy(() => import('@/app/components/TermsPrivacy').then(m => ({ default: m.TermsPrivacy })));
+const PrivacyPolicy = lazy(() => import('@/app/components/PrivacyPolicy').then(m => ({ default: m.default })));
+const TermsOfService = lazy(() => import('@/app/components/TermsOfService').then(m => ({ default: m.default })));
+const PremiumPlans = lazy(() => import('@/app/components/PremiumPlans').then(m => ({ default: m.PremiumPlans })));
+
+// Global loading fallback for Suspense
+const GlobalLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
-import { Outlet } from 'react-router-dom';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -91,54 +101,56 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
       <div className={`${isAdminRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
-        <Routes location={location} key={location.pathname}>
-          {/* Admin Routes - NOT Gated */}
-          <Route path="/admin" element={<AdminLogin onComplete={() => navigate('/admin/dashboard')} />} />
-          <Route element={<RequireAdmin />}>
-            <Route path="/admin/dashboard/*" element={<AdminContainer onLogout={handleSignOut} />} />
-          </Route>
-
-          {/* User Routes - Gated by MaintenanceGate */}
-          <Route element={<MaintenanceGate><Outlet /></MaintenanceGate>}>
-            {/* Public Routes */}
-            <Route element={<PublicOnly />}>
-              <Route path="/welcome" element={<Welcome onSignIn={handleSignInStart} onSignUp={handleSignUpStart} />} />
-              <Route path="/signin" element={<SignIn onBack={handleBackToWelcome} onSignUp={handleSignUpStart} onComplete={handleAuthComplete} />} />
-              <Route path="/signup" element={<SignUp onBack={handleBackToWelcome} onSignIn={handleSignInStart} onComplete={handleAuthComplete} />} />
-              {/* Public Legal Pages */}
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/tos" element={<TermsOfService />} />
-              <Route path="/terms" element={<TermsPrivacy />} />
+        <Suspense fallback={<GlobalLoader />}>
+          <Routes location={location} key={location.pathname}>
+            {/* Admin Routes - NOT Gated */}
+            <Route path="/admin" element={<AdminLogin onComplete={() => navigate('/admin/dashboard')} />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="/admin/dashboard/*" element={<AdminContainer onLogout={handleSignOut} />} />
             </Route>
 
-            {/* Splash/Index */}
-            <Route path="/" element={<Navigate to="/splash" replace />} />
-            <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
-            <Route path="/seed" element={<SeedData />} />
+            {/* User Routes - Gated by MaintenanceGate */}
+            <Route element={<MaintenanceGate><Outlet /></MaintenanceGate>}>
+              {/* Public Routes */}
+              <Route element={<PublicOnly />}>
+                <Route path="/welcome" element={<Welcome onSignIn={handleSignInStart} onSignUp={handleSignUpStart} />} />
+                <Route path="/signin" element={<SignIn onBack={handleBackToWelcome} onSignUp={handleSignUpStart} onComplete={handleAuthComplete} />} />
+                <Route path="/signup" element={<SignUp onBack={handleBackToWelcome} onSignIn={handleSignInStart} onComplete={handleAuthComplete} />} />
+                {/* Public Legal Pages */}
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/tos" element={<TermsOfService />} />
+                <Route path="/terms" element={<TermsPrivacy />} />
+              </Route>
 
-            {/* Protected User Routes */}
-            <Route element={<RequireAuth />}>
-              <Route path="/home" element={<Home userName={userProfile?.name || user?.displayName || 'Student'} onNotifications={handleNotifications} onExplore={handleExplore} />} />
-              <Route path="/explore" element={<Explore selectedDepartment={location.state?.department} onViewPastQuestions={handleViewPastQuestions} />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/profile" element={<Profile userName={userProfile?.name || user?.displayName || 'Student'} isDarkMode={isDarkMode} onToggleDarkMode={handleToggleDarkMode} onSignOut={handleSignOut} />} />
-              <Route path="/notifications" element={<Notifications onBack={handleBackFromNotifications} />} />
+              {/* Splash/Index */}
+              <Route path="/" element={<Navigate to="/splash" replace />} />
+              <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
+              <Route path="/seed" element={<SeedData />} />
 
-              {/* Feature Routes */}
-              <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} departmentId={location.state?.departmentId} />} />
-              <Route path="/view-paper/:paperId" element={<PastQuestionsViewer onBack={() => navigate(-1)} />} />
-              <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
-              <Route path="/premium" element={<PremiumPlans />} />
-              <Route path="/repeated-questions" element={<RepeatedQuestions />} />
-              <Route path="/help" element={<HelpSupport />} />
-              <Route path="/terms" element={<TermsPrivacy />} />
+              {/* Protected User Routes */}
+              <Route element={<RequireAuth />}>
+                <Route path="/home" element={<Home userName={userProfile?.name || user?.displayName || 'Student'} onNotifications={handleNotifications} onExplore={handleExplore} />} />
+                <Route path="/explore" element={<Explore selectedDepartment={location.state?.department} onViewPastQuestions={handleViewPastQuestions} />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/profile" element={<Profile userName={userProfile?.name || user?.displayName || 'Student'} isDarkMode={isDarkMode} onToggleDarkMode={handleToggleDarkMode} onSignOut={handleSignOut} />} />
+                <Route path="/notifications" element={<Notifications onBack={handleBackFromNotifications} />} />
+
+                {/* Feature Routes */}
+                <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} departmentId={location.state?.departmentId} />} />
+                <Route path="/view-paper/:paperId" element={<PastQuestionsViewer onBack={() => navigate(-1)} />} />
+                <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
+                <Route path="/premium" element={<PremiumPlans />} />
+                <Route path="/repeated-questions" element={<RepeatedQuestions />} />
+                <Route path="/help" element={<HelpSupport />} />
+                <Route path="/terms" element={<TermsPrivacy />} />
+              </Route>
+
+              {/* Errors */}
+              <Route path="/403" element={<Forbidden />} />
+              <Route path="*" element={<Navigate to="/splash" />} />
             </Route>
-
-            {/* Errors */}
-            <Route path="/403" element={<Forbidden />} />
-            <Route path="*" element={<Navigate to="/splash" />} />
-          </Route>
-        </Routes>
+          </Routes>
+        </Suspense>
 
         {showBottomNav && (
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />

@@ -10,7 +10,9 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDepartments } from '@/hooks/useData';
@@ -158,6 +160,45 @@ export function NotificationsManager() {
         if (editingId) {
           await deleteDoc(doc(db, 'admin_notifications_queue', editingId));
         }
+
+        // --- PUSH NOTIFICATION DISPATCH ---
+        try {
+          let usersQuery: any = collection(db, 'users');
+          if (formData.target === 'department' && targetName) {
+            usersQuery = query(collection(db, 'users'), where('department', '==', targetName));
+          }
+
+          const snap = await getDocs(usersQuery);
+          const tokens: string[] = [];
+
+          snap.forEach(docSnap => {
+            const data = docSnap.data() as { fcmTokens?: string[] };
+            const userTokens = data.fcmTokens;
+            if (Array.isArray(userTokens)) {
+              tokens.push(...userTokens);
+            }
+          });
+
+          if (tokens.length > 0) {
+            const uniqueTokens = [...new Set(tokens)];
+
+            // Trigger Vercel Serverless Push Dispatcher
+            fetch('/api/send-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: formData.title,
+                body: formData.body,
+                tokens: uniqueTokens,
+                data: { target: formData.target, targetId: formData.targetId }
+              })
+            }).catch(err => console.error('Failed to trigger push API endpoint:', err));
+          }
+        } catch (pushErr) {
+          console.error('Error orchestrating push notification batch:', pushErr);
+        }
+        // --- END PUSH NOTIFICATION DISPATCH ---
+
       } else {
         // Write to queue
         if (editingId) {
