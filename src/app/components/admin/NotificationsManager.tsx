@@ -164,8 +164,8 @@ export function NotificationsManager() {
         // --- PUSH NOTIFICATION DISPATCH ---
         try {
           let usersQuery: any = collection(db, 'users');
-          if (formData.target === 'department' && targetName) {
-            usersQuery = query(collection(db, 'users'), where('department', '==', targetName));
+          if (formData.target === 'department' && formData.targetId) {
+            usersQuery = query(collection(db, 'users'), where('departmentId', '==', formData.targetId));
           }
 
           const snap = await getDocs(usersQuery);

@@ -184,13 +184,29 @@ export function AdminLogin({ onComplete }: AdminLoginProps) {
         </div>
 
         {/* Footer Hint */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-[#666]">
-            Forgot credentials?{' '}
-            <button className="text-[#4F46E5] hover:underline">
-              Contact system administrator
-            </button>
-          </p>
+        <div className="mt-6 text-center text-xs text-[#666]">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!email) {
+                setError('Please enter your admin email above first.');
+                return;
+              }
+              try {
+                const { sendPasswordResetEmail } = await import('firebase/auth');
+                await sendPasswordResetEmail(auth, email);
+                setError('');
+                alert('Password reset link sent to your email! (Check spam folder if not seen)');
+              } catch (err: any) {
+                console.error(err);
+                if (err.code === 'auth/user-not-found') setError('No admin account found with this email.');
+                else setError('Failed to send reset email. Please try again.');
+              }
+            }}
+            className="text-[#4F46E5] hover:underline transition-colors"
+          >
+            Forgot password? Click here to reset it.
+          </button>
         </div>
       </motion.div>
     </div>

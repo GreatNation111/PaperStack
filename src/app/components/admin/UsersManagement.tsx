@@ -333,11 +333,11 @@ export function UsersManagement() {
                   )}
                 </div>
 
-                <div className="relative group">
-                  <button className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform">
+                <div className="relative group" tabIndex={0}>
+                  <button className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform outline-none focus:text-white">
                     <MoreVertical className="w-5 h-5" />
                   </button>
-                  <div className="absolute right-0 bottom-full mb-2 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-focus-within:block z-[60] overflow-hidden">
+                  <div className="absolute right-0 bottom-full mb-2 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-focus:block group-focus-within:block z-[60] overflow-hidden">
                     <button onClick={() => handleViewUser(user)} className="w-full text-left px-4 py-3 text-xs text-[#AAA] active:bg-[#333]">View Details</button>
                     <button onClick={() => handleDeleteUser(user)} className="w-full text-left px-4 py-3 text-xs text-red-500 active:bg-red-500/10 border-t border-[#2A2A2F]">Delete User</button>
                   </div>
