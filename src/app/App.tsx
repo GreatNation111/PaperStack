@@ -3,6 +3,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Splash } from '@/app/components/Splash';
 import { Welcome } from '@/app/components/Welcome';
+import { Landing } from '@/app/components/Landing';
 import { SignIn } from '@/app/components/SignIn';
 import { SignUp } from '@/app/components/SignUp';
 import { Home } from '@/app/components/Home';
@@ -97,10 +98,12 @@ function AppContent() {
 
   const showBottomNav = ['/home', '/explore', '/library', '/profile'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isLandingRoute = location.pathname === '/';
+  const isFullWidthRoute = isAdminRoute || isLandingRoute;
 
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
-      <div className={`${isAdminRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
+      <div className={`${isFullWidthRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
         <Suspense fallback={<GlobalLoader />}>
           <Routes location={location} key={location.pathname}>
             {/* Admin Routes - NOT Gated */}
@@ -113,6 +116,7 @@ function AppContent() {
             <Route element={<MaintenanceGate><Outlet /></MaintenanceGate>}>
               {/* Public Routes */}
               <Route element={<PublicOnly />}>
+                <Route path="/" element={<Landing />} />
                 <Route path="/welcome" element={<Welcome onSignIn={handleSignInStart} onSignUp={handleSignUpStart} />} />
                 <Route path="/signin" element={<SignIn onBack={handleBackToWelcome} onSignUp={handleSignUpStart} onComplete={handleAuthComplete} />} />
                 <Route path="/signup" element={<SignUp onBack={handleBackToWelcome} onSignIn={handleSignInStart} onComplete={handleAuthComplete} />} />
@@ -123,7 +127,6 @@ function AppContent() {
               </Route>
 
               {/* Splash/Index */}
-              <Route path="/" element={<Navigate to="/splash" replace />} />
               <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
               <Route path="/seed" element={<SeedData />} />
 
