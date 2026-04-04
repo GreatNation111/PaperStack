@@ -120,11 +120,12 @@ function AppContent() {
                 <Route path="/welcome" element={<Welcome onSignIn={handleSignInStart} onSignUp={handleSignUpStart} />} />
                 <Route path="/signin" element={<SignIn onBack={handleBackToWelcome} onSignUp={handleSignUpStart} onComplete={handleAuthComplete} />} />
                 <Route path="/signup" element={<SignUp onBack={handleBackToWelcome} onSignIn={handleSignInStart} onComplete={handleAuthComplete} />} />
-                {/* Public Legal Pages */}
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/tos" element={<TermsOfService />} />
-                <Route path="/terms" element={<TermsPrivacy />} />
               </Route>
+
+              {/* Shared Legal Pages */}
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/tos" element={<TermsOfService />} />
+              <Route path="/terms" element={<TermsPrivacy />} />
 
               {/* Splash/Index */}
               <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
@@ -145,7 +146,6 @@ function AppContent() {
                 <Route path="/premium" element={<PremiumPlans />} />
                 <Route path="/repeated-questions" element={<RepeatedQuestions />} />
                 <Route path="/help" element={<HelpSupport />} />
-                <Route path="/terms" element={<TermsPrivacy />} />
               </Route>
 
               {/* Errors */}
