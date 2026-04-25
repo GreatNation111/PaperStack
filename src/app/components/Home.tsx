@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable } from '@/hooks/useData';
+import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable, useCourseThumbnails } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { PremiumLock } from './PremiumLock';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,10 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { timetable, loading: loadingTimetable } = useTimetable(profile?.departmentId);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotificationBanner, setShowNotificationBanner] = useState(false);
+
+  // Fetch real thumbnails for recently viewed courses
+  const courseIds = useMemo(() => recentCourses.map(c => c.id), [recentCourses]);
+  const { thumbnails } = useCourseThumbnails(courseIds);
 
   // Check notification permission status on mount
   useEffect(() => {
@@ -280,23 +284,26 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                     onClick={() => course.driveFolderUrl && window.open(course.driveFolderUrl, '_blank')}
                     className="flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-72 text-left"
                   >
-                    {/* Skeleton Paper Thumbnail */}
                     <div className="w-full h-36 bg-muted rounded-xl mb-4 flex items-center justify-center relative overflow-hidden group">
                       <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
 
-                      {/* Paper Skeleton */}
-                      <div className="w-20 h-28 bg-white rounded-md shadow-sm border border-border/50 p-3 space-y-2 relative transform group-hover:scale-105 transition-transform">
-                        <div className="w-3/4 h-2 bg-muted rounded-full animate-pulse" />
-                        <div className="w-full h-1 bg-muted/60 rounded-full" />
-                        <div className="space-y-1 pt-2">
-                          {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="w-full h-1 bg-muted/30 rounded-full" />
-                          ))}
+                      {thumbnails[course.id] ? (
+                        <img src={thumbnails[course.id]} alt="" className="w-full h-full object-cover relative z-[1]" />
+                      ) : (
+                        /* Paper Skeleton Fallback */
+                        <div className="w-20 h-28 bg-white rounded-md shadow-sm border border-border/50 p-3 space-y-2 relative transform group-hover:scale-105 transition-transform">
+                          <div className="w-3/4 h-2 bg-muted rounded-full animate-pulse" />
+                          <div className="w-full h-1 bg-muted/60 rounded-full" />
+                          <div className="space-y-1 pt-2">
+                            {[1, 2, 3, 4].map(i => (
+                              <div key={i} className="w-full h-1 bg-muted/30 rounded-full" />
+                            ))}
+                          </div>
+                          <div className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-primary/10" />
                         </div>
-                        <div className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-primary/10" />
-                      </div>
+                      )}
 
-                      <div className="absolute top-2 right-2 px-2 py-1 bg-background/80 backdrop-blur rounded text-[10px] font-bold text-foreground">
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-background/80 backdrop-blur rounded text-[10px] font-bold text-foreground z-[2]">
                         {course.semester === 'First' ? '1st' : '2nd'} Sem
                       </div>
                     </div>

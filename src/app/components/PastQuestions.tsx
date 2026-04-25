@@ -1,7 +1,7 @@
 import { ArrowLeft, Filter, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useState, useEffect } from 'react';
-import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, useGlobalConfig, useUserProfile } from '@/hooks/useData';
+import { useState, useEffect, useMemo } from 'react';
+import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, useGlobalConfig, useUserProfile, useCourseThumbnails } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Crown, AlertCircle, X } from 'lucide-react';
@@ -22,6 +22,10 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
     const { bookmarkIds } = useBookmarks(user?.uid);
     const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel || null);
     const [showUpsell, setShowUpsell] = useState(false);
+
+    // Fetch real thumbnails for courses
+    const courseIds = useMemo(() => courses.map(c => c.id), [courses]);
+    const { thumbnails } = useCourseThumbnails(courseIds);
 
     // Default semester logic: Sync with global settings until user manually chooses a semester
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
@@ -185,8 +189,12 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                                     onClick={() => handleOpenDriveFolder(course)}
                                 >
                                     <div className="flex items-start gap-4">
-                                        <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 relative border border-border/20">
-                                            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                                        <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 relative border border-border/20 overflow-hidden">
+                                            {thumbnails[course.id] ? (
+                                                <img src={thumbnails[course.id]} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                                            )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-2 mb-1">

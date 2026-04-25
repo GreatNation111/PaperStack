@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Edit3, Trash2, X, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, CheckCircle, ExternalLink, Loader2, FileText } from 'lucide-react';
 import {
   collection,
   onSnapshot,
@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useDepartments } from '@/hooks/useData';
+import { CoursePapersManager } from './CoursePapersManager';
 
 interface Course {
   id: string;
@@ -36,6 +37,9 @@ export function CoursesManagement() {
   const [showModal, setShowModal] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const { departments } = useDepartments();
+
+  // Papers Management State
+  const [managingPapersCourse, setManagingPapersCourse] = useState<Course | null>(null);
 
   // Form State
   const [isEditing, setIsEditing] = useState(false);
@@ -112,8 +116,8 @@ export function CoursesManagement() {
       setFormError('Please fill in all required fields.');
       return;
     }
-    if (!formData.driveFolderUrl || !formData.driveFolderUrl.startsWith('http')) {
-      setFormError('A valid Drive Folder URL (starting with http) is required.');
+    if (formData.driveFolderUrl && !formData.driveFolderUrl.startsWith('http')) {
+      setFormError('A valid Drive Folder URL (starting with http) is required if provided.');
       return;
     }
 
@@ -244,6 +248,13 @@ export function CoursesManagement() {
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        onClick={() => setManagingPapersCourse(course)}
+                        className="w-8 h-8 flex items-center justify-center text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                        title="Manage Papers"
+                      >
+                        <FileText className="w-4 h-4" strokeWidth={1.5} />
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(course)}
                         className="w-8 h-8 flex items-center justify-center text-[#4F46E5] hover:bg-[#4F46E5]/10 rounded-lg transition-colors"
                       >
@@ -286,6 +297,12 @@ export function CoursesManagement() {
             </div>
 
             <div className="flex gap-2 pt-3 border-t border-[#2A2A2F]">
+              <button
+                onClick={() => setManagingPapersCourse(course)}
+                className="flex-1 h-10 border border-[#333] text-blue-400 rounded-lg hover:border-blue-400/50 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" /> Papers
+              </button>
               <button
                 onClick={() => handleOpenEdit(course)}
                 className="flex-1 h-10 border border-[#333] text-[#AAA] rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors flex items-center justify-center gap-2"
@@ -427,7 +444,7 @@ export function CoursesManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-[#DDD] mb-2">
-                      Drive Folder URL * <span className="text-xs text-[#AAA] font-normal">(Required)</span>
+                      Drive Folder URL <span className="text-xs text-[#AAA] font-normal">(Optional Legacy Fallback)</span>
                     </label>
                     <input
                       value={formData.driveFolderUrl}
@@ -455,6 +472,35 @@ export function CoursesManagement() {
                     {isEditing ? 'Save Changes' : 'Add Course'}
                   </button>
                 </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Papers Manager Modal */}
+      <AnimatePresence>
+        {managingPapersCourse && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-4xl h-[85vh] bg-[#1A1A1F] rounded-2xl border border-[#2A2A2F] shadow-2xl overflow-hidden flex flex-col"
+              >
+                <CoursePapersManager
+                  courseId={managingPapersCourse.id}
+                  courseCode={managingPapersCourse.code}
+                  departmentId={managingPapersCourse.departmentId}
+                  onClose={() => setManagingPapersCourse(null)}
+                />
               </motion.div>
             </div>
           </>

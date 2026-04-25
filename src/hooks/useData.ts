@@ -52,11 +52,14 @@ export interface Paper {
     year: string;
     semester: string;
     type: string;
-    pdfUrl: string;
+    pdfUrl?: string;
+    richTextContent?: string;
+    driveFolderUrl?: string;
     thumbnailUrl?: string;
     downloads: number;
     isBookmarked?: boolean;
     courseId?: string;
+    departmentId?: string;
 }
 
 export interface UserProfile {
@@ -87,19 +90,24 @@ export function useDepartments() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Listen to real departments collection in Firestore
-        const q = query(collection(db, 'departments'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const depts: Department[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
-                .map((d: any) => ({ id: d.id, name: d.name }));
-            setDepartments(depts);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching departments:', err);
-            setLoading(false);
-        });
+        let isMounted = true;
+        const fetchDepartments = async () => {
+            try {
+                const q = query(collection(db, 'departments'));
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const depts: Department[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
+                    .map((d: any) => ({ id: d.id, name: d.name }));
+                setDepartments(depts);
+            } catch (err) {
+                console.error('Error fetching departments:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
 
-        return () => unsubscribe();
+        fetchDepartments();
+        return () => { isMounted = false; };
     }, []);
 
     return { departments, loading };
@@ -117,17 +125,24 @@ export function useCourses(departmentId: string | undefined) {
             return;
         }
 
-        const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const cs: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-            setCourses(cs);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching courses:', err);
-            setLoading(false);
-        });
+        let isMounted = true;
+        const fetchCourses = async () => {
+            setLoading(true);
+            try {
+                const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const cs: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                setCourses(cs);
+            } catch (err) {
+                console.error('Error fetching courses:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
 
-        return () => unsubscribe();
+        fetchCourses();
+        return () => { isMounted = false; };
     }, [departmentId]);
     return { courses, loading };
 }
@@ -137,17 +152,23 @@ export function useContributors() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, 'contributors'), orderBy('contributionCount', 'desc'), limit(10));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const contribs: Contributor[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Contributor));
-            setContributors(contribs);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching contributors:', err);
-            setLoading(false);
-        });
+        let isMounted = true;
+        const fetchContributors = async () => {
+            try {
+                const q = query(collection(db, 'contributors'), orderBy('contributionCount', 'desc'), limit(10));
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const contribs: Contributor[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Contributor));
+                setContributors(contribs);
+            } catch (err) {
+                console.error('Error fetching contributors:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
 
-        return () => unsubscribe();
+        fetchContributors();
+        return () => { isMounted = false; };
     }, []);
 
     return { contributors, loading };
@@ -158,38 +179,44 @@ export function useRecentPapers(departmentId: string | undefined) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Listen to recent papers (optionally filter by department)
-        let q;
-        if (departmentId) {
-            q = query(collection(db, 'papers'), where('departmentId', '==', departmentId), orderBy('createdAt', 'desc'), limit(20));
-        } else {
-            q = query(collection(db, 'papers'), orderBy('createdAt', 'desc'), limit(20));
-        }
+        let isMounted = true;
+        const fetchPapers = async () => {
+            setLoading(true);
+            try {
+                let q;
+                if (departmentId) {
+                    q = query(collection(db, 'papers'), where('departmentId', '==', departmentId), orderBy('createdAt', 'desc'), limit(20));
+                } else {
+                    q = query(collection(db, 'papers'), orderBy('createdAt', 'desc'), limit(20));
+                }
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const docs = snapshot.docs.map(d => {
-                const data = d.data() as any;
-                return {
-                    id: d.id,
-                    title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                    code: data.courseCode || data.code || '',
-                    year: data.year || '',
-                    semester: data.semester || '',
-                    type: data.type || '',
-                    pdfUrl: data.pdfUrl || data.url || '',
-                    thumbnailUrl: data.thumbnailUrl || '',
-                    downloads: data.downloads || 0,
-                    courseId: data.courseId || data.course || undefined,
-                } as Paper;
-            });
-            setPapers(docs);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching papers:', err);
-            setLoading(false);
-        });
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const docs = snapshot.docs.map(d => {
+                    const data = d.data() as any;
+                    return {
+                        id: d.id,
+                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                        code: data.courseCode || data.code || '',
+                        year: data.year || '',
+                        semester: data.semester || '',
+                        type: data.type || '',
+                        pdfUrl: data.pdfUrl || data.url || '',
+                        thumbnailUrl: data.thumbnailUrl || '',
+                        downloads: data.downloads || 0,
+                        courseId: data.courseId || data.course || undefined,
+                    } as Paper;
+                });
+                setPapers(docs);
+            } catch (err) {
+                console.error('Error fetching recent papers:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
 
-        return () => unsubscribe();
+        fetchPapers();
+        return () => { isMounted = false; };
     }, [departmentId]);
 
     return { papers, loading };
@@ -571,41 +598,45 @@ export function usePapers(_courseId: string | undefined, departmentId: string | 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // If no department provided, can't query
         if (!departmentId) {
             setPapers([]);
             setLoading(false);
             return;
         }
 
-        // Query all papers for the department (ignore courseId - show ALL papers for department)
-        // This allows filtering by level and semester in the component
-        const q = query(collection(db, 'papers'), where('departmentId', '==', departmentId));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const docs = snapshot.docs.map(d => {
-                const data = d.data() as any;
-                return {
-                    id: d.id,
-                    title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                    code: data.courseCode || data.code || '',
-                    year: data.year || '',
-                    semester: data.semester || '',
-                    type: data.type || '',
-                    pdfUrl: data.pdfUrl || data.url || '',
-                    thumbnailUrl: data.thumbnailUrl || '',
-                    downloads: data.downloads || 0,
-                    courseId: data.courseId || data.course || undefined,
-                } as Paper;
-            });
-            setPapers(docs);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching papers:', err);
-            setPapers([]);
-            setLoading(false);
-        });
+        let isMounted = true;
+        const fetchDepartmentPapers = async () => {
+            setLoading(true);
+            try {
+                const q = query(collection(db, 'papers'), where('departmentId', '==', departmentId));
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const docs = snapshot.docs.map(d => {
+                    const data = d.data() as any;
+                    return {
+                        id: d.id,
+                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                        code: data.courseCode || data.code || '',
+                        year: data.year || '',
+                        semester: data.semester || '',
+                        type: data.type || '',
+                        pdfUrl: data.pdfUrl || data.url || '',
+                        thumbnailUrl: data.thumbnailUrl || '',
+                        downloads: data.downloads || 0,
+                        courseId: data.courseId || data.course || undefined,
+                    } as Paper;
+                });
+                setPapers(docs);
+            } catch (err) {
+                console.error('Error fetching papers:', err);
+                if (isMounted) setPapers([]);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
 
-        return () => unsubscribe();
+        fetchDepartmentPapers();
+        return () => { isMounted = false; };
     }, [departmentId]);
 
     return { papers, loading };
@@ -648,15 +679,21 @@ export function useUserCount() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, 'users'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setCount(snapshot.size);
-            setLoading(false);
-        }, (err) => {
-            console.error('Error fetching user count:', err);
-            setLoading(false);
-        });
-        return () => unsubscribe();
+        let isMounted = true;
+        const fetchUserCount = async () => {
+            try {
+                const q = query(collection(db, 'users'));
+                const snapshot = await getDocs(q);
+                if (isMounted) setCount(snapshot.size);
+            } catch (err) {
+                console.error('Error fetching user count:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchUserCount();
+        return () => { isMounted = false; };
     }, []);
 
     return { count, loading };
@@ -812,4 +849,63 @@ export async function submitPricingFeedback(userId: string, suggestedPrice: numb
         suggestedPrice,
         createdAt: new Date()
     });
+}
+
+/**
+ * Fetches the first available thumbnail URL for a list of courses.
+ * Returns a map of courseId -> thumbnailUrl for use in course card previews.
+ */
+export function useCourseThumbnails(courseIds: string[]) {
+    const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!courseIds.length) {
+            setThumbnails({});
+            return;
+        }
+
+        let isMounted = true;
+        const fetchThumbnails = async () => {
+            setLoading(true);
+            const thumbMap: Record<string, string> = {};
+
+            // Firestore 'in' queries support max 30 items per batch
+            const batches: string[][] = [];
+            for (let i = 0; i < courseIds.length; i += 30) {
+                batches.push(courseIds.slice(i, i + 30));
+            }
+
+            for (const batch of batches) {
+                try {
+                    const q = query(
+                        collection(db, 'papers'),
+                        where('courseId', 'in', batch),
+                        where('thumbnailUrl', '!=', ''),
+                        limit(batch.length)
+                    );
+                    const snapshot = await getDocs(q);
+                    snapshot.docs.forEach(d => {
+                        const data = d.data();
+                        // Only set first thumbnail per course
+                        if (data.courseId && data.thumbnailUrl && !thumbMap[data.courseId]) {
+                            thumbMap[data.courseId] = data.thumbnailUrl;
+                        }
+                    });
+                } catch (err) {
+                    console.warn('[useCourseThumbnails] Error fetching batch:', err);
+                }
+            }
+
+            if (isMounted) {
+                setThumbnails(thumbMap);
+                setLoading(false);
+            }
+        };
+
+        fetchThumbnails();
+        return () => { isMounted = false; };
+    }, [courseIds.join(',')]); // Stringify array to avoid infinite re-renders
+
+    return { thumbnails, loading };
 }

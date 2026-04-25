@@ -1,11 +1,16 @@
+import { useState, useMemo } from 'react';
 import { Search, Bookmark, FileText, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/app/context/AuthContext';
-import { useBookmarkedCourses, toggleBookmark, Course } from '@/hooks/useData';
+import { useBookmarkedCourses, toggleBookmark, Course, useCourseThumbnails } from '@/hooks/useData';
 
 export function Library() {
   const { user } = useAuth();
   const { courses, loading } = useBookmarkedCourses(user?.uid);
+
+  // Fetch real thumbnails for bookmarked courses
+  const courseIds = useMemo(() => courses.map(c => c.id), [courses]);
+  const { thumbnails } = useCourseThumbnails(courseIds);
 
   const handleRemoveBookmark = async (courseId: string) => {
     if (user?.uid) {
@@ -62,8 +67,12 @@ export function Library() {
                   onClick={() => handleOpenCourse(course)}
                   className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:border-primary transition-colors group"
                 >
-                  <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                    <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                  <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors overflow-hidden">
+                    {thumbnails[course.id] ? (
+                      <img src={thumbnails[course.id]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <FileText className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-foreground mb-1">

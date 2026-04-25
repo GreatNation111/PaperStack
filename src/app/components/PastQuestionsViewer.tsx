@@ -58,13 +58,15 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const { paper: fetchedPaper, loading } = usePaper(paperId);
   const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
 
-  // If paper has pdfUrl, open it directly and go back
+  // If paper has driveFolderUrl and no other content, open it directly and go back
   useEffect(() => {
-    if (paper?.pdfUrl && !loading) {
-      window.open(paper.pdfUrl, '_blank');
-      navigate(-1);
+    if (paper && !loading) {
+      if (paper.driveFolderUrl && !paper.pdfUrl && !paper.richTextContent) {
+        window.open(paper.driveFolderUrl, '_blank');
+        navigate(-1);
+      }
     }
-  }, [paper?.pdfUrl, loading, navigate]);
+  }, [paper, loading, navigate]);
 
   // Note: Recently viewed is recorded when clicking on a course in PastQuestions page
   // This viewer is for paper-level viewing, not course-level
@@ -167,7 +169,12 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
             marginBottom: `${(scale - 1) * 500}px`
           }}
         >
-          {paper && paper.pdfUrl ? (
+          {paper && paper.richTextContent ? (
+            <div 
+              className="p-8 md:p-12 prose prose-slate max-w-none min-h-[1000px] w-full"
+              dangerouslySetInnerHTML={{ __html: paper.richTextContent }}
+            />
+          ) : paper && paper.pdfUrl ? (
             <iframe
               src={paper.pdfUrl}
               className="w-full h-full min-h-[1000px]"
