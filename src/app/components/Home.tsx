@@ -281,7 +281,13 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => course.driveFolderUrl && window.open(course.driveFolderUrl, '_blank')}
+                    onClick={() => {
+                      if (course.driveFolderUrl) {
+                        window.open(course.driveFolderUrl, '_blank');
+                      } else {
+                        navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
+                      }
+                    }}
                     className="flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-72 text-left"
                   >
                     <div className="w-full h-36 bg-muted rounded-xl mb-4 flex items-center justify-center relative overflow-hidden group">

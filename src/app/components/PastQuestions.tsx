@@ -68,6 +68,9 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
         }
         if (course.driveFolderUrl) {
             window.open(course.driveFolderUrl, '_blank');
+        } else {
+            // Native papers — navigate to course papers list
+            navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
         }
     };
 
@@ -220,7 +223,10 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                                                     >
                                                         <Bookmark className="w-4 h-4" strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
                                                     </button>
-                                                    <button className="px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-xs font-medium flex items-center gap-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenDriveFolder(course); }}
+                                                        className="px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-xs font-medium flex items-center gap-1"
+                                                    >
                                                         <ExternalLink className="w-3 h-3" /> Preview
                                                     </button>
                                                 </div>

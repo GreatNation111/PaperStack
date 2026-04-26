@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     collection,
     getDocs,
+    getDoc,
     query,
     where,
     orderBy,
@@ -653,25 +654,96 @@ export function usePaper(paperId: string | undefined) {
             return;
         }
 
+        let isMounted = true;
         const fetchPaper = async () => {
+            setLoading(true);
             try {
-                const staticPapers: Paper[] = [
-                    { id: '1', title: '2023 First Semester Exam', code: 'PHY 314', year: '2023', semester: 'First', type: 'Exam', pdfUrl: '#', thumbnailUrl: '', downloads: 124, courseId: '1' },
-                    { id: '2', title: '2022 Second Semester Test', code: 'PHY 314', year: '2022', semester: 'Second', type: 'Test', pdfUrl: '#', thumbnailUrl: '', downloads: 89, courseId: '1' },
-                ];
-                const found = staticPapers.find(p => p.id === paperId);
-                setPaper(found || null);
+                const docRef = doc(db, 'papers', paperId);
+                const docSnap = await getDoc(docRef);
+                if (!isMounted) return;
+                if (docSnap.exists()) {
+                    const data = docSnap.data() as any;
+                    setPaper({
+                        id: docSnap.id,
+                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                        code: data.courseCode || data.code || '',
+                        year: data.year || '',
+                        semester: data.semester || '',
+                        type: data.type || '',
+                        pdfUrl: data.pdfUrl || data.url || '',
+                        richTextContent: data.richTextContent || '',
+                        thumbnailUrl: data.thumbnailUrl || '',
+                        downloads: data.downloads || 0,
+                        courseId: data.courseId || undefined,
+                        departmentId: data.departmentId || undefined,
+                    });
+                } else {
+                    setPaper(null);
+                }
             } catch (e) {
-                console.error("Error fetching paper", e);
-                setPaper(null);
+                console.error("Error fetching paper:", e);
+                if (isMounted) setPaper(null);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
         fetchPaper();
+        return () => { isMounted = false; };
     }, [paperId]);
 
     return { paper, loading };
+}
+
+// Fetch all papers for a specific course
+export function useCoursePapers(courseId: string | undefined) {
+    const [papers, setPapers] = useState<Paper[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!courseId) {
+            setPapers([]);
+            setLoading(false);
+            return;
+        }
+
+        let isMounted = true;
+        const fetchPapers = async () => {
+            setLoading(true);
+            try {
+                const q = query(collection(db, 'papers'), where('courseId', '==', courseId));
+                const snapshot = await getDocs(q);
+                if (!isMounted) return;
+                const docs = snapshot.docs.map(d => {
+                    const data = d.data() as any;
+                    return {
+                        id: d.id,
+                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
+                        code: data.courseCode || data.code || '',
+                        year: data.year || '',
+                        semester: data.semester || '',
+                        type: data.type || '',
+                        pdfUrl: data.pdfUrl || data.url || '',
+                        richTextContent: data.richTextContent || '',
+                        thumbnailUrl: data.thumbnailUrl || '',
+                        downloads: data.downloads || 0,
+                        courseId: data.courseId || undefined,
+                        departmentId: data.departmentId || undefined,
+                    } as Paper;
+                });
+                setPapers(docs);
+            } catch (err) {
+                console.error('Error fetching course papers:', err);
+                if (isMounted) setPapers([]);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchPapers();
+        return () => { isMounted = false; };
+    }, [courseId]);
+
+    return { papers, loading };
 }
 
 export function useUserCount() {

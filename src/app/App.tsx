@@ -28,6 +28,7 @@ const TermsPrivacy = lazy(() => import('@/app/components/TermsPrivacy').then(m =
 const PrivacyPolicy = lazy(() => import('@/app/components/PrivacyPolicy').then(m => ({ default: m.default })));
 const TermsOfService = lazy(() => import('@/app/components/TermsOfService').then(m => ({ default: m.default })));
 const PremiumPlans = lazy(() => import('@/app/components/PremiumPlans').then(m => ({ default: m.PremiumPlans })));
+const CoursePapers = lazy(() => import('@/app/components/CoursePapers').then(m => ({ default: m.CoursePapers })));
 
 // Global loading fallback for Suspense
 const GlobalLoader = () => (
@@ -155,6 +156,7 @@ function AppContent() {
 
                 {/* Feature Routes */}
                 <Route path="/past-questions" element={<PastQuestions onBack={handleBackFromPastQuestions} courseCode={location.state?.courseCode} selectedLevel={location.state?.selectedLevel} departmentId={location.state?.departmentId} />} />
+                <Route path="/course/:courseId/papers" element={<CoursePapers />} />
                 <Route path="/view-paper/:paperId" element={<PastQuestionsViewer onBack={() => navigate(-1)} />} />
                 <Route path="/timetable" element={<Timetable onBack={() => navigate(-1)} />} />
                 <Route path="/premium" element={<PremiumPlans />} />
