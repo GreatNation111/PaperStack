@@ -1,51 +1,118 @@
-import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Paper, usePaper } from '@/hooks/useData';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore - Vite ?url import for local worker bundling
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Mock PDF component since we can't easily embed real PDFs without a library or file URL
-// In production, use 'react-pdf' or an iframe with the PDF URL
-function MockPDFContent({ title }: { title: string }) {
-  return (
-    <div className="w-full h-full bg-white flex flex-col items-center p-8 overflow-y-auto">
-      <div className="max-w-2xl w-full space-y-6 text-slate-800">
-        <div className="text-center border-b-2 border-slate-900 pb-4 mb-8">
-          <h1 className="text-xl font-bold uppercase tracking-wider">University of Excellence</h1>
-          <h2 className="text-lg font-bold mt-2">{title}</h2>
-          <div className="flex justify-between mt-4 text-sm font-medium">
-            <span>Time: 2 Hours</span>
-            <span>Total Marks: 70</span>
-          </div>
-          <div className="mt-4 italic text-sm">Attempt all questions in Section A and any 3 in Section B</div>
-        </div>
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-        <div className="space-y-4">
-          <h3 className="font-bold">SECTION A (Compulsory)</h3>
-          {[1, 2, 3, 4].map(n => (
-            <div key={n} className="flex gap-2">
-              <span className="font-bold">{n}.</span>
-              <p>
-                Explain the fundamental principles of {title.split(' ').slice(0, 2).join(' ')}.
-                (5 Marks)
-              </p>
-            </div>
-          ))}
-        </div>
+/**
+ * Canvas-based PDF viewer using pdf.js.
+ * Avoids cross-origin iframe blocking (e.g. Brave, Safari).
+ */
+function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const pdfDocRef = useRef<any>(null);
 
-        <div className="space-y-4 pt-4">
-          <h3 className="font-bold">SECTION B</h3>
-          {[5, 6, 7].map(n => (
-            <div key={n} className="flex gap-2">
-              <span className="font-bold">{n}.</span>
-              <p>
-                Discuss the impact of modern technology on the study of this subject.
-                Support your answer with relevant diagrams where necessary. (15 Marks)
-              </p>
-            </div>
-          ))}
-        </div>
+  // Load the PDF document once
+  useEffect(() => {
+    let cancelled = false;
+    setPdfLoading(true);
+    setPdfError(null);
+
+    const loadPdf = async () => {
+      try {
+        const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+        if (cancelled) { await pdf.destroy(); return; }
+        pdfDocRef.current = pdf;
+        setPageCount(pdf.numPages);
+        setPdfLoading(false);
+      } catch (err: any) {
+        console.error('PDF load error:', err);
+        if (!cancelled) {
+          setPdfError('Could not load PDF. Try opening it directly.');
+          setPdfLoading(false);
+        }
+      }
+    };
+    loadPdf();
+
+    return () => {
+      cancelled = true;
+      if (pdfDocRef.current) {
+        pdfDocRef.current.destroy();
+        pdfDocRef.current = null;
+      }
+    };
+  }, [pdfUrl]);
+
+  // Render all pages when PDF is loaded or scale changes
+  const renderPages = useCallback(async () => {
+    const pdf = pdfDocRef.current;
+    const container = containerRef.current;
+    if (!pdf || !container) return;
+
+    // Clear previous canvases
+    container.innerHTML = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: scale * 1.5 }); // 1.5x base for crisp text
+
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = '100%';
+      canvas.style.maxWidth = `${viewport.width}px`;
+      canvas.style.height = 'auto';
+      canvas.style.display = 'block';
+      canvas.style.marginBottom = '12px';
+      canvas.style.boxShadow = '0 2px 12px rgba(0,0,0,0.15)';
+      canvas.style.borderRadius = '4px';
+
+      const ctx = canvas.getContext('2d')!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      container.appendChild(canvas);
+    }
+  }, [scale]);
+
+  useEffect(() => {
+    if (pageCount > 0) renderPages();
+  }, [pageCount, scale, renderPages]);
+
+  if (pdfLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="w-8 h-8 text-white animate-spin" />
+        <p className="text-gray-300 text-sm">Loading PDF...</p>
       </div>
-    </div>
+    );
+  }
+
+  if (pdfError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+        <p className="text-red-300 text-sm">{pdfError}</p>
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" /> Open PDF Directly
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="flex flex-col items-center w-full max-w-[800px]" />
   );
 }
 
@@ -68,16 +135,12 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     }
   }, [paper, loading, navigate]);
 
-  // Note: Recently viewed is recorded when clicking on a course in PastQuestions page
-  // This viewer is for paper-level viewing, not course-level
-
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
   const handleBack = () => {
-    // Smart back navigation
     if (window.history.length > 2) {
       navigate(-1);
     } else {
@@ -108,14 +171,6 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     );
   }
 
-  // Use override onBack if provided (e.g. from props), else use internal handler
-  // Actually, props onBack might be passed by Router? No, checking App.tsx. 
-  // App.tsx passes `onBack={() => navigate(-1)}`. 
-  // If we are refreshing, that prop logic is fine IF history exists.
-  // But we want our robust `handleBack` to take precedence if needed.
-  // I will ignore the prop in favor of robust logic or combine them.
-  // Let's use `handleBack` which is robust.
-
   return (
     <div className={`h-screen flex flex-col bg-[#525659] ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
@@ -145,12 +200,28 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
           <div className="h-6 w-px bg-gray-600 mx-1 hidden sm:block" />
 
+          {paper?.pdfUrl && (
+            <a
+              href={paper.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
+              title="Open in new tab"
+            >
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          )}
           <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
             <Bookmark className="w-5 h-5" />
           </button>
-          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
+          <a
+            href={paper?.pdfUrl || '#'}
+            download
+            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
+            title="Download"
+          >
             <Download className="w-5 h-5" />
-          </button>
+          </a>
           <button onClick={toggleFullscreen} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
@@ -159,32 +230,34 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
       {/* Viewer Area */}
       <div className="flex-1 overflow-auto p-4 flex justify-center bg-[#525659]">
-        <div
-          className="bg-white shadow-2xl transition-transform origin-top"
-          style={{
-            width: '100%',
-            maxWidth: '800px',
-            minHeight: '1000px',
-            transform: `scale(${scale})`,
-            marginBottom: `${(scale - 1) * 500}px`
-          }}
-        >
-          {paper && paper.richTextContent ? (
-            <div 
+        {paper && paper.richTextContent ? (
+          <div
+            className="bg-white shadow-2xl transition-transform origin-top"
+            style={{
+              width: '100%',
+              maxWidth: '800px',
+              minHeight: '1000px',
+              transform: `scale(${scale})`,
+              marginBottom: `${(scale - 1) * 500}px`
+            }}
+          >
+            <div
               className="p-8 md:p-12 prose prose-slate max-w-none min-h-[1000px] w-full"
               dangerouslySetInnerHTML={{ __html: paper.richTextContent }}
             />
-          ) : paper && paper.pdfUrl ? (
-            <iframe
-              src={paper.pdfUrl}
-              className="w-full h-full min-h-[1000px]"
-              title="Question Paper PDF"
-            />
-          ) : (
-            <MockPDFContent title={`${paper?.code || 'Question'} - ${paper?.type || 'Paper'}`} />
-          )}
-        </div>
+          </div>
+        ) : paper && paper.pdfUrl ? (
+          <PdfCanvasViewer pdfUrl={paper.pdfUrl} scale={scale} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center text-gray-300">
+            <p>No content available for this paper.</p>
+            <button onClick={handleBack} className="px-5 py-2 bg-white text-black rounded-full text-sm font-medium">
+              Go Back
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
