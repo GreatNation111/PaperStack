@@ -1,7 +1,10 @@
-import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Paper, usePaper } from '@/hooks/useData';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore - Vite ?url import for local worker bundling
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -120,6 +123,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const { paperId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, userProfile } = useAuth();
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Try to get paper from state (fast), otherwise fetch (refresh)
   const { paper: fetchedPaper, loading } = usePaper(paperId);
@@ -139,6 +145,45 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
+
+  const handleDownload = async () => {
+    if (!paper?.pdfUrl) return;
+    
+    const profile = userProfile;
+    // Premium limit check: max 3 downloads for free users
+    if (!profile?.isPremium && (profile?.downloadsCount || 0) >= 3) {
+      setShowUpsellModal(true);
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      // Fetch as blob to force download instead of opening in tab
+      const response = await fetch(paper.pdfUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${paper.code}_${paper.year}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Increment download count if not premium
+      if (!profile?.isPremium && user) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          downloadsCount: (profile?.downloadsCount || 0) + 1
+        });
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback if fetch fails (e.g. CORS issues)
+      window.open(paper.pdfUrl, '_blank');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handleBack = () => {
     if (window.history.length > 2) {
@@ -214,14 +259,14 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
             <Bookmark className="w-5 h-5" />
           </button>
-          <a
-            href={paper?.pdfUrl || '#'}
-            download
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading || !paper?.pdfUrl}
+            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full disabled:opacity-50"
             title="Download"
           >
-            <Download className="w-5 h-5" />
-          </a>
+            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+          </button>
           <button onClick={toggleFullscreen} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
@@ -257,6 +302,45 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           </div>
         )}
       </div>
+
+      {/* Premium Upsell Modal */}
+      {showUpsellModal && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#2f3133] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center relative">
+              <button
+                onClick={() => setShowUpsellModal(false)}
+                className="absolute right-4 top-4 text-gray-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Download Limit Reached
+              </h3>
+              <p className="text-gray-300 text-sm mb-6">
+                Free users can download up to <span className="text-white font-bold">3 papers</span>. Upgrade to Premium for unlimited downloads and more academic tools.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/premium')}
+                  className="w-full py-3 bg-white text-black rounded-full font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Unlock Premium
+                </button>
+                <button
+                  onClick={() => setShowUpsellModal(false)}
+                  className="w-full py-3 text-gray-400 hover:text-white font-medium transition-colors"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

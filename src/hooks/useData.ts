@@ -70,6 +70,7 @@ export interface UserProfile {
     level?: string;
     avatar?: string;
     savedPapers?: string[]; // Array of paper IDs
+    downloadsCount?: number; // Track PDF downloads
     isPremium: boolean;
     premiumExpiresAt?: any; // Firestore Timestamp
 }
