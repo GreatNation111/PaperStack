@@ -34,12 +34,15 @@ export function AdminLogin({ onComplete }: AdminLoginProps) {
       // Sign in with email and password
       await signInWithEmailAndPassword(auth, email, password);
 
+      // Persist admin mode so PWA relaunches go straight to admin dashboard
+      localStorage.setItem('paperstack_admin_mode', 'true');
+
       // AuthContext will check if user is admin automatically
       // If they are, the RequireAdmin guard will let them through
 
       onComplete();
     } catch (err: any) {
-      console.error('Admin login error:', err);
+      if (import.meta.env.DEV) console.error('Admin login error:', err);
       if (err.code === 'auth/invalid-credential') {
         setError('Invalid email or password.');
       } else if (err.code === 'auth/user-not-found') {

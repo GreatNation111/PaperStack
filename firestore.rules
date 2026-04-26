@@ -78,6 +78,12 @@ service cloud.firestore {
       }
     }
     
+    // --- TOP-LEVEL PAPERS (used by student views & admin uploads) ---
+    match /papers/{paperId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /contributors/{id} {
       allow read: if true;
       allow write: if isAdmin();

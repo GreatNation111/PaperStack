@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // --- PAPER PDFs ---
+    // Public read so students can view/download papers
+    // Admin-only write so only admins can upload/delete
+    match /papers/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- PAPER THUMBNAILS ---
+    // Same access pattern as papers
+    match /thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- DEFAULT: deny everything else ---
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

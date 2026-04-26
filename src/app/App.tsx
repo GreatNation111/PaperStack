@@ -42,7 +42,20 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, userProfile, logout } = useAuth();
+  const { user, isAdmin, loading: authLoading, userProfile, logout } = useAuth();
+
+  // Admin auto-redirect: if admin mode was persisted, redirect on boot
+  useEffect(() => {
+    if (authLoading) return;
+    const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
+    if (adminPersisted && user && isAdmin && !location.pathname.startsWith('/admin')) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+    // If persisted but user is not admin (e.g. logged out), clear the flag
+    if (adminPersisted && !authLoading && (!user || !isAdmin)) {
+      localStorage.removeItem('paperstack_admin_mode');
+    }
+  }, [authLoading, user, isAdmin, location.pathname, navigate]);
 
   // Theme management
   useEffect(() => {
@@ -82,6 +95,7 @@ function AppContent() {
   };
 
   const handleSignOut = async () => {
+    localStorage.removeItem('paperstack_admin_mode');
     await logout();
     navigate('/welcome');
   };

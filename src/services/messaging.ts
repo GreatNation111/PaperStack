@@ -17,7 +17,7 @@ export const requestNotificationPermissionAndSaveToken = async (userId: string) 
                 await updateDoc(doc(db, 'users', userId), {
                     fcmTokens: arrayUnion(targetToken)
                 });
-                console.log('Push notifications enabled and token registered.');
+                if (import.meta.env.DEV) console.log('Push notifications enabled and token registered.');
                 return targetToken;
             } else {
                 console.warn('No registration token available. Request permission to generate one.');

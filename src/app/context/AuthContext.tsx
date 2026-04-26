@@ -28,9 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [userProfile, setUserProfile] = useState<any | null>(null);
 
     useEffect(() => {
-        console.log('[AuthContext] Setting up auth listener');
+        if (import.meta.env.DEV) console.log('[AuthContext] Setting up auth listener');
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            console.log('[AuthContext] Auth state changed - user:', currentUser?.uid);
+            if (import.meta.env.DEV) console.log('[AuthContext] Auth state changed - user:', currentUser?.uid);
 
             // Set loading to true while we verify profile and admin status
             setLoading(true);
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (currentUser) {
                 // Fetch User Profile
                 try {
-                    console.log('[AuthContext] Fetching profile and admin status...');
+                    if (import.meta.env.DEV) console.log('[AuthContext] Fetching profile and admin status...');
                     const [userDoc, adminDoc] = await Promise.all([
                         getDoc(doc(db, 'users', currentUser.uid)),
                         getDoc(doc(db, 'admins', currentUser.uid))
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
 
                     const isAdminUser = adminDoc.exists();
-                    console.log('[AuthContext] Admin status verified:', isAdminUser);
+                    if (import.meta.env.DEV) console.log('[AuthContext] Admin status verified:', isAdminUser);
                     setIsAdmin(isAdminUser);
                 } catch (error: any) {
                     console.error("[AuthContext] Error fetching extended user data:", error);
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsAdmin(false);
             }
 
-            console.log('[AuthContext] Verification complete, setting loading to false');
+            if (import.meta.env.DEV) console.log('[AuthContext] Verification complete, setting loading to false');
             setLoading(false);
         });
 
