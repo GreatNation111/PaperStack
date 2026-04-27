@@ -147,7 +147,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
   const handleDownload = async () => {
-    if (!paper?.pdfUrl) return;
+    if (!paper?.pdfUrl && !paper?.richTextContent) return;
     
     const profile = userProfile;
     // Premium limit check: max 3 downloads for free users
@@ -158,17 +158,48 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
     try {
       setIsDownloading(true);
-      // Fetch as blob to force download instead of opening in tab
-      const response = await fetch(paper.pdfUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${paper.code}_${paper.year}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      if (paper.pdfUrl) {
+        // PDF Download
+        const response = await fetch(paper.pdfUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${paper.code}_${paper.year}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else if (paper.richTextContent) {
+        // Native Doc Download as HTML
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>${paper.code} - ${paper.year}</title>
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }
+                h1, h2, h3 { color: #111; }
+                img { max-width: 100%; height: auto; }
+              </style>
+            </head>
+            <body>
+              ${paper.richTextContent}
+            </body>
+          </html>
+        `;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${paper.code}_${paper.year}.html`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
 
       // Increment download count if not premium
       if (!profile?.isPremium && user) {
@@ -256,12 +287,27 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
               <ExternalLink className="w-5 h-5" />
             </a>
           )}
-          <button className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full">
+          <button 
+            onClick={async () => {
+              if (paper?.courseId && user) {
+                try {
+                  const { toggleBookmark } = await import('@/hooks/useData');
+                  await toggleBookmark(user.uid, paper.courseId, false);
+                  alert('Course bookmarked! You can access it from the Library.');
+                } catch (e) {
+                  console.error(e);
+                  alert('Failed to bookmark course.');
+                }
+              }
+            }}
+            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
+            title="Bookmark Course"
+          >
             <Bookmark className="w-5 h-5" />
           </button>
           <button
             onClick={handleDownload}
-            disabled={isDownloading || !paper?.pdfUrl}
+            disabled={isDownloading || (!paper?.pdfUrl && !paper?.richTextContent)}
             className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full disabled:opacity-50"
             title="Download"
           >
@@ -277,17 +323,16 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
       <div className="flex-1 overflow-auto p-4 flex justify-center bg-[#525659]">
         {paper && paper.richTextContent ? (
           <div
-            className="bg-white shadow-2xl transition-transform origin-top"
+            className="bg-white shadow-xl transition-all origin-top rounded-lg mb-8"
             style={{
               width: '100%',
               maxWidth: '800px',
-              minHeight: '1000px',
-              transform: `scale(${scale})`,
-              marginBottom: `${(scale - 1) * 500}px`
+              height: 'max-content',
+              fontSize: `${scale}rem`
             }}
           >
             <div
-              className="p-8 md:p-12 prose prose-slate max-w-none min-h-[1000px] w-full"
+              className="p-8 md:p-12 prose prose-slate max-w-none w-full pb-16"
               dangerouslySetInnerHTML={{ __html: paper.richTextContent }}
             />
           </div>

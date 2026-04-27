@@ -526,6 +526,61 @@ export async function recordRecentCourse(userId: string, course: Course) {
     });
 }
 
+export async function recordPaperDownload(userId: string, paper: Paper) {
+    if (!userId || !paper.id) return;
+    const ref = doc(db, 'users', userId, 'downloaded_papers', paper.id);
+    await setDoc(ref, {
+        paperId: paper.id,
+        title: paper.title,
+        code: paper.code,
+        year: paper.year,
+        semester: paper.semester,
+        type: paper.type,
+        pdfUrl: paper.pdfUrl || null,
+        richTextContent: paper.richTextContent || null,
+        courseId: paper.courseId || null,
+        downloadedAt: new Date()
+    });
+}
+
+export function useDownloadedPapers(userId: string | undefined) {
+    const [papers, setPapers] = useState<Paper[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!userId) {
+            setPapers([]);
+            setLoading(false);
+            return;
+        }
+
+        const q = query(
+            collection(db, 'users', userId, 'downloaded_papers'),
+            orderBy('downloadedAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetched = snapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    ...data
+                } as Paper;
+            });
+            setPapers(fetched);
+            setLoading(false);
+        }, (err) => {
+            console.error('[useDownloadedPapers] Error:', err);
+            setPapers([]);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [userId]);
+
+    return { papers, loading };
+}
+
 export function useRecentCourses(userId: string | undefined) {
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
