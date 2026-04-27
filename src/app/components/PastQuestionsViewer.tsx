@@ -1,6 +1,6 @@
-import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2, Sparkles, X, CheckCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Paper, usePaper, useBookmarks } from '@/hooks/useData';
+import { Paper, usePaper, useBookmarks, useDownloadedPapers } from '@/hooks/useData';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -93,8 +93,8 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
   if (pdfLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <Loader2 className="w-8 h-8 text-white animate-spin" />
-        <p className="text-gray-300 text-sm">Loading PDF...</p>
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-secondary text-sm">Loading PDF...</p>
       </div>
     );
   }
@@ -102,15 +102,13 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
   if (pdfError) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-        <p className="text-red-300 text-sm">{pdfError}</p>
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors"
+        <p className="text-destructive text-sm">{pdfError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          <ExternalLink className="w-4 h-4" /> Open PDF Directly
-        </a>
+          Retry
+        </button>
       </div>
     );
   }
@@ -133,6 +131,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
   const { bookmarkIds } = useBookmarks(user?.uid);
   const isBookmarked = paper?.courseId ? bookmarkIds.includes(paper.courseId) : false;
+
+  const { papers: downloadedPapers } = useDownloadedPapers(user?.uid);
+  const isDownloaded = downloadedPapers.some(p => p.id === paper?.id);
 
   const [offlineDocUrl, setOfflineDocUrl] = useState<string | null>(null);
   const [offlineHtml, setOfflineHtml] = useState<string | null>(null);
@@ -227,10 +228,10 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
   if (loading && !paper) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#525659] text-white">
+      <div className="h-screen flex items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <p>Loading paper...</p>
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-secondary">Loading paper...</p>
         </div>
       </div>
     );
@@ -238,10 +239,10 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
   if (!paper) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center text-white bg-[#525659]">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center text-foreground bg-background">
         <div className="text-xl font-bold mb-2">Paper Not Found</div>
-        <p className="text-gray-300 mb-6">The requested paper could not be found.</p>
-        <button onClick={handleBack} className="px-6 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90">
+        <p className="text-secondary mb-6">The requested paper could not be found.</p>
+        <button onClick={handleBack} className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90">
           Go Back
         </button>
       </div>
@@ -249,79 +250,67 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   }
 
   return (
-    <div className={`h-screen flex flex-col bg-[#525659] ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+    <div className={`h-screen flex flex-col bg-background ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
-      <div className="h-14 bg-[#2f3133] flex items-center justify-between px-4 shadow-md z-10">
+      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 shadow-sm z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="text-white font-medium truncate max-w-[200px] md:max-w-md">
+          <div className="text-foreground font-medium truncate max-w-[200px] md:max-w-md">
             {paper ? `${paper.code} - ${paper.year} (${paper.semester})` : 'Question Paper'}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             <ZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-xs text-gray-400 font-mono w-12 text-center hidden sm:block">
+          <span className="text-xs text-secondary font-mono w-12 text-center hidden sm:block">
             {Math.round(scale * 100)}%
           </span>
-          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             <ZoomIn className="w-5 h-5" />
           </button>
 
-          <div className="h-6 w-px bg-gray-600 mx-1 hidden sm:block" />
+          <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
 
-          {paper?.pdfUrl && (
-            <a
-              href={paper.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
-              title="Open in new tab"
-            >
-              <ExternalLink className="w-5 h-5" />
-            </a>
-          )}
           <button 
             onClick={async () => {
               if (paper?.courseId && user) {
                 try {
                   const { toggleBookmark } = await import('@/hooks/useData');
                   await toggleBookmark(user.uid, paper.courseId, isBookmarked);
-                  // We don't need alert here, visual feedback is instant
                 } catch (e) {
                   console.error(e);
                   alert('Failed to update bookmark.');
                 }
               }
             }}
-            className={`p-2 rounded-full transition-colors ${isBookmarked ? 'text-[#4F46E5] bg-[#4F46E5]/10 hover:bg-[#4F46E5]/20' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+            className={`p-2 rounded-full transition-colors ${isBookmarked ? 'text-[#4F46E5] bg-[#4F46E5]/10 hover:bg-[#4F46E5]/20' : 'text-secondary hover:text-foreground hover:bg-foreground/10'}`}
             title={isBookmarked ? "Remove Bookmark" : "Bookmark Course"}
           >
             <Bookmark className="w-5 h-5" fill={isBookmarked ? "currentColor" : "none"} />
           </button>
           <button
             onClick={handleDownload}
-            disabled={isDownloading || (!paper?.pdfUrl && !paper?.richTextContent)}
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full disabled:opacity-50"
-            title="Download"
+            disabled={isDownloading || (!paper?.pdfUrl && !paper?.richTextContent) || isDownloaded}
+            className={`p-2 rounded-full transition-colors ${isDownloaded ? 'text-green-500 bg-green-500/10' : 'text-secondary hover:text-foreground hover:bg-foreground/10'} disabled:opacity-100`}
+            title={isDownloaded ? "Saved Offline" : "Save for Offline"}
           >
-            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin text-secondary" /> : isDownloaded ? <CheckCircle className="w-5 h-5" /> : <Download className="w-5 h-5" />}
           </button>
-          <button onClick={toggleFullscreen} className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full hidden sm:block">
+          <button onClick={toggleFullscreen} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       {/* Viewer Area */}
-      <div className="flex-1 overflow-auto p-4 flex justify-center bg-[#525659]">
+      <div className="flex-1 overflow-auto p-4 flex justify-center bg-muted/30">
         {(offlineHtml || (paper && paper.richTextContent)) ? (
           <div
             className="bg-white shadow-xl transition-all origin-top rounded-lg mb-8"
@@ -340,9 +329,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
         ) : (offlineDocUrl || (paper && paper.pdfUrl)) ? (
           <PdfCanvasViewer pdfUrl={offlineDocUrl || paper!.pdfUrl!} scale={scale} />
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center text-gray-300">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center text-secondary">
             <p>No content available for this paper.</p>
-            <button onClick={handleBack} className="px-5 py-2 bg-white text-black rounded-full text-sm font-medium">
+            <button onClick={handleBack} className="px-5 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium">
               Go Back
             </button>
           </div>
