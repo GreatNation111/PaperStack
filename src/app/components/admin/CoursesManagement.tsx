@@ -13,7 +13,8 @@ import {
   serverTimestamp,
   setDoc
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import { useDepartments } from '@/hooks/useData';
 import { CoursePapersManager } from './CoursePapersManager';
 
@@ -44,6 +45,8 @@ export function CoursesManagement() {
   // Form State
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [paperFile, setPaperFile] = useState<File | null>(null);
+  const [paperYear, setPaperYear] = useState('');
   const [formData, setFormData] = useState({
     code: '',
     title: '',
@@ -87,6 +90,8 @@ export function CoursesManagement() {
       driveFolderUrl: '',
       papers: 0
     });
+    setPaperFile(null);
+    setPaperYear('');
     setFormError('');
     setShowModal(true);
   };
@@ -104,6 +109,8 @@ export function CoursesManagement() {
       driveFolderUrl: course.driveFolderUrl || '',
       papers: course.papers || 0
     });
+    setPaperFile(null);
+    setPaperYear('');
     setFormError('');
     setShowModal(true);
   };
@@ -128,6 +135,8 @@ export function CoursesManagement() {
         lastUpdated: serverTimestamp()
       };
 
+      let customId = editingId;
+
       if (isEditing && editingId) {
         // For editing, we keep the existing ID
         await updateDoc(doc(db, 'courses', editingId), {
@@ -136,7 +145,7 @@ export function CoursesManagement() {
         });
       } else {
         // Create custom readable ID (e.g. 'BUS 101' -> 'bus101')
-        const customId = formData.code.toLowerCase().replace(/[^a-z0-9]/g, '');
+        customId = formData.code.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         // Save with custom ID and include id field in body
         await setDoc(doc(db, 'courses', customId), {
@@ -145,6 +154,32 @@ export function CoursesManagement() {
           papers: formData.papers || 0
         });
       }
+
+      // If a paper was attached, upload and link it
+      if (paperFile && customId) {
+        const storageRef = ref(storage, `papers/${customId}/${Date.now()}_${paperFile.name}`);
+        const snapshot = await uploadBytes(storageRef, paperFile);
+        const downloadUrl = await getDownloadURL(snapshot.ref);
+
+        await addDoc(collection(db, 'papers'), {
+          courseId: customId,
+          departmentId: formData.departmentId,
+          code: formData.code,
+          title: `${formData.code} Past Question`,
+          year: paperYear || new Date().getFullYear().toString(),
+          semester: formData.semester,
+          type: 'Exam', // Default
+          pdfUrl: downloadUrl,
+          downloads: 0,
+          createdAt: serverTimestamp()
+        });
+
+        // Increment papers count
+        await updateDoc(doc(db, 'courses', customId), {
+          papers: (formData.papers || 0) + 1
+        });
+      }
+
       setShowModal(false);
     } catch (err) {
       console.error("Error saving course:", err);
@@ -438,6 +473,27 @@ export function CoursesManagement() {
                         onChange={(e) => setFormData({ ...formData, lecturer: e.target.value })}
                         placeholder="Optional"
                         className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#DDD] mb-2">
+                      Upload PDF Paper <span className="text-xs text-[#AAA] font-normal">(Optional)</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => setPaperFile(e.target.files?.[0] || null)}
+                        className="flex-1 h-11 px-4 py-2 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] focus:outline-none focus:border-[#4F46E5] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:bg-[#4F46E5] file:text-white hover:file:bg-[#4338CA] transition-colors"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Year (e.g. 2023)"
+                        value={paperYear}
+                        onChange={(e) => setPaperYear(e.target.value)}
+                        className="w-1/3 h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
                       />
                     </div>
                   </div>

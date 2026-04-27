@@ -45,18 +45,29 @@ function AppContent() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { user, isAdmin, loading: authLoading, userProfile, logout } = useAuth();
 
+  // If admin mode is active and we're at the root or splash, go straight to admin
+  // This bypasses the student UI entirely on reload
+  const [initialRedirectDone, setInitialRedirectDone] = useState(false);
+
+  useEffect(() => {
+    const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
+    if (!initialRedirectDone) {
+      if (adminPersisted && (location.pathname === '/' || location.pathname === '/splash' || location.pathname === '/welcome')) {
+        navigate('/admin/dashboard', { replace: true });
+      }
+      setInitialRedirectDone(true);
+    }
+  }, [location.pathname, navigate, initialRedirectDone]);
+
   // Admin auto-redirect: if admin mode was persisted, redirect on boot
   useEffect(() => {
     if (authLoading) return;
     const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
-    if (adminPersisted && user && isAdmin && !location.pathname.startsWith('/admin')) {
-      navigate('/admin/dashboard', { replace: true });
-    }
     // If persisted but user is not admin (e.g. logged out), clear the flag
     if (adminPersisted && !authLoading && (!user || !isAdmin)) {
       localStorage.removeItem('paperstack_admin_mode');
     }
-  }, [authLoading, user, isAdmin, location.pathname, navigate]);
+  }, [authLoading, user, isAdmin]);
 
   // Theme management
   useEffect(() => {

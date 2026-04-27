@@ -1,10 +1,11 @@
 import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2, Sparkles, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Paper, usePaper } from '@/hooks/useData';
+import { Paper, usePaper, useBookmarks } from '@/hooks/useData';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getOfflinePaper } from '@/lib/indexedDB';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore - Vite ?url import for local worker bundling
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -127,9 +128,29 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Try to get paper from state (fast), otherwise fetch (refresh)
   const { paper: fetchedPaper, loading } = usePaper(paperId);
   const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
+
+  const { bookmarkIds } = useBookmarks(user?.uid);
+  const isBookmarked = paper?.courseId ? bookmarkIds.includes(paper.courseId) : false;
+
+  const [offlineDocUrl, setOfflineDocUrl] = useState<string | null>(null);
+  const [offlineHtml, setOfflineHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (paperId) {
+      getOfflinePaper(paperId).then(data => {
+        if (data) {
+          if (data.type === 'pdf') {
+            const blob = new Blob([data.data as ArrayBuffer], { type: 'application/pdf' });
+            setOfflineDocUrl(URL.createObjectURL(blob));
+          } else if (data.type === 'html') {
+            setOfflineHtml(data.data as string);
+          }
+        }
+      }).catch(err => console.error('Error loading offline paper:', err));
+    }
+  }, [paperId]);
 
   // If paper has driveFolderUrl and no other content, open it directly and go back
   useEffect(() => {
@@ -159,58 +180,38 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     try {
       setIsDownloading(true);
       
+      const { savePaperOffline } = await import('@/lib/indexedDB');
+      const { recordPaperDownload } = await import('@/hooks/useData');
+
       if (paper.pdfUrl) {
-        // PDF Download
+        // PDF Offline Download
         const response = await fetch(paper.pdfUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${paper.code}_${paper.year}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        const arrayBuffer = await response.arrayBuffer();
+        await savePaperOffline(paper.id, 'pdf', arrayBuffer);
+        
+        // Update local viewer to use offline copy immediately
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        setOfflineDocUrl(URL.createObjectURL(blob));
       } else if (paper.richTextContent) {
-        // Native Doc Download as HTML
-        const htmlContent = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <title>${paper.code} - ${paper.year}</title>
-              <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }
-                h1, h2, h3 { color: #111; }
-                img { max-width: 100%; height: auto; }
-              </style>
-            </head>
-            <body>
-              ${paper.richTextContent}
-            </body>
-          </html>
-        `;
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${paper.code}_${paper.year}.html`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Native Doc Offline Download
+        await savePaperOffline(paper.id, 'html', paper.richTextContent);
+        setOfflineHtml(paper.richTextContent);
       }
 
-      // Increment download count if not premium
-      if (!profile?.isPremium && user) {
-        await updateDoc(doc(db, 'users', user.uid), {
-          downloadsCount: (profile?.downloadsCount || 0) + 1
-        });
+      if (user) {
+        await recordPaperDownload(user.uid, paper);
+        // Increment download count if not premium
+        if (!profile?.isPremium) {
+          await updateDoc(doc(db, 'users', user.uid), {
+            downloadsCount: (profile?.downloadsCount || 0) + 1
+          });
+        }
       }
+      
+      alert('Paper saved for offline viewing! You can access it in the Library.');
     } catch (error) {
       console.error('Download failed:', error);
-      // Fallback if fetch fails (e.g. CORS issues)
-      window.open(paper.pdfUrl, '_blank');
+      alert('Failed to save paper for offline viewing.');
     } finally {
       setIsDownloading(false);
     }
@@ -292,18 +293,18 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
               if (paper?.courseId && user) {
                 try {
                   const { toggleBookmark } = await import('@/hooks/useData');
-                  await toggleBookmark(user.uid, paper.courseId, false);
-                  alert('Course bookmarked! You can access it from the Library.');
+                  await toggleBookmark(user.uid, paper.courseId, isBookmarked);
+                  // We don't need alert here, visual feedback is instant
                 } catch (e) {
                   console.error(e);
-                  alert('Failed to bookmark course.');
+                  alert('Failed to update bookmark.');
                 }
               }
             }}
-            className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-full"
-            title="Bookmark Course"
+            className={`p-2 rounded-full transition-colors ${isBookmarked ? 'text-[#4F46E5] bg-[#4F46E5]/10 hover:bg-[#4F46E5]/20' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
+            title={isBookmarked ? "Remove Bookmark" : "Bookmark Course"}
           >
-            <Bookmark className="w-5 h-5" />
+            <Bookmark className="w-5 h-5" fill={isBookmarked ? "currentColor" : "none"} />
           </button>
           <button
             onClick={handleDownload}
@@ -321,7 +322,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
       {/* Viewer Area */}
       <div className="flex-1 overflow-auto p-4 flex justify-center bg-[#525659]">
-        {paper && paper.richTextContent ? (
+        {(offlineHtml || (paper && paper.richTextContent)) ? (
           <div
             className="bg-white shadow-xl transition-all origin-top rounded-lg mb-8"
             style={{
@@ -333,11 +334,11 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           >
             <div
               className="p-8 md:p-12 prose prose-slate max-w-none w-full pb-16"
-              dangerouslySetInnerHTML={{ __html: paper.richTextContent }}
+              dangerouslySetInnerHTML={{ __html: offlineHtml || paper!.richTextContent! }}
             />
           </div>
-        ) : paper && paper.pdfUrl ? (
-          <PdfCanvasViewer pdfUrl={paper.pdfUrl} scale={scale} />
+        ) : (offlineDocUrl || (paper && paper.pdfUrl)) ? (
+          <PdfCanvasViewer pdfUrl={offlineDocUrl || paper!.pdfUrl!} scale={scale} />
         ) : (
           <div className="flex flex-col items-center justify-center py-20 gap-4 text-center text-gray-300">
             <p>No content available for this paper.</p>

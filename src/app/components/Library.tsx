@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Search, Bookmark, FileText, ExternalLink, Download } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
 import { useBookmarkedCourses, toggleBookmark, Course, useCourseThumbnails, useDownloadedPapers } from '@/hooks/useData';
 
@@ -13,6 +14,8 @@ export function Library() {
   const courseIds = useMemo(() => courses.map(c => c.id), [courses]);
   const { thumbnails } = useCourseThumbnails(courseIds);
 
+  const navigate = useNavigate();
+
   const handleRemoveBookmark = async (courseId: string) => {
     if (user?.uid) {
       await toggleBookmark(user.uid, courseId, true); // true = currently bookmarked, so remove
@@ -20,9 +23,7 @@ export function Library() {
   };
 
   const handleOpenCourse = (course: Course) => {
-    if (course.driveFolderUrl) {
-      window.open(course.driveFolderUrl, '_blank');
-    }
+    navigate(`/course/${course.id}/papers`);
   };
 
   const EmptyState = () => (

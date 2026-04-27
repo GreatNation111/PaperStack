@@ -39,6 +39,10 @@ service cloud.firestore {
       match /recent_courses/{courseId} {
         allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       }
+      
+      match /downloaded_papers/{paperId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      }
     }
 
     // --- SYSTEM CONFIG ---
