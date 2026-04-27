@@ -42,7 +42,9 @@ import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('paperstack_theme') === 'dark';
+  });
   const { user, isAdmin, loading: authLoading, userProfile, logout } = useAuth();
 
   // If admin mode is active and we're at the root or splash, go straight to admin
@@ -52,7 +54,7 @@ function AppContent() {
   useEffect(() => {
     const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
     if (!initialRedirectDone) {
-      if (adminPersisted && (location.pathname === '/' || location.pathname === '/splash' || location.pathname === '/welcome')) {
+      if (adminPersisted && !location.pathname.startsWith('/admin')) {
         navigate('/admin/dashboard', { replace: true });
       }
       setInitialRedirectDone(true);
@@ -78,7 +80,11 @@ function AppContent() {
     }
   }, [isDarkMode]);
 
-  const handleToggleDarkMode = () => setIsDarkMode(!isDarkMode);
+  const handleToggleDarkMode = () => {
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    localStorage.setItem('paperstack_theme', next ? 'dark' : 'light');
+  };
 
   // Navigation Handlers
   const handleSplashComplete = () => navigate('/welcome');

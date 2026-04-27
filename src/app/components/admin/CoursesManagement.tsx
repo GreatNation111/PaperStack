@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, Edit3, Trash2, X, CheckCircle, ExternalLink, Loader2, FileText } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import {
   collection,
   onSnapshot,
@@ -59,6 +61,8 @@ export function CoursesManagement() {
   });
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'pdf' | 'richtext'>('pdf');
+  const [richText, setRichText] = useState('');
 
   // Fetch Courses Real-time
   useEffect(() => {
@@ -93,6 +97,8 @@ export function CoursesManagement() {
     setPaperFile(null);
     setPaperYear('');
     setFormError('');
+    setUploadMode('pdf');
+    setRichText('');
     setShowModal(true);
   };
 
@@ -112,6 +118,8 @@ export function CoursesManagement() {
     setPaperFile(null);
     setPaperYear('');
     setFormError('');
+    setUploadMode('pdf');
+    setRichText('');
     setShowModal(true);
   };
 
@@ -155,7 +163,7 @@ export function CoursesManagement() {
         });
       }
 
-      // If a paper was attached, upload and link it
+      // If a paper was attached (PDF), upload and link it
       if (paperFile && customId) {
         const storageRef = ref(storage, `papers/${customId}/${Date.now()}_${paperFile.name}`);
         const snapshot = await uploadBytes(storageRef, paperFile);
@@ -168,13 +176,33 @@ export function CoursesManagement() {
           title: `${formData.code} Past Question`,
           year: paperYear || new Date().getFullYear().toString(),
           semester: formData.semester,
-          type: 'Exam', // Default
+          type: 'Exam',
           pdfUrl: downloadUrl,
           downloads: 0,
           createdAt: serverTimestamp()
         });
 
         // Increment papers count
+        await updateDoc(doc(db, 'courses', customId), {
+          papers: (formData.papers || 0) + 1
+        });
+      }
+
+      // If native doc was written, save it as a paper
+      if (uploadMode === 'richtext' && richText && richText !== '<p><br></p>' && customId) {
+        await addDoc(collection(db, 'papers'), {
+          courseId: customId,
+          departmentId: formData.departmentId,
+          code: formData.code,
+          title: `${formData.code} Past Question`,
+          year: paperYear || new Date().getFullYear().toString(),
+          semester: formData.semester,
+          type: 'Exam',
+          richTextContent: richText,
+          downloads: 0,
+          createdAt: serverTimestamp()
+        });
+
         await updateDoc(doc(db, 'courses', customId), {
           papers: (formData.papers || 0) + 1
         });
@@ -283,13 +311,6 @@ export function CoursesManagement() {
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => setManagingPapersCourse(course)}
-                        className="w-8 h-8 flex items-center justify-center text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
-                        title="Manage Papers"
-                      >
-                        <FileText className="w-4 h-4" strokeWidth={1.5} />
-                      </button>
-                      <button
                         onClick={() => handleOpenEdit(course)}
                         className="w-8 h-8 flex items-center justify-center text-[#4F46E5] hover:bg-[#4F46E5]/10 rounded-lg transition-colors"
                       >
@@ -333,12 +354,6 @@ export function CoursesManagement() {
 
             <div className="flex gap-2 pt-3 border-t border-[#2A2A2F]">
               <button
-                onClick={() => setManagingPapersCourse(course)}
-                className="flex-1 h-10 border border-[#333] text-blue-400 rounded-lg hover:border-blue-400/50 transition-colors flex items-center justify-center gap-2"
-              >
-                <FileText className="w-4 h-4" /> Papers
-              </button>
-              <button
                 onClick={() => handleOpenEdit(course)}
                 className="flex-1 h-10 border border-[#333] text-[#AAA] rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors flex items-center justify-center gap-2"
               >
@@ -371,7 +386,7 @@ export function CoursesManagement() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-lg bg-[#1A1A1F] rounded-2xl border border-[#2A2A2F] shadow-2xl max-h-[90vh] overflow-y-auto"
+                className="w-full max-w-lg bg-[#1A1A1F] rounded-2xl border border-[#2A2A2F] shadow-2xl max-h-[90vh] flex flex-col overflow-hidden"
               >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2F]">
                   <h2 className="text-xl font-semibold text-[#E5E5E5]">
@@ -385,7 +400,7 @@ export function CoursesManagement() {
                   </button>
                 </div>
 
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   {formError && (
                     <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                       {formError}
@@ -479,35 +494,71 @@ export function CoursesManagement() {
 
                   <div>
                     <label className="block text-sm font-medium text-[#DDD] mb-2">
-                      Upload PDF Paper <span className="text-xs text-[#AAA] font-normal">(Optional)</span>
+                      Attach Paper (Optional)
                     </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="file"
-                        accept="application/pdf"
-                        onChange={(e) => setPaperFile(e.target.files?.[0] || null)}
-                        className="flex-1 h-11 px-4 py-2 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] focus:outline-none focus:border-[#4F46E5] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:bg-[#4F46E5] file:text-white hover:file:bg-[#4338CA] transition-colors"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Year (e.g. 2023)"
-                        value={paperYear}
-                        onChange={(e) => setPaperYear(e.target.value)}
-                        className="w-1/3 h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
-                      />
+                    {/* Mode Tabs */}
+                    <div className="flex p-1 bg-[#0F1115] border border-[#2A2A2F] rounded-xl mb-3">
+                      <button
+                        type="button"
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${uploadMode === 'pdf' ? 'bg-[#2A2A2F] text-white' : 'text-[#888] hover:text-[#DDD]'}`}
+                        onClick={() => setUploadMode('pdf')}
+                      >
+                        Upload PDF
+                      </button>
+                      <button
+                        type="button"
+                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${uploadMode === 'richtext' ? 'bg-[#2A2A2F] text-white' : 'text-[#888] hover:text-[#DDD]'}`}
+                        onClick={() => setUploadMode('richtext')}
+                      >
+                        Native Document
+                      </button>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-[#DDD] mb-2">
-                      Drive Folder URL <span className="text-xs text-[#AAA] font-normal">(Optional Legacy Fallback)</span>
-                    </label>
-                    <input
-                      value={formData.driveFolderUrl}
-                      onChange={(e) => setFormData({ ...formData, driveFolderUrl: e.target.value })}
-                      placeholder="https://drive.google.com/..."
-                      className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
-                    />
+                    {uploadMode === 'pdf' ? (
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => setPaperFile(e.target.files?.[0] || null)}
+                          className="w-full text-sm text-[#AAA] file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Year (e.g. 2023)"
+                          value={paperYear}
+                          onChange={(e) => setPaperYear(e.target.value)}
+                          className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="bg-white rounded-xl overflow-hidden text-black" style={{ minHeight: '200px' }}>
+                          <ReactQuill
+                            theme="snow"
+                            value={richText}
+                            onChange={setRichText}
+                            modules={{
+                              toolbar: [
+                                [{ header: [1, 2, 3, false] }],
+                                ['bold', 'italic', 'underline'],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
+                                ['blockquote'],
+                                [{ align: [] }],
+                                ['clean'],
+                              ],
+                            }}
+                            style={{ height: '180px' }}
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Year (e.g. 2023)"
+                          value={paperYear}
+                          onChange={(e) => setPaperYear(e.target.value)}
+                          className="w-full h-11 px-4 mt-8 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, ExternalLink, Loader2, Sparkles, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, Loader2, Sparkles, X, CheckCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Paper, usePaper, useBookmarks, useDownloadedPapers } from '@/hooks/useData';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -313,7 +313,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
       <div className="flex-1 overflow-auto p-4 flex justify-center bg-muted/30">
         {(offlineHtml || (paper && paper.richTextContent)) ? (
           <div
-            className="bg-white shadow-xl transition-all origin-top rounded-lg mb-8"
+            className="bg-card shadow-xl transition-all origin-top rounded-lg mb-8 border border-border"
             style={{
               width: '100%',
               maxWidth: '800px',
@@ -322,7 +322,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
             }}
           >
             <div
-              className="p-8 md:p-12 prose prose-slate max-w-none w-full pb-16"
+              className="p-8 md:p-12 prose prose-slate dark:prose-invert max-w-none w-full pb-16 text-foreground"
               dangerouslySetInnerHTML={{ __html: offlineHtml || paper!.richTextContent! }}
             />
           </div>
@@ -340,34 +340,34 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
       {/* Premium Upsell Modal */}
       {showUpsellModal && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#2f3133] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 text-center relative">
               <button
                 onClick={() => setShowUpsellModal(false)}
-                className="absolute right-4 top-4 text-gray-400 hover:text-white p-1"
+                className="absolute right-4 top-4 text-secondary hover:text-foreground p-1"
               >
                 <X className="w-5 h-5" />
               </button>
-              <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-foreground mb-2">
                 Download Limit Reached
               </h3>
-              <p className="text-gray-300 text-sm mb-6">
-                Free users can download up to <span className="text-white font-bold">3 papers</span>. Upgrade to Premium for unlimited downloads and more academic tools.
+              <p className="text-secondary text-sm mb-6">
+                Free users can download up to <span className="text-foreground font-bold">3 papers</span>. Upgrade to Premium for unlimited downloads and more academic tools.
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/premium')}
-                  className="w-full py-3 bg-white text-black rounded-full font-medium hover:bg-gray-200 transition-colors"
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
                 >
                   Unlock Premium
                 </button>
                 <button
                   onClick={() => setShowUpsellModal(false)}
-                  className="w-full py-3 text-gray-400 hover:text-white font-medium transition-colors"
+                  className="w-full py-3 text-secondary hover:text-foreground font-medium transition-colors"
                 >
                   Maybe Later
                 </button>

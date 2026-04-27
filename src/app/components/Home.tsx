@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, Search, AlignLeft, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, FileText } from 'lucide-react';
+import { Bell, Search, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, Building2, BookOpen, Beaker, Calculator, Globe, Activity, Music, Palette } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable, useCourseThumbnails } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
@@ -58,15 +58,25 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
     }
   }, []);
 
-  // Helper for department styling and icons
-  const getDeptConfig = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes('phys')) return { color: 'bg-teal-500/10', iconColor: 'text-teal-600', Icon: Atom };
-    if (lower.includes('comp') || lower.includes('csc')) return { color: 'bg-indigo-500/10', iconColor: 'text-indigo-600', Icon: Cpu };
-    if (lower.includes('indust') || lower.includes('tech')) return { color: 'bg-amber-500/10', iconColor: 'text-amber-600', Icon: Wrench };
-    if (lower.includes('busin')) return { color: 'bg-emerald-500/10', iconColor: 'text-emerald-600', Icon: Briefcase };
-    if (lower.includes('chem')) return { color: 'bg-rose-500/10', iconColor: 'text-rose-600', Icon: FlaskConical };
-    return { color: 'bg-slate-500/10', iconColor: 'text-slate-600', Icon: AlignLeft };
+  // Dynamic icon mapping from admin-set icon field
+  const ICON_MAP: Record<string, any> = {
+    Building2, BookOpen, Cpu, Beaker, Calculator, Globe, Activity, Briefcase, Music, Palette, Atom, Wrench, FlaskConical
+  };
+
+  // Vibrant gradient palette for department cards
+  const DEPT_GRADIENTS = [
+    { bg: 'from-violet-600 to-indigo-700', glow: 'bg-violet-400/20' },
+    { bg: 'from-emerald-500 to-teal-700', glow: 'bg-emerald-400/20' },
+    { bg: 'from-amber-500 to-orange-700', glow: 'bg-amber-400/20' },
+    { bg: 'from-rose-500 to-pink-700', glow: 'bg-rose-400/20' },
+    { bg: 'from-cyan-500 to-blue-700', glow: 'bg-cyan-400/20' },
+    { bg: 'from-fuchsia-500 to-purple-700', glow: 'bg-fuchsia-400/20' },
+  ];
+
+  const getDeptConfig = (dept: { name: string; icon?: string }, index: number) => {
+    const Icon = (dept.icon && ICON_MAP[dept.icon]) || Building2;
+    const gradient = DEPT_GRADIENTS[index % DEPT_GRADIENTS.length];
+    return { Icon, gradient };
   };
 
   const filteredCourses = recentCourses.filter(course =>
@@ -178,22 +188,23 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
             ))
           ) : (
             departments.map((dept, index) => {
-              const { color, iconColor, Icon } = getDeptConfig(dept.name);
+              const { Icon, gradient } = getDeptConfig(dept, index);
               return (
                 <motion.button
                   key={dept.id}
                   onClick={() => onExplore(dept.id)}
-                  className={`flex-1 min-w-[30%] h-28 ${color} rounded-2xl p-5 flex flex-col items-start justify-between hover:opacity-80 transition-all`}
+                  className={`flex-1 min-w-[30%] h-28 bg-gradient-to-br ${gradient.bg} rounded-2xl p-5 flex flex-col items-start justify-between hover:shadow-lg hover:shadow-black/20 transition-all relative overflow-hidden`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <div className={`w-8 h-8 ${iconColor} bg-white/50 rounded-full flex items-center justify-center`}>
-                    <Icon className={`w-4 h-4 ${iconColor}`} strokeWidth={2} />
+                  <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full ${gradient.glow} blur-2xl`} />
+                  <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
                   </div>
-                  <span className={`font-semibold text-xs leading-tight text-left ${iconColor}`}>{dept.name}</span>
+                  <span className="font-semibold text-xs leading-tight text-left text-white/95 drop-shadow-sm">{dept.name}</span>
                 </motion.button>
               );
             })
