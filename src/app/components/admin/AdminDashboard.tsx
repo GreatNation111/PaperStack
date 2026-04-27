@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SeedAdminData } from './SeedAdminData';
 import { motion } from 'motion/react';
-import { Building2, BookOpen, Users, Flag, ArrowUpRight, LayoutDashboard, Bell, FileText, HelpCircle } from 'lucide-react';
+import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -59,9 +58,6 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         <div className="relative z-10">
           <h1 className="text-3xl font-black text-foreground tracking-tight mb-1">Admin Dashboard</h1>
           <p className="text-secondary text-xs font-bold uppercase tracking-widest opacity-60">General Overview & Management Hub</p>
-        </div>
-        <div className="relative z-10">
-          <SeedAdminData />
         </div>
       </div>
 
