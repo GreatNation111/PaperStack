@@ -52,13 +52,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const isAdminUser = adminDoc.exists();
                     if (import.meta.env.DEV) console.log('[AuthContext] Admin status verified:', isAdminUser);
                     setIsAdmin(isAdminUser);
+                    if (isAdminUser) {
+                        localStorage.setItem('paperstack_is_admin', 'true');
+                    } else {
+                        localStorage.removeItem('paperstack_is_admin');
+                    }
                 } catch (error: any) {
                     console.error("[AuthContext] Error fetching extended user data:", error);
-                    setIsAdmin(false);
+                    // Fallback to cached admin status if offline/error
+                    const cachedAdmin = localStorage.getItem('paperstack_is_admin') === 'true';
+                    setIsAdmin(cachedAdmin);
                 }
             } else {
                 setUserProfile(null);
                 setIsAdmin(false);
+                localStorage.removeItem('paperstack_is_admin');
             }
 
             if (import.meta.env.DEV) console.log('[AuthContext] Verification complete, setting loading to false');

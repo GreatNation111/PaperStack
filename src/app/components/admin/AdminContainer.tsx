@@ -12,6 +12,8 @@ import { RepeatedQuestionsManagement } from './RepeatedQuestionsManagement';
 
 interface AdminContainerProps {
   onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
 type AdminPage =
@@ -25,7 +27,7 @@ type AdminPage =
   | 'timetable'
   | 'repeated-questions';
 
-export function AdminContainer({ onLogout }: AdminContainerProps) {
+export function AdminContainer({ onLogout, isDarkMode, onToggleDarkMode }: AdminContainerProps) {
   const [currentPage, setCurrentPage] = useState<AdminPage>('dashboard');
 
   const handleNavigate = (page: string) => {
@@ -58,7 +60,13 @@ export function AdminContainer({ onLogout }: AdminContainerProps) {
   };
 
   return (
-    <AdminLayout currentPage={currentPage} onNavigate={handleNavigate} onLogout={onLogout}>
+    <AdminLayout 
+      currentPage={currentPage} 
+      onNavigate={handleNavigate} 
+      onLogout={onLogout}
+      isDarkMode={isDarkMode}
+      onToggleDarkMode={onToggleDarkMode}
+    >
       {renderPage()}
     </AdminLayout>
   );

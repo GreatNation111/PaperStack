@@ -9,6 +9,5 @@ export { DepartmentsManager } from './DepartmentsManager';
 export { UsersManagement } from './UsersManagement';
 export { FeatureRequestsViewer } from './FeatureRequestsViewer';
 export { AdminSettings } from './AdminSettings';
-export { SeedAdminData } from './SeedAdminData';
 export { TimetableManagement } from './TimetableManagement';
 export { RepeatedQuestionsManagement } from './RepeatedQuestionsManagement';

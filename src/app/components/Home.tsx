@@ -111,7 +111,10 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
             </button>
             {/* Avatar: Show user's avatar from settings if available, else show first letter initial */}
             <div
-              onDoubleClick={() => navigate('/admin')}
+              onDoubleClick={() => {
+                localStorage.setItem('paperstack_admin_mode', 'true');
+                navigate('/admin');
+              }}
               className="cursor-default"
               title="Profile"
             >

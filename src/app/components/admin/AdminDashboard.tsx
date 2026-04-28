@@ -44,7 +44,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   }, []);
 
   const stats = [
-    { label: 'Total Departments', value: counts.departments.toString(), icon: Building2, color: '#4F46E5' },
+    { label: 'Total Departments', value: counts.departments.toString(), icon: Building2, color: 'var(--primary)' },
     { label: 'Total Courses', value: counts.courses.toString(), icon: BookOpen, color: '#10B981' },
     { label: 'Active Contributors', value: counts.contributors.toString(), icon: Users, color: '#F59E0B' },
     { label: 'Feature Requests', value: counts.requests.toString(), icon: Flag, color: '#EC4899' },
@@ -52,12 +52,16 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   ];
 
   return (
-    <div className="p-4 lg:p-8 space-y-10">
-      {/* Header - Simplified */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-card border border-border p-10 rounded-[2.5rem] shadow-sm relative overflow-hidden group">
+    <div className="p-4 lg:p-8 space-y-12">
+      {/* Header - Premium Look */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-card border border-border p-10 rounded-[3rem] shadow-sm relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-primary/10 transition-colors duration-700" />
         <div className="relative z-10">
-          <h1 className="text-3xl font-black text-foreground tracking-tight mb-1">Admin Dashboard</h1>
-          <p className="text-secondary text-xs font-bold uppercase tracking-widest opacity-60">General Overview & Management Hub</p>
+          <h1 className="text-4xl font-black text-foreground tracking-tight mb-2">Admin Dashboard</h1>
+          <p className="text-secondary text-xs font-bold uppercase tracking-widest opacity-60 flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            System Live & Operational
+          </p>
         </div>
       </div>
 
@@ -71,110 +75,120 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-card border border-border rounded-[2rem] p-8 hover:border-primary/20 transition-all group relative overflow-hidden"
+              className="bg-card border border-border rounded-[2.5rem] p-8 hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all group relative overflow-hidden"
             >
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-8">
                 <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm"
-                  style={{ backgroundColor: `${stat.color}15` }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500"
+                  style={{ backgroundColor: stat.color.startsWith('var') ? 'var(--primary-foreground)' : `${stat.color}15`, border: `1px solid ${stat.color.startsWith('var') ? 'var(--border)' : `${stat.color}30`}` }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: stat.color }} strokeWidth={2} />
+                  <Icon className="w-7 h-7" style={{ color: stat.color.startsWith('var') ? 'var(--primary)' : stat.color }} strokeWidth={2} />
                 </div>
               </div>
               <div>
-                <div className="text-3xl font-black text-foreground tracking-tight mb-1">{stat.value}</div>
-                <div className="text-[11px] font-bold text-secondary uppercase tracking-widest opacity-60">{stat.label}</div>
+                <div className="text-4xl font-black text-foreground tracking-tight mb-1">{stat.value}</div>
+                <div className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] opacity-40">{stat.label}</div>
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Primary Management Hub - Simplified Terminology */}
-      <div className="space-y-6">
-        <h3 className="text-sm font-black text-secondary uppercase tracking-widest px-4 opacity-40">System Management</h3>
+      {/* Primary Management Hub */}
+      <div className="space-y-8">
+        <div className="flex items-center justify-between px-4">
+           <h3 className="text-xs font-black text-secondary uppercase tracking-[0.3em] opacity-40">Command Center</h3>
+           <div className="h-px flex-1 bg-border/50 ml-6" />
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <button
             onClick={() => onNavigate('notifications')}
-            className="group relative h-32 bg-card border border-border rounded-[2rem] px-10 flex items-center justify-between text-left hover:border-primary/40 hover:shadow-xl transition-all"
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 transition-all overflow-hidden"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
-              <div className="text-xl font-black text-foreground tracking-tight mb-1">Send Notifications</div>
-              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Push Alerts & Announcements</div>
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Push Notifications</div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Global Alerts & User Comms</div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary text-primary group-hover:text-white transition-all">
-              <ArrowUpRight className="w-6 h-6" strokeWidth={2} />
+            <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary text-primary group-hover:text-white transition-all duration-500 shadow-sm">
+              <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
             </div>
           </button>
 
           <button
             onClick={() => onNavigate('courses')}
-            className="group relative h-32 bg-card border border-border rounded-[2rem] px-10 flex items-center justify-between text-left hover:border-green-500/40 hover:shadow-xl transition-all"
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-green-500/40 hover:shadow-2xl hover:shadow-green-500/5 transition-all overflow-hidden"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
-              <div className="text-xl font-black text-foreground tracking-tight mb-1">Manage Courses</div>
-              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Course Database & Materials</div>
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Course Catalog</div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Curriculum & Paper Database</div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center group-hover:bg-green-500 text-green-600 group-hover:text-white transition-all">
-              <ArrowUpRight className="w-6 h-6" strokeWidth={2} />
+            <div className="w-14 h-14 rounded-2xl bg-green-500/5 flex items-center justify-center group-hover:bg-green-500 text-green-600 group-hover:text-white transition-all duration-500 shadow-sm">
+              <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
             </div>
           </button>
 
           <button
             onClick={() => onNavigate('timetable')}
-            className="group relative h-32 bg-card border border-border rounded-[2rem] px-10 flex items-center justify-between text-left hover:border-amber-500/40 hover:shadow-xl transition-all"
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-amber-500/40 hover:shadow-2xl hover:shadow-amber-500/5 transition-all overflow-hidden"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
-              <div className="text-xl font-black text-foreground tracking-tight mb-1">Timetable Manager</div>
-              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Exam Schedules & Logistics</div>
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Exam Logistics</div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Timetable & Schedule Management</div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/5 flex items-center justify-center group-hover:bg-amber-500 text-amber-600 group-hover:text-white transition-all">
-              <ArrowUpRight className="w-6 h-6" strokeWidth={2} />
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/5 flex items-center justify-center group-hover:bg-amber-500 text-amber-600 group-hover:text-white transition-all duration-500 shadow-sm">
+              <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
             </div>
           </button>
 
           <button
             onClick={() => onNavigate('repeated-questions')}
-            className="group relative h-32 bg-card border border-border rounded-[2rem] px-10 flex items-center justify-between text-left hover:border-indigo-400/40 hover:shadow-xl transition-all"
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-indigo-400/40 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all overflow-hidden"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
-              <div className="text-xl font-black text-foreground tracking-tight mb-1">Question Curator</div>
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Question Bank</div>
               <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Repeated Questions Analysis</div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/5 flex items-center justify-center group-hover:bg-indigo-500 text-indigo-600 group-hover:text-white transition-all">
-              <ArrowUpRight className="w-6 h-6" strokeWidth={2} />
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/5 flex items-center justify-center group-hover:bg-indigo-500 text-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm">
+              <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
             </div>
           </button>
 
           <button
             onClick={() => onNavigate('reports')}
-            className="group relative h-32 bg-card border border-border rounded-[2rem] px-10 flex items-center justify-between text-left hover:border-pink-500/40 hover:shadow-xl transition-all"
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-pink-500/40 hover:shadow-2xl hover:shadow-pink-500/5 transition-all overflow-hidden"
           >
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
-              <div className="text-xl font-black text-foreground tracking-tight mb-1">Feature Requests</div>
-              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">User Feedback & Interests</div>
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Insight Engine</div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">User Feedback & Feature Requests</div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-pink-500/5 flex items-center justify-center group-hover:bg-pink-500 text-pink-600 group-hover:text-white transition-all">
-              <ArrowUpRight className="w-6 h-6" strokeWidth={2} />
+            <div className="w-14 h-14 rounded-2xl bg-pink-500/5 flex items-center justify-center group-hover:bg-pink-500 text-pink-600 group-hover:text-white transition-all duration-500 shadow-sm">
+              <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
             </div>
           </button>
         </div>
       </div>
 
-      {/* Simplified Helper Section */}
-      <div className="flex items-center gap-6 p-8 bg-card border border-border rounded-[2rem] shadow-sm">
-        <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
-          <HelpCircle className="w-5 h-5 text-secondary opacity-60" />
+      {/* Helper Section */}
+      <div className="flex items-center gap-8 p-10 bg-card border border-border rounded-[3rem] shadow-sm relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-muted/50 to-transparent" />
+        <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center relative z-10">
+          <HelpCircle className="w-6 h-6 text-secondary opacity-40 group-hover:text-primary group-hover:opacity-100 transition-all" />
         </div>
-        <div className="flex flex-wrap items-center gap-6">
-          <span className="text-[11px] font-bold text-secondary/60 uppercase tracking-widest">Helpful Shortcuts</span>
-          <div className="flex items-center gap-2">
-            <kbd className="px-2 py-1 bg-muted rounded-lg text-[10px] font-black text-secondary">N</kbd>
-            <span className="text-[10px] font-bold text-secondary/40 uppercase tracking-widest">New Notification</span>
+        <div className="flex flex-wrap items-center gap-8 relative z-10">
+          <span className="text-[10px] font-black text-secondary/40 uppercase tracking-[0.2em]">Quick Commands</span>
+          <div className="flex items-center gap-3">
+            <kbd className="px-3 py-1.5 bg-muted border border-border rounded-xl text-[11px] font-black text-secondary shadow-sm">N</kbd>
+            <span className="text-[10px] font-bold text-secondary/60 uppercase tracking-widest">New Alert</span>
           </div>
-          <div className="flex items-center gap-2">
-            <kbd className="px-2 py-1 bg-muted rounded-lg text-[10px] font-black text-secondary">C</kbd>
-            <span className="text-[10px] font-bold text-secondary/40 uppercase tracking-widest">Course Catalog</span>
+          <div className="flex items-center gap-3">
+            <kbd className="px-3 py-1.5 bg-muted border border-border rounded-xl text-[11px] font-black text-secondary shadow-sm">C</kbd>
+            <span className="text-[10px] font-bold text-secondary/60 uppercase tracking-widest">Course List</span>
           </div>
         </div>
       </div>

@@ -16,6 +16,7 @@ import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
+import { useAnalytics } from '@/app/hooks/useAnalytics';
 
 // --- Lazy Loaded Heavyweight/Secondary Routes ---
 const AdminLogin = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminLogin })));
@@ -32,7 +33,7 @@ const CoursePapers = lazy(() => import('@/app/components/CoursePapers').then(m =
 
 // Global loading fallback for Suspense
 const GlobalLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-background">
+  <div className="flex h-screen w-full items-center justify-center bg-background text-foreground">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
@@ -46,30 +47,50 @@ function AppContent() {
     return localStorage.getItem('paperstack_theme') === 'dark';
   });
   const { user, isAdmin, loading: authLoading, userProfile, logout } = useAuth();
+  const { trackPageView, trackEvent } = useAnalytics();
 
-  // If admin mode is active and we're at the root or splash, go straight to admin
+  const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
+
+  // Track page views on route change
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
+  // Offline detection and auto-redirect
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOffline && user && !adminPersisted && !authLoading) {
+       const allowedOfflineRoutes = ['/library', '/view-paper', '/profile'];
+       const isAllowed = allowedOfflineRoutes.some(route => location.pathname.startsWith(route));
+       if (!isAllowed) {
+          navigate('/library', { replace: true });
+       }
+    }
+  }, [isOffline, user, adminPersisted, authLoading, location.pathname, navigate]);
+
+  // If admin mode is active and we're not on an admin route, immediately redirect
   // This bypasses the student UI entirely on reload
-  const [initialRedirectDone, setInitialRedirectDone] = useState(false);
-
   useEffect(() => {
-    const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
-    if (!initialRedirectDone) {
-      if (adminPersisted && !location.pathname.startsWith('/admin')) {
-        navigate('/admin/dashboard', { replace: true });
-      }
-      setInitialRedirectDone(true);
+    // Only redirect if we are logged in as admin or have the persistence flag
+    // and we are NOT already on an admin route
+    if (adminPersisted && !location.pathname.startsWith('/admin')) {
+      navigate('/admin/dashboard', { replace: true });
     }
-  }, [location.pathname, navigate, initialRedirectDone]);
-
-  // Admin auto-redirect: if admin mode was persisted, redirect on boot
-  useEffect(() => {
-    if (authLoading) return;
-    const adminPersisted = localStorage.getItem('paperstack_admin_mode') === 'true';
-    // If persisted but user is not admin (e.g. logged out), clear the flag
-    if (adminPersisted && !authLoading && (!user || !isAdmin)) {
-      localStorage.removeItem('paperstack_admin_mode');
-    }
-  }, [authLoading, user, isAdmin]);
+  }, [adminPersisted, location.pathname, navigate]);
 
   // Theme management
   useEffect(() => {
@@ -90,8 +111,14 @@ function AppContent() {
   const handleSplashComplete = () => navigate('/welcome');
   const handleSignInStart = () => navigate('/signin');
   const handleSignUpStart = () => navigate('/signup');
-  // Auth completion is now handled by redirect in SignUp/SignIn or AuthContext observer
-  const handleAuthComplete = () => navigate('/home');
+  const handleAuthComplete = () => {
+    // Check if user is admin, if so, go to admin dashboard
+    if (adminPersisted || isAdmin) {
+      navigate('/admin/dashboard', { replace: true });
+    } else {
+      navigate('/home');
+    }
+  };
 
   const handleBackToWelcome = () => navigate('/welcome');
   const handleNotifications = () => navigate('/notifications');
@@ -137,11 +164,11 @@ function AppContent() {
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
       <div className={`${isFullWidthRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
         <Suspense fallback={<GlobalLoader />}>
-          <Routes location={location} key={location.pathname}>
+          <Routes location={location}>
             {/* Admin Routes - NOT Gated */}
             <Route path="/admin" element={<AdminLogin onComplete={() => navigate('/admin/dashboard')} />} />
             <Route element={<RequireAdmin />}>
-              <Route path="/admin/dashboard/*" element={<AdminContainer onLogout={handleSignOut} />} />
+              <Route path="/admin/dashboard/*" element={<AdminContainer onLogout={handleSignOut} isDarkMode={isDarkMode} onToggleDarkMode={handleToggleDarkMode} />} />
             </Route>
 
             {/* User Routes - Gated by MaintenanceGate */}
@@ -161,7 +188,6 @@ function AppContent() {
 
               {/* Splash/Index */}
               <Route path="/splash" element={<Splash onComplete={handleSplashComplete} />} />
-              <Route path="/seed" element={<SeedData />} />
 
               {/* Protected User Routes */}
               <Route element={<RequireAuth />}>

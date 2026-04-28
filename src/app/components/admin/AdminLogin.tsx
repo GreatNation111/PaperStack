@@ -22,6 +22,7 @@ export function AdminLogin({ onComplete }: AdminLoginProps) {
   // Auto-redirect if already admin
   useEffect(() => {
     if (!authLoading && user && isAdmin) {
+      localStorage.setItem('paperstack_admin_mode', 'true');
       navigate('/admin/dashboard');
     }
   }, [user, isAdmin, authLoading, navigate]);
