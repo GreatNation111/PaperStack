@@ -322,7 +322,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
             }}
           >
             <div
-              className="p-8 md:p-12 prose prose-slate dark:prose-invert max-w-none w-full pb-16 text-foreground"
+              className="native-doc-page"
               dangerouslySetInnerHTML={{ __html: offlineHtml || paper!.richTextContent! }}
             />
           </div>
@@ -379,4 +379,3 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     </div>
   );
 }
-

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, Edit3, Trash2, X, CheckCircle, ExternalLink, Loader2, FileText } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import {
   collection,
   onSnapshot,
@@ -19,6 +17,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { useDepartments } from '@/hooks/useData';
 import { CoursePapersManager } from './CoursePapersManager';
+import { NativeDocumentEditor } from './NativeDocumentEditor';
 
 interface Course {
   id: string;
@@ -215,6 +214,14 @@ export function CoursesManagement() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const uploadNativeDocumentImage = async (file: File): Promise<string> => {
+    const courseKey = editingId || formData.code.toLowerCase().replace(/[^a-z0-9]/g, '') || 'draft-native-docs';
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageRef = ref(storage, `papers/${courseKey}/native-images/${Date.now()}_${safeName}`);
+    const snapshot = await uploadBytes(storageRef, file);
+    return getDownloadURL(snapshot.ref);
   };
 
   const handleDelete = async (id: string) => {
@@ -532,24 +539,12 @@ export function CoursesManagement() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <div className="bg-white rounded-xl overflow-hidden text-black" style={{ minHeight: '200px' }}>
-                          <ReactQuill
-                            theme="snow"
-                            value={richText}
-                            onChange={setRichText}
-                            modules={{
-                              toolbar: [
-                                [{ header: [1, 2, 3, false] }],
-                                ['bold', 'italic', 'underline'],
-                                [{ list: 'ordered' }, { list: 'bullet' }],
-                                ['blockquote'],
-                                [{ align: [] }],
-                                ['clean'],
-                              ],
-                            }}
-                            style={{ height: '180px' }}
-                          />
-                        </div>
+                        <NativeDocumentEditor
+                          value={richText}
+                          onChange={setRichText}
+                          onUploadImage={uploadNativeDocumentImage}
+                          onError={setFormError}
+                        />
                         <input
                           type="text"
                           placeholder="Year (e.g. 2023)"

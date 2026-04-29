@@ -4,9 +4,8 @@ import { Upload, FileText, Trash2, X, CheckCircle, Loader2, Link as LinkIcon, Fi
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { generatePdfThumbnail, validatePdfFile, MAX_PDF_SIZE_LABEL } from '@/utils/pdfThumbnail';
+import { NativeDocumentEditor } from './NativeDocumentEditor';
 
 interface Paper {
   id: string;
@@ -29,18 +28,6 @@ interface CoursePapersManagerProps {
   departmentId: string;
   onClose: () => void;
 }
-
-const quillModules = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ indent: '-1' }, { indent: '+1' }],
-    ['blockquote'],
-    [{ align: [] }],
-    ['clean'],
-  ],
-};
 
 export function CoursePapersManager({ courseId, courseCode, departmentId, onClose }: CoursePapersManagerProps) {
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -137,6 +124,14 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
         }
       );
     });
+  };
+
+  const uploadNativeDocumentImage = async (file: File): Promise<string> => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return uploadFileToStorage(
+      file,
+      `papers/${courseId}/native-images/${Date.now()}_${safeName}`
+    );
   };
 
   const handleSave = async () => {
@@ -513,15 +508,13 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                   ) : (
                     <div>
                       <label className="block text-sm font-medium text-[#DDD] mb-2">Document Content {!isEditing && '*'}</label>
-                      <div className="bg-white rounded-xl overflow-hidden text-black pb-10" style={{ minHeight: '300px' }}>
-                        <ReactQuill
-                          theme="snow"
-                          value={richText}
-                          onChange={setRichText}
-                          modules={quillModules}
-                          style={{ height: '250px' }}
-                        />
-                      </div>
+                      <NativeDocumentEditor
+                        value={richText}
+                        onChange={setRichText}
+                        onUploadImage={uploadNativeDocumentImage}
+                        onStatus={setStatusMsg}
+                        onError={setFormError}
+                      />
                     </div>
                   )}
                 </div>
