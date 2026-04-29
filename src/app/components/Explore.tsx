@@ -178,7 +178,14 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
               </div>
             ) : (
               coursesForYou.map((course, index) => (
-                <motion.button key={course.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }} onClick={() => onViewPastQuestions(course.code, selectedLevel || userLevel)} className="flex-shrink-0 w-72 bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all text-left">
+                <motion.button
+                  key={course.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } })}
+                  className="flex-shrink-0 w-72 bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all text-left"
+                >
                   <div className="w-full h-32 bg-muted rounded-xl mb-4 flex items-center justify-center relative overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
                     <FileText className="w-10 h-10 text-secondary group-hover:scale-110 transition-transform" strokeWidth={1.5} />

@@ -11,7 +11,9 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  setDoc
+  setDoc,
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
@@ -32,6 +34,13 @@ interface Course {
   lastUpdated?: any;
 }
 
+interface CoursePaper {
+  id: string;
+  year?: string;
+  pdfUrl?: string;
+  richTextContent?: string;
+}
+
 export function CoursesManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +56,7 @@ export function CoursesManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paperFile, setPaperFile] = useState<File | null>(null);
+  const [attachedPaperId, setAttachedPaperId] = useState<string | null>(null);
   const [paperYear, setPaperYear] = useState('');
   const [formData, setFormData] = useState({
     code: '',
@@ -56,7 +66,7 @@ export function CoursesManagement() {
     semester: 'First',
     lecturer: '',
     driveFolderUrl: '',
-    papers: 0
+    papers: 1
   });
   const [formError, setFormError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -91,9 +101,10 @@ export function CoursesManagement() {
       semester: 'First',
       lecturer: '',
       driveFolderUrl: '',
-      papers: 0
+      papers: 1
     });
     setPaperFile(null);
+    setAttachedPaperId(null);
     setPaperYear('');
     setFormError('');
     setUploadMode('pdf');
@@ -101,7 +112,7 @@ export function CoursesManagement() {
     setShowModal(true);
   };
 
-  const handleOpenEdit = (course: Course) => {
+  const handleOpenEdit = async (course: Course) => {
     setIsEditing(true);
     setEditingId(course.id);
     setFormData({
@@ -112,14 +123,35 @@ export function CoursesManagement() {
       semester: course.semester || 'First',
       lecturer: course.lecturer || '',
       driveFolderUrl: course.driveFolderUrl || '',
-      papers: course.papers || 0
+      papers: course.papers || 1
     });
     setPaperFile(null);
+    setAttachedPaperId(null);
     setPaperYear('');
     setFormError('');
     setUploadMode('pdf');
     setRichText('');
     setShowModal(true);
+
+    try {
+      const papersSnap = await getDocs(query(collection(db, 'papers'), where('courseId', '==', course.id)));
+      const existingPaper = papersSnap.docs
+        .map(docSnap => ({ id: docSnap.id, ...(docSnap.data() as any) } as CoursePaper))
+        .find(paper => paper.richTextContent || paper.pdfUrl);
+
+      if (existingPaper) {
+        setAttachedPaperId(existingPaper.id);
+        setPaperYear(existingPaper.year || '');
+        if (existingPaper.richTextContent) {
+          setUploadMode('richtext');
+          setRichText(existingPaper.richTextContent);
+        } else {
+          setUploadMode('pdf');
+        }
+      }
+    } catch (err) {
+      console.error('Error loading existing course paper:', err);
+    }
   };
 
   const handleSave = async () => {
@@ -148,7 +180,8 @@ export function CoursesManagement() {
         // For editing, we keep the existing ID
         await updateDoc(doc(db, 'courses', editingId), {
           ...payload,
-          id: editingId // Ensure ID field stays in sync
+          id: editingId,
+          papers: formData.papers || 1
         });
       } else {
         // Create custom readable ID (e.g. 'BUS 101' -> 'bus101')
@@ -158,9 +191,20 @@ export function CoursesManagement() {
         await setDoc(doc(db, 'courses', customId), {
           ...payload,
           id: customId,
-          papers: formData.papers || 0
+          papers: formData.papers || 1
         });
       }
+
+      const paperPayload = {
+        courseId: customId,
+        departmentId: formData.departmentId,
+        code: formData.code,
+        title: `${formData.code} Past Question`,
+        year: paperYear || new Date().getFullYear().toString(),
+        semester: formData.semester,
+        type: 'Exam',
+        downloads: 0,
+      };
 
       // If a paper was attached (PDF), upload and link it
       if (paperFile && customId) {
@@ -168,43 +212,34 @@ export function CoursesManagement() {
         const snapshot = await uploadBytes(storageRef, paperFile);
         const downloadUrl = await getDownloadURL(snapshot.ref);
 
-        await addDoc(collection(db, 'papers'), {
-          courseId: customId,
-          departmentId: formData.departmentId,
-          code: formData.code,
-          title: `${formData.code} Past Question`,
-          year: paperYear || new Date().getFullYear().toString(),
-          semester: formData.semester,
-          type: 'Exam',
+        const nextPaperPayload = {
+          ...paperPayload,
           pdfUrl: downloadUrl,
-          downloads: 0,
+          richTextContent: '',
           createdAt: serverTimestamp()
-        });
+        };
 
-        // Increment papers count
-        await updateDoc(doc(db, 'courses', customId), {
-          papers: (formData.papers || 0) + 1
-        });
+        if (attachedPaperId) {
+          await updateDoc(doc(db, 'papers', attachedPaperId), nextPaperPayload);
+        } else {
+          await addDoc(collection(db, 'papers'), nextPaperPayload);
+        }
       }
 
       // If native doc was written, save it as a paper
       if (uploadMode === 'richtext' && richText && richText !== '<p><br></p>' && customId) {
-        await addDoc(collection(db, 'papers'), {
-          courseId: customId,
-          departmentId: formData.departmentId,
-          code: formData.code,
-          title: `${formData.code} Past Question`,
-          year: paperYear || new Date().getFullYear().toString(),
-          semester: formData.semester,
-          type: 'Exam',
+        const nextPaperPayload = {
+          ...paperPayload,
           richTextContent: richText,
-          downloads: 0,
+          pdfUrl: '',
           createdAt: serverTimestamp()
-        });
+        };
 
-        await updateDoc(doc(db, 'courses', customId), {
-          papers: (formData.papers || 0) + 1
-        });
+        if (attachedPaperId) {
+          await updateDoc(doc(db, 'papers', attachedPaperId), nextPaperPayload);
+        } else {
+          await addDoc(collection(db, 'papers'), nextPaperPayload);
+        }
       }
 
       setShowModal(false);
@@ -468,9 +503,9 @@ export function CoursesManagement() {
                       <label className="block text-sm font-medium text-[#DDD] mb-2">Paper Count</label>
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={formData.papers}
-                        onChange={(e) => setFormData({ ...formData, papers: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => setFormData({ ...formData, papers: Math.max(1, parseInt(e.target.value) || 1) })}
                         className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
                       />
                     </div>

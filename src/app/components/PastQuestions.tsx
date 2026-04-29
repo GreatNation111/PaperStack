@@ -58,7 +58,7 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
         }
     };
 
-    const handleOpenDriveFolder = async (course: Course) => {
+    const handleOpenCoursePapers = async (course: Course) => {
         if (user) {
             try {
                 await recordRecentCourse(user.uid, course);
@@ -66,12 +66,7 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                 console.error('[PastQuestions] Error recording recently viewed:', err);
             }
         }
-        if (course.driveFolderUrl) {
-            window.open(course.driveFolderUrl, '_blank');
-        } else {
-            // Native papers — navigate to course papers list
-            navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
-        }
+        navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
     };
 
     const filteredCourses = courses.filter(c => {
@@ -189,7 +184,7 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.05 }}
                                     className="bg-card border border-border rounded-xl p-4 hover:border-primary transition-all group cursor-pointer"
-                                    onClick={() => handleOpenDriveFolder(course)}
+                                    onClick={() => handleOpenCoursePapers(course)}
                                 >
                                     <div className="flex items-start gap-4">
                                         <div className="w-14 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 relative border border-border/20 overflow-hidden">
@@ -224,10 +219,10 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                                                         <Bookmark className="w-4 h-4" strokeWidth={2} fill={isBookmarked ? 'currentColor' : 'none'} />
                                                     </button>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); handleOpenDriveFolder(course); }}
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenCoursePapers(course); }}
                                                         className="px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-xs font-medium flex items-center gap-1"
                                                     >
-                                                        <ExternalLink className="w-3 h-3" /> Preview
+                                                        <ExternalLink className="w-3 h-3" /> View
                                                     </button>
                                                 </div>
                                             </div>

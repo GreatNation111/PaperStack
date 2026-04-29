@@ -43,12 +43,15 @@ import {
     serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDepartmentArtwork } from '@/utils/departmentArtwork';
 
 interface Department {
     id: string;
     name: string;
     code: string;
     icon: string;
+    iconUrl?: string;
+    backgroundUrl?: string;
 }
 
 const ICON_PRESETS = [
@@ -90,7 +93,9 @@ export function DepartmentsManager() {
     const [formData, setFormData] = useState({
         name: '',
         code: '',
-        icon: 'Building2'
+        icon: 'Building2',
+        iconUrl: '',
+        backgroundUrl: ''
     });
     const [formError, setFormError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +123,9 @@ export function DepartmentsManager() {
         setFormData({
             name: '',
             code: '',
-            icon: 'Building2'
+            icon: 'Building2',
+            iconUrl: '',
+            backgroundUrl: ''
         });
         setFormError('');
         setShowModal(true);
@@ -130,7 +137,9 @@ export function DepartmentsManager() {
         setFormData({
             name: dept.name,
             code: dept.code || '',
-            icon: dept.icon || 'Building2'
+            icon: dept.icon || 'Building2',
+            iconUrl: dept.iconUrl || '',
+            backgroundUrl: dept.backgroundUrl || ''
         });
         setFormError('');
         setShowModal(true);
@@ -157,6 +166,8 @@ export function DepartmentsManager() {
                     name: formData.name.trim(),
                     code: formData.code.trim().toUpperCase(),
                     icon: formData.icon,
+                    iconUrl: formData.iconUrl.trim(),
+                    backgroundUrl: formData.backgroundUrl.trim(),
                     updatedAt: serverTimestamp()
                 });
             } else {
@@ -168,6 +179,8 @@ export function DepartmentsManager() {
                     name: formData.name.trim(),
                     code: formData.code.trim().toUpperCase(),
                     icon: formData.icon,
+                    iconUrl: formData.iconUrl.trim(),
+                    backgroundUrl: formData.backgroundUrl.trim(),
                     createdAt: serverTimestamp()
                 });
             }
@@ -232,6 +245,7 @@ export function DepartmentsManager() {
                         // Dynamic Icon Render
                         const iconPreset = ICON_PRESETS.find(p => p.name === dept.icon) || ICON_PRESETS[0];
                         const IconComponent = iconPreset.icon;
+                        const artwork = getDepartmentArtwork(dept);
 
                         return (
                             <motion.div
@@ -240,11 +254,20 @@ export function DepartmentsManager() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 hover:border-[#333] transition-colors group relative"
+                                className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 hover:border-[#333] transition-colors group relative overflow-hidden"
                             >
+                                <div
+                                    className="absolute inset-0 opacity-25"
+                                    style={{ backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.86)), url(${artwork.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                />
+                                <div className="relative z-[1]">
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconPreset.tone} flex items-center justify-center text-white shadow-lg shadow-black/10`}>
-                                        <IconComponent className="w-6 h-6" strokeWidth={1.9} />
+                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconPreset.tone} flex items-center justify-center text-white shadow-lg shadow-black/10 overflow-hidden`}>
+                                        {artwork.iconUrl ? (
+                                            <img src={artwork.iconUrl} alt="" className="w-8 h-8 object-contain" />
+                                        ) : (
+                                            <IconComponent className="w-6 h-6" strokeWidth={1.9} />
+                                        )}
                                     </div>
                                     <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                                         <button
@@ -265,6 +288,7 @@ export function DepartmentsManager() {
                                 <h3 className="text-lg font-semibold text-[#E5E5E5] mb-1">{dept.name}</h3>
                                 <div className="flex items-center gap-2 mb-3">
                                     <span className="px-2 py-0.5 bg-[#333] rounded text-xs text-[#AAA] font-medium">{dept.code}</span>
+                                </div>
                                 </div>
                             </motion.div>
                         );
@@ -357,6 +381,26 @@ export function DepartmentsManager() {
                                             )
                                         })}
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-[#AAA] mb-2">Custom Icon URL</label>
+                                    <input
+                                        value={formData.iconUrl}
+                                        onChange={e => setFormData({ ...formData, iconUrl: e.target.value })}
+                                        placeholder="/department-art/computer-icon.svg"
+                                        className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-4 py-3 text-[#E5E5E5] focus:border-[#4F46E5] outline-none transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-[#AAA] mb-2">Card Background URL</label>
+                                    <input
+                                        value={formData.backgroundUrl}
+                                        onChange={e => setFormData({ ...formData, backgroundUrl: e.target.value })}
+                                        placeholder="/department-art/computer-bg.svg"
+                                        className="w-full bg-[#0F1115] border border-[#333] rounded-xl px-4 py-3 text-[#E5E5E5] focus:border-[#4F46E5] outline-none transition-colors"
+                                    />
                                 </div>
                             </div>
 

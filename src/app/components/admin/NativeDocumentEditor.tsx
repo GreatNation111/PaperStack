@@ -334,7 +334,7 @@ export function NativeDocumentEditor({ value, onChange, onUploadImage, onStatus,
         </ToolbarButton>
       </div>
 
-      <div className="native-doc-canvas max-h-[620px] overflow-auto px-4 py-6 sm:px-6">
+      <div className="native-doc-canvas max-h-[620px] overflow-auto scroll-smooth px-4 py-6 sm:px-6">
         <EditorContent editor={editor} />
       </div>
     </div>

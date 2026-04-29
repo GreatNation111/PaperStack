@@ -27,6 +27,12 @@
     line-height: 1.65;
   }
 
+  .native-doc-canvas {
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
   .native-doc-page p {
     margin: 0 0 0.75rem;
   }

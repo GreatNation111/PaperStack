@@ -39,6 +39,7 @@ import { PremiumLock } from './PremiumLock';
 import { useNavigate } from 'react-router-dom';
 import { differenceInDays, parseISO, isAfter } from 'date-fns';
 import { requestNotificationPermissionAndSaveToken } from '@/services/messaging';
+import { getDepartmentArtwork } from '@/utils/departmentArtwork';
 
 interface HomeProps {
   userName: string;
@@ -248,12 +249,13 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
           ) : (
             departments.map((dept, index) => {
               const { Icon, gradient } = getDeptConfig(dept, index);
+              const artwork = getDepartmentArtwork(dept);
               return (
                 <motion.button
                   key={dept.id}
                   onClick={() => onExplore(dept.id)}
                   className={`flex-1 min-w-[30%] h-28 bg-gradient-to-br ${gradient.bg} rounded-2xl p-5 flex flex-col items-start justify-between hover:shadow-lg hover:shadow-black/20 transition-all relative overflow-hidden`}
-                  style={dept.backgroundUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.68)), url(${dept.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                  style={{ backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.66)), url(${artwork.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 20 }}
@@ -262,8 +264,8 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                 >
                   <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full ${gradient.glow} blur-2xl`} />
                   <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    {dept.iconUrl ? (
-                      <img src={dept.iconUrl} alt="" className="w-6 h-6 object-contain" />
+                    {artwork.iconUrl ? (
+                      <img src={artwork.iconUrl} alt="" className="w-6 h-6 object-contain" />
                     ) : (
                       <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
                     )}
@@ -357,11 +359,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => {
-                      if (course.driveFolderUrl) {
-                        window.open(course.driveFolderUrl, '_blank');
-                      } else {
-                        navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
-                      }
+                      navigate(`/course/${course.id}/papers`, { state: { courseCode: course.code, courseTitle: course.title } });
                     }}
                     className="flex-shrink-0 snap-center bg-card border border-border rounded-2xl p-5 hover:border-primary transition-all w-72 text-left"
                   >
