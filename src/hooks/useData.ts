@@ -89,9 +89,16 @@ export interface Notification {
     isRead: boolean;
 }
 
+let departmentsCache: Department[] | null = null;
+const coursesCache: Record<string, Course[]> = {};
+let contributorsCache: Contributor[] | null = null;
+const bookmarkedCoursesCache: Record<string, Course[]> = {};
+const recentCoursesCache: Record<string, Course[]> = {};
+const downloadedPapersCache: Record<string, Paper[]> = {};
+
 export function useDepartments() {
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [departments, setDepartments] = useState<Department[]>(departmentsCache || []);
+    const [loading, setLoading] = useState(!departmentsCache);
 
     useEffect(() => {
         let isMounted = true;
@@ -111,6 +118,7 @@ export function useDepartments() {
                         backgroundUrl: data.backgroundUrl,
                     };
                 });
+                departmentsCache = depts;
                 setDepartments(depts);
             } catch (err) {
                 console.error('Error fetching departments:', err);
@@ -128,8 +136,9 @@ export function useDepartments() {
 
 
 export function useCourses(departmentId: string | undefined) {
-    const [courses, setCourses] = useState<Course[]>([]);
-    const [loading, setLoading] = useState(true);
+    const cacheKey = departmentId || '';
+    const [courses, setCourses] = useState<Course[]>(coursesCache[cacheKey] || []);
+    const [loading, setLoading] = useState(!coursesCache[cacheKey]);
 
     useEffect(() => {
         if (!departmentId) {
@@ -139,13 +148,18 @@ export function useCourses(departmentId: string | undefined) {
         }
 
         let isMounted = true;
+        if (coursesCache[departmentId]) {
+            setCourses(coursesCache[departmentId]);
+            setLoading(false);
+        }
         const fetchCourses = async () => {
-            setLoading(true);
+            setLoading(!coursesCache[departmentId]);
             try {
                 const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
                 const cs: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                coursesCache[departmentId] = cs;
                 setCourses(cs);
             } catch (err) {
                 console.error('Error fetching courses:', err);
@@ -161,8 +175,8 @@ export function useCourses(departmentId: string | undefined) {
 }
 
 export function useContributors() {
-    const [contributors, setContributors] = useState<Contributor[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [contributors, setContributors] = useState<Contributor[]>(contributorsCache || []);
+    const [loading, setLoading] = useState(!contributorsCache);
 
     useEffect(() => {
         let isMounted = true;
@@ -172,6 +186,7 @@ export function useContributors() {
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
                 const contribs: Contributor[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) } as Contributor));
+                contributorsCache = contribs;
                 setContributors(contribs);
             } catch (err) {
                 console.error('Error fetching contributors:', err);
@@ -417,8 +432,9 @@ export function useBookmarks(userId: string | undefined) {
 }
 
 export function useBookmarkedCourses(userId: string | undefined) {
-    const [courses, setCourses] = useState<Course[]>([]);
-    const [loading, setLoading] = useState(true);
+    const cacheKey = userId || '';
+    const [courses, setCourses] = useState<Course[]>(bookmarkedCoursesCache[cacheKey] || []);
+    const [loading, setLoading] = useState(!bookmarkedCoursesCache[cacheKey]);
 
     useEffect(() => {
         if (!userId) {
@@ -434,6 +450,7 @@ export function useBookmarkedCourses(userId: string | undefined) {
                 const bookmarkedIds = snapshot.docs.map(doc => doc.id);
 
                 if (bookmarkedIds.length === 0) {
+                    bookmarkedCoursesCache[userId] = [];
                     setCourses([]);
                     setLoading(false);
                     return;
@@ -456,6 +473,7 @@ export function useBookmarkedCourses(userId: string | undefined) {
                     }
                 }
 
+                bookmarkedCoursesCache[userId] = coursesData;
                 setCourses(coursesData);
             } catch (e) {
                 console.error('[useBookmarkedCourses] Error:', e);
@@ -555,8 +573,9 @@ export async function recordPaperDownload(userId: string, paper: Paper) {
 }
 
 export function useDownloadedPapers(userId: string | undefined) {
-    const [papers, setPapers] = useState<Paper[]>([]);
-    const [loading, setLoading] = useState(true);
+    const cacheKey = userId || '';
+    const [papers, setPapers] = useState<Paper[]>(downloadedPapersCache[cacheKey] || []);
+    const [loading, setLoading] = useState(!downloadedPapersCache[cacheKey]);
 
     useEffect(() => {
         if (!userId) {
@@ -578,6 +597,7 @@ export function useDownloadedPapers(userId: string | undefined) {
                     ...data
                 } as Paper;
             });
+            downloadedPapersCache[userId] = fetched;
             setPapers(fetched);
             setLoading(false);
         }, (err) => {
@@ -593,8 +613,9 @@ export function useDownloadedPapers(userId: string | undefined) {
 }
 
 export function useRecentCourses(userId: string | undefined) {
-    const [courses, setCourses] = useState<Course[]>([]);
-    const [loading, setLoading] = useState(true);
+    const cacheKey = userId || '';
+    const [courses, setCourses] = useState<Course[]>(recentCoursesCache[cacheKey] || []);
+    const [loading, setLoading] = useState(!recentCoursesCache[cacheKey]);
 
     useEffect(() => {
         if (!userId) {
@@ -625,6 +646,7 @@ export function useRecentCourses(userId: string | undefined) {
                     driveFolderUrl: data.driveFolderUrl
                 } as Course;
             });
+            recentCoursesCache[userId] = fetched;
             setCourses(fetched);
             setLoading(false);
         }, (err) => {

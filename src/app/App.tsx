@@ -12,6 +12,10 @@ import { Library } from '@/app/components/Library';
 import { Profile } from '@/app/components/Profile';
 import { Notifications } from '@/app/components/Notifications';
 import { PastQuestions } from '@/app/components/PastQuestions';
+import { Timetable } from '@/app/components/Timetable';
+import { RepeatedQuestions } from '@/app/components/RepeatedQuestions';
+import { CoursePapers } from '@/app/components/CoursePapers';
+import { PremiumPlans } from '@/app/components/PremiumPlans';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
 import { SeedData } from '@/app/components/SeedData';
@@ -22,14 +26,10 @@ import { useAnalytics } from '@/app/hooks/useAnalytics';
 const AdminLogin = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminLogin })));
 const AdminContainer = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminContainer })));
 const PastQuestionsViewer = lazy(() => import('@/app/components/PastQuestionsViewer').then(m => ({ default: m.PastQuestionsViewer })));
-const Timetable = lazy(() => import('@/app/components/Timetable').then(m => ({ default: m.Timetable })));
-const RepeatedQuestions = lazy(() => import('@/app/components/RepeatedQuestions').then(m => ({ default: m.RepeatedQuestions })));
 const HelpSupport = lazy(() => import('@/app/components/HelpSupport').then(m => ({ default: m.HelpSupport })));
 const TermsPrivacy = lazy(() => import('@/app/components/TermsPrivacy').then(m => ({ default: m.TermsPrivacy })));
 const PrivacyPolicy = lazy(() => import('@/app/components/PrivacyPolicy').then(m => ({ default: m.default })));
 const TermsOfService = lazy(() => import('@/app/components/TermsOfService').then(m => ({ default: m.default })));
-const PremiumPlans = lazy(() => import('@/app/components/PremiumPlans').then(m => ({ default: m.PremiumPlans })));
-const CoursePapers = lazy(() => import('@/app/components/CoursePapers').then(m => ({ default: m.CoursePapers })));
 
 // Global loading fallback for Suspense
 const GlobalLoader = () => (
@@ -55,6 +55,18 @@ function AppContent() {
   useEffect(() => {
     trackPageView(location.pathname);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user || adminPersisted) return;
+    const prefetch = window.requestIdleCallback || ((callback: IdleRequestCallback) => window.setTimeout(callback, 300));
+    const cancelPrefetch = window.cancelIdleCallback || window.clearTimeout;
+    const handle = prefetch(() => {
+      void import('@/app/components/PastQuestionsViewer');
+      void import('@/app/components/HelpSupport');
+    });
+
+    return () => cancelPrefetch(handle as any);
+  }, [user, adminPersisted]);
 
   // Offline detection and auto-redirect
   const [isOffline, setIsOffline] = useState(!navigator.onLine);

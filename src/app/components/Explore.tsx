@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Calendar, FileText, RefreshCw, ChevronDown, ChevronRight, Award, BookOpen, Layers } from 'lucide-react';
+import { Search, Filter, FileText, ChevronDown, ChevronRight, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useDepartments, useCourses, useContributors, useUserProfile, useGlobalConfig } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
+import { getDepartmentArtwork } from '@/utils/departmentArtwork';
 
 interface ExploreProps {
   selectedDepartment?: string;
@@ -33,6 +34,8 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
   }, [profile?.departmentId, selectedDepartment]);
 
   const currentDeptName = departments.find(d => d.id === departmentId)?.name || 'Select Department';
+  const currentDepartment = departments.find(d => d.id === departmentId);
+  const currentArtwork = currentDepartment ? getDepartmentArtwork(currentDepartment) : null;
   const userLevel = profile?.level || '100L';
 
   const coursesForYou = courses.filter(course => {
@@ -111,51 +114,111 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
         <div className="mb-6">
           <div className="text-xs text-secondary mb-2 px-1">Your department</div>
           <div className="relative">
-            <select
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              onBlur={() => setIsDropdownOpen(false)}
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(open => !open)}
+              className="w-full bg-[#0A2540]/5 border border-border rounded-full px-5 py-4 flex items-center justify-between text-left"
             >
-              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-            <div className="bg-[#0A2540]/5 border border-border rounded-full px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-[#0A2540] rounded-full flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" strokeWidth={1.5} />
+                <div
+                  className="w-9 h-9 bg-[#0A2540] rounded-full flex items-center justify-center overflow-hidden"
+                  style={currentArtwork ? { backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.36)), url(${currentArtwork.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                >
+                  {currentArtwork && <img src={currentArtwork.iconUrl} alt="" className="w-6 h-6 object-contain" />}
                 </div>
                 <span className="font-semibold text-foreground">{loadingDepts ? 'Loading...' : currentDeptName}</span>
               </div>
               <motion.div animate={{ rotate: isDropdownOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown className="w-5 h-5 text-secondary" strokeWidth={2} />
               </motion.div>
-            </div>
+            </button>
+
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  className="absolute left-0 right-0 top-full mt-2 z-30 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+                >
+                  <div className="max-h-72 overflow-auto p-2">
+                    {departments.map(dept => {
+                      const artwork = getDepartmentArtwork(dept);
+                      const isSelected = dept.id === departmentId;
+
+                      return (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          onClick={() => {
+                            setDepartmentId(dept.id);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${isSelected ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-foreground'}`}
+                        >
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
+                            style={{ backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.42)), url(${artwork.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                          >
+                            <img src={artwork.iconUrl} alt="" className="w-7 h-7 object-contain" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold truncate">{dept.name}</div>
+                            {dept.code && <div className="text-[10px] text-secondary font-bold uppercase tracking-wider">{dept.code}</div>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/timetable')} className="relative bg-[#0A2540] rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px]">
-            <Layers className="absolute bottom-0 right-0 opacity-10 w-24 h-24" strokeWidth={1} />
-            <Calendar className="w-10 h-10 text-white/90 mb-3 z-10" strokeWidth={1.5} />
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/timetable')}
+            className="relative rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px] bg-[#0A2540]"
+            style={{ backgroundImage: 'linear-gradient(135deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.68)), url(/feature-art/timetable-bg.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-white/18 backdrop-blur-sm flex items-center justify-center mb-3 z-10 shadow-lg shadow-black/10">
+              <img src="/feature-art/timetable-icon.svg" alt="" className="w-10 h-10 object-contain" />
+            </div>
             <div className="text-center z-10">
               <div className="font-semibold text-white mb-1">Timetable</div>
               <div className="text-xs text-white/70">Exam schedule</div>
             </div>
           </motion.button>
 
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/repeated-questions')} className="relative bg-teal-600 rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px]">
-            <BookOpen className="absolute bottom-0 right-0 opacity-10 w-24 h-24" strokeWidth={1} />
-            <RefreshCw className="w-10 h-10 text-white/90 mb-3 z-10" strokeWidth={1.5} />
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/repeated-questions')}
+            className="relative rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px] bg-teal-600"
+            style={{ backgroundImage: 'linear-gradient(135deg, rgba(6, 78, 59, 0.16), rgba(6, 78, 59, 0.64)), url(/feature-art/repeated-bg.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-white/18 backdrop-blur-sm flex items-center justify-center mb-3 z-10 shadow-lg shadow-black/10">
+              <img src="/feature-art/repeated-icon.svg" alt="" className="w-10 h-10 object-contain" />
+            </div>
             <div className="text-center z-10">
               <div className="font-semibold text-white mb-1">Repeated</div>
               <div className="text-xs text-white/70">High-yield questions</div>
             </div>
           </motion.button>
 
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => onViewPastQuestions(undefined, selectedLevel || userLevel, departmentId)} className="relative bg-indigo-600 rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px] col-span-2">
-            <FileText className="absolute bottom-0 right-0 opacity-10 w-32 h-32" strokeWidth={1} />
-            <FileText className="w-10 h-10 text-white/90 mb-3 z-10" strokeWidth={1.5} />
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onViewPastQuestions(undefined, selectedLevel || userLevel, departmentId)}
+            className="relative rounded-3xl p-6 flex flex-col items-center justify-center overflow-hidden min-h-[180px] col-span-2 bg-indigo-600"
+            style={{ backgroundImage: 'linear-gradient(135deg, rgba(49, 46, 129, 0.12), rgba(49, 46, 129, 0.62)), url(/feature-art/pastquestions-bg.svg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+          >
+            <div className="w-16 h-16 rounded-2xl bg-white/18 backdrop-blur-sm flex items-center justify-center mb-3 z-10 shadow-lg shadow-black/10">
+              <img src="/feature-art/pastquestions-icon.svg" alt="" className="w-12 h-12 object-contain" />
+            </div>
             <div className="text-center z-10">
               <div className="font-semibold text-white mb-1">Past Questions</div>
               <div className="text-xs text-white/70">All available papers 100-400 level</div>
