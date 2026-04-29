@@ -20,6 +20,8 @@ export interface Department {
     name: string;
     code?: string;
     icon?: string;
+    iconUrl?: string;
+    backgroundUrl?: string;
 }
 
 export interface Course {
@@ -98,8 +100,17 @@ export function useDepartments() {
                 const q = query(collection(db, 'departments'));
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const depts: Department[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
-                    .map((d: any) => ({ id: d.id, name: d.name }));
+                const depts: Department[] = snapshot.docs.map(d => {
+                    const data = d.data() as any;
+                    return {
+                        id: d.id,
+                        name: data.name || d.id,
+                        code: data.code,
+                        icon: data.icon,
+                        iconUrl: data.iconUrl,
+                        backgroundUrl: data.backgroundUrl,
+                    };
+                });
                 setDepartments(depts);
             } catch (err) {
                 console.error('Error fetching departments:', err);

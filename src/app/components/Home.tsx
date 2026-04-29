@@ -1,5 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, Search, Calendar, ChevronRight, Atom, Cpu, Wrench, Briefcase, FlaskConical, Database, UserCircle, Building2, BookOpen, Beaker, Calculator, Globe, Activity, Music, Palette } from 'lucide-react';
+import {
+  Bell,
+  Search,
+  Calendar,
+  ChevronRight,
+  Atom,
+  Cpu,
+  Wrench,
+  Briefcase,
+  FlaskConical,
+  Database,
+  UserCircle,
+  Building2,
+  BookOpen,
+  Beaker,
+  Calculator,
+  Globe,
+  Activity,
+  Music,
+  Palette,
+  GraduationCap,
+  BrainCircuit,
+  CircuitBoard,
+  Microscope,
+  Stethoscope,
+  Landmark,
+  Scale,
+  LineChart,
+  Factory,
+  RadioTower,
+  Leaf,
+  PenTool,
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDepartments, useRecentCourses, useNotifications, useUserProfile, useTimetable, useCourseThumbnails } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
@@ -60,7 +92,31 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
 
   // Dynamic icon mapping from admin-set icon field
   const ICON_MAP: Record<string, any> = {
-    Building2, BookOpen, Cpu, Beaker, Calculator, Globe, Activity, Briefcase, Music, Palette, Atom, Wrench, FlaskConical
+    Building2,
+    BookOpen,
+    Cpu,
+    Beaker,
+    Calculator,
+    Globe,
+    Activity,
+    Briefcase,
+    Music,
+    Palette,
+    Atom,
+    Wrench,
+    FlaskConical,
+    GraduationCap,
+    BrainCircuit,
+    CircuitBoard,
+    Microscope,
+    Stethoscope,
+    Landmark,
+    Scale,
+    LineChart,
+    Factory,
+    RadioTower,
+    Leaf,
+    PenTool,
   };
 
   // Vibrant gradient palette for department cards
@@ -197,6 +253,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                   key={dept.id}
                   onClick={() => onExplore(dept.id)}
                   className={`flex-1 min-w-[30%] h-28 bg-gradient-to-br ${gradient.bg} rounded-2xl p-5 flex flex-col items-start justify-between hover:shadow-lg hover:shadow-black/20 transition-all relative overflow-hidden`}
+                  style={dept.backgroundUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.68)), url(${dept.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   initial={{ opacity: 0, y: 20 }}
@@ -205,7 +262,11 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                 >
                   <div className={`absolute -top-4 -right-4 w-20 h-20 rounded-full ${gradient.glow} blur-2xl`} />
                   <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    {dept.iconUrl ? (
+                      <img src={dept.iconUrl} alt="" className="w-6 h-6 object-contain" />
+                    ) : (
+                      <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    )}
                   </div>
                   <span className="font-semibold text-xs leading-tight text-left text-white/95 drop-shadow-sm">{dept.name}</span>
                 </motion.button>
