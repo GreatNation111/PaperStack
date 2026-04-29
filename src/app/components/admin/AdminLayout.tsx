@@ -53,7 +53,7 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
   ];
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 flex flex-col lg:flex-row bg-background text-foreground`}>
+    <div className={`admin-shell min-h-screen transition-colors duration-500 flex flex-col lg:flex-row bg-background text-foreground`}>
       {/* Mobile Header */}
       <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 border-b flex items-center justify-between px-4 z-40 transition-colors bg-card border-border`}>
         <div className="flex items-center gap-2">

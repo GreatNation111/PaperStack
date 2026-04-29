@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, Shield, Bell, Loader2, Save, AlertTriangle, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
+import { Settings, Loader2, Save, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
-import { useGlobalConfig, GlobalConfig, useUserCount } from '@/hooks/useData';
+import { DEFAULT_PRICING_CONFIG, GlobalConfig, PricingConfig, useGlobalConfig, usePricingConfig } from '@/hooks/useData';
 
 export function AdminSettings() {
   const { config, loading } = useGlobalConfig();
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const { count: userCount } = useUserCount();
-  const [pricingStats, setPricingStats] = useState({ '1000': 0, '2000': 0, '3000': 0, total: 0 });
+  const { pricingConfig, loading: pricingLoading } = usePricingConfig();
+  const [pricingStats, setPricingStats] = useState<Record<string, number>>({ total: 0 });
+  const [localPricingConfig, setLocalPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
 
   // Local state for immediate UI feedback before blur/save
   const [localConfig, setLocalConfig] = useState<GlobalConfig | null>(null);
@@ -22,14 +23,20 @@ export function AdminSettings() {
     }
   }, [config, loading]);
 
+  useEffect(() => {
+    if (!pricingLoading) {
+      setLocalPricingConfig(pricingConfig);
+    }
+  }, [pricingConfig, pricingLoading]);
+
   // Fetch pricing feedback stats
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'pricingFeedback'), (snap) => {
-      const stats = { '1000': 0, '2000': 0, '3000': 0, total: snap.size };
+      const stats: Record<string, number> = { total: snap.size };
       snap.docs.forEach(doc => {
         const choice = doc.data().suggestedPrice?.toString();
-        if (choice && choice in stats) {
-          stats[choice as keyof typeof stats]++;
+        if (choice) {
+          stats[choice] = (stats[choice] || 0) + 1;
         }
       });
       setPricingStats(stats);
@@ -57,7 +64,39 @@ export function AdminSettings() {
     }
   };
 
-  if (loading || !localConfig) {
+  const handleUpdatePricingConfig = async (updates?: Partial<PricingConfig>) => {
+    const nextConfig = {
+      ...localPricingConfig,
+      ...updates,
+      options: (updates?.options || localPricingConfig.options)
+        .map(option => ({
+          amount: Number(option.amount) || 0,
+          label: option.label?.trim() || `\u20A6${Number(option.amount || 0).toLocaleString()} / Semester`,
+        }))
+        .filter(option => option.amount > 0),
+    };
+
+    if (!nextConfig.options.length) {
+      alert('Add at least one valid price option.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      await setDoc(doc(db, 'config', 'pricing'), nextConfig, { merge: true });
+      setLocalPricingConfig(nextConfig);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error updating pricing config:', error);
+      alert('Failed to save pricing settings.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading || pricingLoading || !localConfig) {
     return (
       <div className="p-8 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -66,10 +105,10 @@ export function AdminSettings() {
   }
 
   // Find the most popular price
-  const prices = ['1000', '2000', '3000'];
+  const prices = localPricingConfig.options.map(option => option.amount.toString());
   const marketLeader = prices.reduce((a, b) =>
     (pricingStats[a as keyof typeof pricingStats] as number) >= (pricingStats[b as keyof typeof pricingStats] as number) ? a : b
-  );
+  , prices[0] || '0');
 
   return (
     <div className="p-4 lg:p-12 space-y-12 w-full max-w-7xl mx-auto">
@@ -190,10 +229,98 @@ export function AdminSettings() {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-[3rem] p-8 shadow-sm">
+          <div className="bg-card border border-border rounded-[2rem] p-6 md:p-8 shadow-sm space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Student Pricing Title</label>
+                <input
+                  value={localPricingConfig.title}
+                  onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, title: e.target.value })}
+                  onBlur={() => handleUpdatePricingConfig({ title: localPricingConfig.title })}
+                  className="w-full bg-muted/40 border border-border rounded-xl h-11 px-4 font-bold text-foreground focus:border-primary/40 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Pricing Choices</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextOptions = [...localPricingConfig.options, { amount: 0, label: '' }];
+                    setLocalPricingConfig({ ...localPricingConfig, options: nextOptions });
+                  }}
+                  className="w-full h-11 rounded-xl border border-border bg-muted/40 text-secondary hover:text-foreground text-xs font-bold uppercase tracking-widest"
+                >
+                  Add Price Option
+                </button>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Student Pricing Description</label>
+                <textarea
+                  value={localPricingConfig.description}
+                  onChange={(e) => setLocalPricingConfig({ ...localPricingConfig, description: e.target.value })}
+                  onBlur={() => handleUpdatePricingConfig({ description: localPricingConfig.description })}
+                  className="w-full bg-muted/40 border border-border rounded-xl min-h-20 px-4 py-3 font-medium text-foreground focus:border-primary/40 outline-none text-sm resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {localPricingConfig.options.map((option, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[160px_1fr_auto] gap-3 items-center bg-muted/20 border border-border rounded-2xl p-3">
+                  <input
+                    type="number"
+                    min="1"
+                    value={option.amount || ''}
+                    onChange={(e) => {
+                      const amount = Number(e.target.value) || 0;
+                      const nextOptions = localPricingConfig.options.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, amount } : item
+                      );
+                      setLocalPricingConfig({ ...localPricingConfig, options: nextOptions });
+                    }}
+                    className="w-full bg-card border border-border rounded-xl h-11 px-4 font-black text-foreground focus:border-primary/40 outline-none text-sm"
+                    placeholder="1000"
+                  />
+                  <input
+                    value={option.label}
+                    onChange={(e) => {
+                      const nextOptions = localPricingConfig.options.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, label: e.target.value } : item
+                      );
+                      setLocalPricingConfig({ ...localPricingConfig, options: nextOptions });
+                    }}
+                    className="w-full bg-card border border-border rounded-xl h-11 px-4 font-bold text-foreground focus:border-primary/40 outline-none text-sm"
+                    placeholder={`\u20A6${Number(option.amount || 0).toLocaleString()} / Semester`}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdatePricingConfig()}
+                      disabled={isSaving}
+                      className="h-11 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextOptions = localPricingConfig.options.filter((_, itemIndex) => itemIndex !== index);
+                        setLocalPricingConfig({ ...localPricingConfig, options: nextOptions });
+                        void handleUpdatePricingConfig({ options: nextOptions });
+                      }}
+                      disabled={localPricingConfig.options.length <= 1 || isSaving}
+                      className="h-11 px-4 rounded-xl border border-border text-red-500 text-xs font-bold disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {prices.map((price, _idx) => {
-                const count = pricingStats[price as keyof typeof pricingStats] as number;
+                const count = pricingStats[price] || 0;
                 const percentage = pricingStats.total > 0 ? (count / pricingStats.total) * 100 : 0;
                 const isLeader = price === marketLeader;
 
@@ -213,7 +340,7 @@ export function AdminSettings() {
                     )}
 
                     <div className="flex flex-col items-center pt-8">
-                      <div className="text-4xl font-black text-foreground tracking-tight mb-1">₦{parseInt(price).toLocaleString()}</div>
+                      <div className="text-4xl font-black text-foreground tracking-tight mb-1">{`\u20A6${parseInt(price).toLocaleString()}`}</div>
                       <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">Suggested Price</div>
                     </div>
 

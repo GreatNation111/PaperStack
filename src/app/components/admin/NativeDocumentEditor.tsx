@@ -134,7 +134,7 @@ export function NativeDocumentEditor({ value, onChange, onUploadImage, onStatus,
     const currentHtml = editor.getHTML();
     const nextHtml = value || '<p></p>';
     if (currentHtml !== nextHtml) {
-      editor.commands.setContent(nextHtml, false);
+      editor.commands.setContent(nextHtml, { emitUpdate: false });
     }
   }, [editor, value]);
 

@@ -849,6 +849,27 @@ export interface GlobalConfig {
     platformName: string;
 }
 
+export interface PricingOption {
+    amount: number;
+    label: string;
+}
+
+export interface PricingConfig {
+    title: string;
+    description: string;
+    options: PricingOption[];
+}
+
+export const DEFAULT_PRICING_CONFIG: PricingConfig = {
+    title: 'Fair Price?',
+    description: 'PaperStack Premium will launch next semester. What would you consider a fair price for all these features per semester?',
+    options: [
+        { amount: 1000, label: '\u20A61,000 / Semester' },
+        { amount: 2000, label: '\u20A62,000 / Semester' },
+        { amount: 3000, label: '\u20A63,000 / Semester' },
+    ],
+};
+
 export function useGlobalConfig() {
     const [config, setConfig] = useState<GlobalConfig>({
         maintenanceMode: false,
@@ -883,6 +904,44 @@ export function useGlobalConfig() {
     }, []);
 
     return { config, loading };
+}
+
+export function usePricingConfig() {
+    const [pricingConfig, setPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, 'config', 'pricing'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as Partial<PricingConfig>;
+                const options = Array.isArray(data.options)
+                    ? data.options
+                        .map((option: any) => ({
+                            amount: Number(option.amount) || 0,
+                            label: option.label || `\u20A6${Number(option.amount || 0).toLocaleString()} / Semester`,
+                        }))
+                        .filter(option => option.amount > 0)
+                    : DEFAULT_PRICING_CONFIG.options;
+
+                setPricingConfig({
+                    title: data.title || DEFAULT_PRICING_CONFIG.title,
+                    description: data.description || DEFAULT_PRICING_CONFIG.description,
+                    options: options.length ? options : DEFAULT_PRICING_CONFIG.options,
+                });
+            } else {
+                setPricingConfig(DEFAULT_PRICING_CONFIG);
+            }
+            setLoading(false);
+        }, (err) => {
+            console.error('Error fetching pricing config:', err);
+            setPricingConfig(DEFAULT_PRICING_CONFIG);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { pricingConfig, loading };
 }
 
 // PREMIUM ARCHITECTURE HOOKS & FUNCTIONS

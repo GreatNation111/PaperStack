@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2 } from 'lucide-react';
+import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2 } from 'lucide-react';
 import { collection, doc, onSnapshot, query, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -20,6 +20,8 @@ export function UsersManagement() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'admin' | 'contributor'>('all');
+  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [openUserMenuId, setOpenUserMenuId] = useState<string | null>(null);
 
   // Contributor Modal State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -162,22 +164,34 @@ export function UsersManagement() {
           </div>
 
           <div className="flex gap-2">
-            <div className="relative group">
-              <button className="h-11 px-4 bg-[#0F1115] border border-[#333] rounded-lg text-[#AAA] hover:text-[#E5E5E5] hover:border-[#4F46E5] transition-colors flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsRoleMenuOpen(open => !open)}
+                onBlur={() => window.setTimeout(() => setIsRoleMenuOpen(false), 120)}
+                aria-expanded={isRoleMenuOpen}
+                className="h-11 px-4 bg-[#0F1115] border border-[#333] rounded-lg text-[#AAA] hover:text-[#E5E5E5] hover:border-[#4F46E5] transition-colors flex items-center gap-2"
+              >
                 <span>Role: {roleFilter === 'all' ? 'All' : roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)}</span>
                 <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
               </button>
-              <div className="absolute right-0 top-full mt-2 w-40 bg-[#1A1A1F] border border-[#333] rounded-lg shadow-xl hidden group-hover:block z-20">
-                {['all', 'student', 'contributor'].map(r => (
+              {isRoleMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-40 bg-[#1A1A1F] border border-[#333] rounded-lg shadow-xl z-20 overflow-hidden">
+                {['all', 'student', 'contributor', 'admin'].map(r => (
                   <button
                     key={r}
-                    onClick={() => setRoleFilter(r as any)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setRoleFilter(r as any);
+                      setIsRoleMenuOpen(false);
+                    }}
                     className="w-full text-left px-4 py-2 text-[#AAA] hover:bg-[#333] hover:text-white first:rounded-t-lg last:rounded-b-lg"
                   >
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </button>
                 ))}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -252,16 +266,22 @@ export function UsersManagement() {
                             Demote
                           </button>
                         )}
-                        <div className="relative group/menu">
+                        <div className="relative">
                           <button
+                            type="button"
+                            onClick={() => setOpenUserMenuId(openUserMenuId === user.id ? null : user.id)}
+                            onBlur={() => window.setTimeout(() => setOpenUserMenuId(null), 120)}
+                            aria-expanded={openUserMenuId === user.id}
                             className="w-8 h-8 flex items-center justify-center text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#333] rounded-lg transition-colors"
                           >
                             <MoreVertical className="w-4 h-4" strokeWidth={1.5} />
                           </button>
-                          <div className="absolute right-0 top-full mt-1 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-hover/menu:block z-[60] overflow-hidden">
-                            <button onClick={() => handleViewUser(user)} className="w-full text-left px-4 py-2 text-xs text-[#AAA] hover:bg-[#333] hover:text-white">View Details</button>
-                            <button onClick={() => handleDeleteUser(user)} className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2A2A2F]">Delete Account</button>
-                          </div>
+                          {openUserMenuId === user.id && (
+                            <div className="absolute right-0 top-full mt-1 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl z-[60] overflow-hidden">
+                              <button onMouseDown={(event) => event.preventDefault()} onClick={() => { handleViewUser(user); setOpenUserMenuId(null); }} className="w-full text-left px-4 py-2 text-xs text-[#AAA] hover:bg-[#333] hover:text-white">View Details</button>
+                              <button onMouseDown={(event) => event.preventDefault()} onClick={() => { void handleDeleteUser(user); setOpenUserMenuId(null); }} className="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors border-t border-[#2A2A2F]">Delete Account</button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -333,14 +353,22 @@ export function UsersManagement() {
                   )}
                 </div>
 
-                <div className="relative group" tabIndex={0}>
-                  <button className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform outline-none focus:text-white">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setOpenUserMenuId(openUserMenuId === user.id ? null : user.id)}
+                    onBlur={() => window.setTimeout(() => setOpenUserMenuId(null), 120)}
+                    aria-expanded={openUserMenuId === user.id}
+                    className="w-10 h-10 flex items-center justify-center text-[#AAA] hover:bg-[#333] rounded-xl active:scale-95 transition-transform outline-none focus:text-white"
+                  >
                     <MoreVertical className="w-5 h-5" />
                   </button>
-                  <div className="absolute right-0 bottom-full mb-2 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl hidden group-focus:block group-focus-within:block z-[60] overflow-hidden">
-                    <button onClick={() => handleViewUser(user)} className="w-full text-left px-4 py-3 text-xs text-[#AAA] active:bg-[#333]">View Details</button>
-                    <button onClick={() => handleDeleteUser(user)} className="w-full text-left px-4 py-3 text-xs text-red-500 active:bg-red-500/10 border-t border-[#2A2A2F]">Delete User</button>
-                  </div>
+                  {openUserMenuId === user.id && (
+                    <div className="absolute right-0 bottom-full mb-2 w-36 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl shadow-2xl z-[60] overflow-hidden">
+                      <button onMouseDown={(event) => event.preventDefault()} onClick={() => { handleViewUser(user); setOpenUserMenuId(null); }} className="w-full text-left px-4 py-3 text-xs text-[#AAA] active:bg-[#333]">View Details</button>
+                      <button onMouseDown={(event) => event.preventDefault()} onClick={() => { void handleDeleteUser(user); setOpenUserMenuId(null); }} className="w-full text-left px-4 py-3 text-xs text-red-500 active:bg-red-500/10 border-t border-[#2A2A2F]">Delete User</button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -179,3 +179,71 @@
     line-height: 1.5;
   }
 }
+
+@layer components {
+  :root:not(.dark) .admin-shell {
+    background:
+      radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), transparent 32rem),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  }
+
+  :root:not(.dark) .admin-shell [class*="bg-[#1A1A1F]"],
+  :root:not(.dark) .admin-shell [class*="bg-[#15151A]"],
+  :root:not(.dark) .admin-shell [class*="bg-[#222227]"] {
+    background-color: #ffffff !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="bg-[#222227]/50"] {
+    background-color: rgba(255, 255, 255, 0.72) !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="bg-[#0F1115]"] {
+    background-color: #f8fafc !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="border-[#2A2A2F]"],
+  :root:not(.dark) .admin-shell [class*="border-[#333]"] {
+    border-color: #e2e8f0 !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="text-[#E5E5E5]"],
+  :root:not(.dark) .admin-shell [class*="hover:text-[#E5E5E5]"]:hover,
+  :root:not(.dark) .admin-shell [class*="hover:text-white"]:hover {
+    color: #0f172a !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="text-[#AAA]"] {
+    color: #64748b !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="text-[#888]"],
+  :root:not(.dark) .admin-shell [class*="text-[#666]"],
+  :root:not(.dark) .admin-shell [class*="text-[#555]"] {
+    color: #94a3b8 !important;
+  }
+
+  :root:not(.dark) .admin-shell input,
+  :root:not(.dark) .admin-shell textarea,
+  :root:not(.dark) .admin-shell select {
+    color: #0f172a !important;
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  :root:not(.dark) .admin-shell input::placeholder,
+  :root:not(.dark) .admin-shell textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  :root:not(.dark) .admin-shell table tbody tr:hover,
+  :root:not(.dark) .admin-shell [class*="hover:bg-[#222227]"]:hover,
+  :root:not(.dark) .admin-shell [class*="hover:bg-[#333]"]:hover,
+  :root:not(.dark) .admin-shell [class*="hover:bg-[#333]/50"]:hover {
+    background-color: #f1f5f9 !important;
+  }
+
+  :root:not(.dark) .admin-shell [class*="shadow-2xl"],
+  :root:not(.dark) .admin-shell [class*="shadow-xl"] {
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12) !important;
+  }
+}

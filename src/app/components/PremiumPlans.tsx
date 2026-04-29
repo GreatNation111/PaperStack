@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Crown, Check, MessageSquare, Heart, Sparkles, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/app/context/AuthContext';
-import { useUserProfile, submitPricingFeedback } from '@/hooks/useData';
+import { submitPricingFeedback, usePricingConfig } from '@/hooks/useData';
 import { useNavigate } from 'react-router-dom';
 
 export function PremiumPlans() {
     const { user } = useAuth();
-    const { profile } = useUserProfile(user?.uid);
+    const { pricingConfig } = usePricingConfig();
     const navigate = useNavigate();
     const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,12 +19,6 @@ export function PremiumPlans() {
         { title: 'Curated Repeated Questions', description: 'Questions that appear year after year.', icon: Heart },
         { title: 'Unlimited Bookmarks', description: 'Save as many courses as you need.', icon: Check },
         { title: 'Priority Feature Access', description: 'Get new features before anyone else.', icon: Crown },
-    ];
-
-    const pricingOptions = [
-        { amount: 1000, label: '₦1,000 / Semester' },
-        { amount: 2000, label: '₦2,000 / Semester' },
-        { amount: 3000, label: '₦3,000 / Semester' },
     ];
 
     // Check if user has already voted on mount
@@ -110,15 +104,25 @@ export function PremiumPlans() {
                 <div className="bg-card border border-border rounded-[2.5rem] p-8 shadow-sm">
                     <div className="flex items-center gap-3 mb-6">
                         <MessageSquare className="w-5 h-5 text-primary" />
-                        <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Fair Price?</h3>
+                        <h3 className="text-lg font-black text-foreground uppercase tracking-tight">{pricingConfig.title}</h3>
                     </div>
 
                     <p className="text-secondary text-xs font-medium leading-relaxed mb-8">
-                        PaperStack Premium will launch next semester. What would you consider a fair price for all these features per semester?
+                        {pricingConfig.description}
                     </p>
 
                     <AnimatePresence mode="wait">
-                        {!submitted ? (
+                        {isLoadingVote ? (
+                            <motion.div
+                                key="loading"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="py-8 flex justify-center"
+                            >
+                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            </motion.div>
+                        ) : !submitted ? (
                             <motion.div
                                 key="form"
                                 initial={{ opacity: 0, y: 10 }}
@@ -126,7 +130,7 @@ export function PremiumPlans() {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 className="space-y-3"
                             >
-                                {pricingOptions.map((opt) => (
+                                {pricingConfig.options.map((opt) => (
                                     <button
                                         key={opt.amount}
                                         onClick={() => setSelectedPrice(opt.amount)}
@@ -144,7 +148,7 @@ export function PremiumPlans() {
                                 ))}
 
                                 <button
-                                    disabled={!selectedPrice || isSubmitting}
+                                    disabled={!selectedPrice || isSubmitting || isLoadingVote}
                                     onClick={handleSubmitFeedback}
                                     className="w-full h-14 bg-primary text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] mt-8 flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:scale-[1.02]"
                                 >

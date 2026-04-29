@@ -15,7 +15,21 @@ import {
     Activity,
     Briefcase,
     Music,
-    Palette
+    Palette,
+    GraduationCap,
+    Atom,
+    Microscope,
+    Stethoscope,
+    Landmark,
+    Scale,
+    Leaf,
+    BrainCircuit,
+    PenTool,
+    RadioTower,
+    Factory,
+    LineChart,
+    FlaskConical,
+    CircuitBoard,
 } from 'lucide-react';
 import {
     collection,
@@ -38,16 +52,30 @@ interface Department {
 }
 
 const ICON_PRESETS = [
-    { name: 'Building2', icon: Building2 },
-    { name: 'BookOpen', icon: BookOpen },
-    { name: 'Cpu', icon: Cpu },
-    { name: 'Beaker', icon: Beaker },
-    { name: 'Calculator', icon: Calculator },
-    { name: 'Globe', icon: Globe },
-    { name: 'Activity', icon: Activity },
-    { name: 'Briefcase', icon: Briefcase },
-    { name: 'Music', icon: Music },
-    { name: 'Palette', icon: Palette },
+    { name: 'GraduationCap', icon: GraduationCap, tone: 'from-indigo-500 to-blue-500' },
+    { name: 'BrainCircuit', icon: BrainCircuit, tone: 'from-violet-500 to-fuchsia-500' },
+    { name: 'CircuitBoard', icon: CircuitBoard, tone: 'from-cyan-500 to-blue-500' },
+    { name: 'Atom', icon: Atom, tone: 'from-sky-500 to-indigo-500' },
+    { name: 'Microscope', icon: Microscope, tone: 'from-emerald-500 to-teal-500' },
+    { name: 'FlaskConical', icon: FlaskConical, tone: 'from-lime-500 to-emerald-500' },
+    { name: 'Stethoscope', icon: Stethoscope, tone: 'from-rose-500 to-red-500' },
+    { name: 'Landmark', icon: Landmark, tone: 'from-amber-500 to-orange-500' },
+    { name: 'Scale', icon: Scale, tone: 'from-slate-500 to-zinc-700' },
+    { name: 'LineChart', icon: LineChart, tone: 'from-green-500 to-emerald-600' },
+    { name: 'Factory', icon: Factory, tone: 'from-orange-500 to-red-500' },
+    { name: 'RadioTower', icon: RadioTower, tone: 'from-pink-500 to-rose-500' },
+    { name: 'Leaf', icon: Leaf, tone: 'from-green-500 to-lime-500' },
+    { name: 'PenTool', icon: PenTool, tone: 'from-purple-500 to-indigo-500' },
+    { name: 'Building2', icon: Building2, tone: 'from-indigo-500 to-slate-600' },
+    { name: 'BookOpen', icon: BookOpen, tone: 'from-blue-500 to-cyan-500' },
+    { name: 'Cpu', icon: Cpu, tone: 'from-cyan-500 to-slate-700' },
+    { name: 'Beaker', icon: Beaker, tone: 'from-emerald-500 to-cyan-500' },
+    { name: 'Calculator', icon: Calculator, tone: 'from-amber-500 to-yellow-500' },
+    { name: 'Globe', icon: Globe, tone: 'from-sky-500 to-emerald-500' },
+    { name: 'Activity', icon: Activity, tone: 'from-red-500 to-pink-500' },
+    { name: 'Briefcase', icon: Briefcase, tone: 'from-zinc-500 to-slate-700' },
+    { name: 'Music', icon: Music, tone: 'from-fuchsia-500 to-purple-500' },
+    { name: 'Palette', icon: Palette, tone: 'from-pink-500 to-amber-500' },
 ];
 
 export function DepartmentsManager() {
@@ -202,7 +230,8 @@ export function DepartmentsManager() {
                 <AnimatePresence>
                     {filteredDepartments.map((dept, index) => {
                         // Dynamic Icon Render
-                        const IconComponent = ICON_PRESETS.find(p => p.name === dept.icon)?.icon || Building2;
+                        const iconPreset = ICON_PRESETS.find(p => p.name === dept.icon) || ICON_PRESETS[0];
+                        const IconComponent = iconPreset.icon;
 
                         return (
                             <motion.div
@@ -214,10 +243,10 @@ export function DepartmentsManager() {
                                 className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 hover:border-[#333] transition-colors group relative"
                             >
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className="w-12 h-12 rounded-xl bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5]">
-                                        <IconComponent className="w-6 h-6" strokeWidth={1.5} />
+                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconPreset.tone} flex items-center justify-center text-white shadow-lg shadow-black/10`}>
+                                        <IconComponent className="w-6 h-6" strokeWidth={1.9} />
                                     </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => handleOpenEdit(dept)}
                                             className="p-2 text-[#AAA] hover:text-[#E5E5E5] hover:bg-[#333] rounded-lg transition-colors"
