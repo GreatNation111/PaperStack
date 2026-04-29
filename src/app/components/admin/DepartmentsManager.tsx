@@ -81,6 +81,15 @@ const ICON_PRESETS = [
     { name: 'Palette', icon: Palette, tone: 'from-pink-500 to-amber-500' },
 ];
 
+const ART_PRESETS = [
+    { label: 'Physics', iconUrl: '/department-art/physics-icon.svg', backgroundUrl: '/department-art/physics-bg.svg' },
+    { label: 'Computer', iconUrl: '/department-art/computer-icon.svg', backgroundUrl: '/department-art/computer-bg.svg' },
+    { label: 'Industrial', iconUrl: '/department-art/industrial-icon.svg', backgroundUrl: '/department-art/industrial-bg.svg' },
+    { label: 'Business', iconUrl: '/department-art/business-icon.svg', backgroundUrl: '/department-art/business-bg.svg' },
+    { label: 'Chemistry', iconUrl: '/department-art/chemistry-icon.svg', backgroundUrl: '/department-art/chemistry-bg.svg' },
+    { label: 'Education', iconUrl: '/department-art/education-icon.svg', backgroundUrl: '/department-art/education-bg.svg' },
+];
+
 export function DepartmentsManager() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
@@ -318,9 +327,9 @@ export function DepartmentsManager() {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+                            className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl w-full max-w-md max-h-[88vh] overflow-hidden shadow-2xl flex flex-col"
                         >
-                            <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between bg-[#15151A]">
+                            <div className="px-6 py-4 border-b border-[#2A2A2F] flex items-center justify-between bg-[#15151A] flex-shrink-0">
                                 <h2 className="text-lg font-semibold text-[#E5E5E5]">
                                     {isEditing ? 'Edit Department' : 'New Department'}
                                 </h2>
@@ -332,7 +341,7 @@ export function DepartmentsManager() {
                                 </button>
                             </div>
 
-                            <div className="p-6 space-y-4">
+                            <div className="p-6 space-y-4 overflow-y-auto flex-1">
                                 {formError && (
                                     <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-500">
                                         {formError}
@@ -384,6 +393,28 @@ export function DepartmentsManager() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-sm font-medium text-[#AAA] mb-2">PaperStack Art Presets</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {ART_PRESETS.map(preset => {
+                                            const isSelected = formData.iconUrl === preset.iconUrl && formData.backgroundUrl === preset.backgroundUrl;
+
+                                            return (
+                                                <button
+                                                    key={preset.label}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, iconUrl: preset.iconUrl, backgroundUrl: preset.backgroundUrl })}
+                                                    className={`relative overflow-hidden rounded-xl border p-3 min-h-20 text-left transition-all ${isSelected ? 'border-[#4F46E5] ring-2 ring-[#4F46E5]/20' : 'border-[#333] hover:border-[#666]'}`}
+                                                    style={{ backgroundImage: `linear-gradient(135deg, rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.78)), url(${preset.backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                                >
+                                                    <img src={preset.iconUrl} alt="" className="w-8 h-8 object-contain mb-2" />
+                                                    <span className="text-xs font-bold text-white">{preset.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div>
                                     <label className="block text-sm font-medium text-[#AAA] mb-2">Custom Icon URL</label>
                                     <input
                                         value={formData.iconUrl}
@@ -404,7 +435,7 @@ export function DepartmentsManager() {
                                 </div>
                             </div>
 
-                            <div className="px-6 py-4 bg-[#15151A] border-t border-[#2A2A2F] flex justify-end gap-3">
+                            <div className="px-6 py-4 bg-[#15151A] border-t border-[#2A2A2F] flex justify-end gap-3 flex-shrink-0">
                                 <button
                                     onClick={() => setShowModal(false)}
                                     className="px-4 py-2 text-sm font-medium text-[#AAA] hover:text-[#E5E5E5] transition-colors"
