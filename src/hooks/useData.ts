@@ -158,7 +158,17 @@ export function useCourses(departmentId: string | undefined) {
                 const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const cs: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                const baseCourses: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                const papersSnapshot = await getDocs(query(collection(db, 'papers'), where('departmentId', '==', departmentId)));
+                const paperCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
+                    const courseId = (paperDoc.data() as any).courseId;
+                    if (courseId) counts[courseId] = (counts[courseId] || 0) + 1;
+                    return counts;
+                }, {});
+                const cs = baseCourses.map(course => ({
+                    ...course,
+                    papers: paperCountsByCourse[course.id] ?? course.papers ?? 0,
+                }));
                 coursesCache[departmentId] = cs;
                 setCourses(cs);
             } catch (err) {

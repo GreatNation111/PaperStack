@@ -61,6 +61,10 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   // Fetch real thumbnails for recently viewed courses
   const courseIds = useMemo(() => recentCourses.map(c => c.id), [recentCourses]);
   const { thumbnails } = useCourseThumbnails(courseIds);
+  const formatPaperCount = (count?: number) => {
+    const safeCount = count || 0;
+    return `${safeCount} ${safeCount === 1 ? 'paper' : 'papers'}`;
+  };
 
   // Check notification permission status on mount
   useEffect(() => {
@@ -399,7 +403,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                         <div className="text-xs text-secondary flex items-center gap-2">
                           <span>{course.level}</span>
                           <span className="w-1 h-1 bg-secondary/30 rounded-full" />
-                          <span>{course.papers || 0} papers</span>
+                          <span>{formatPaperCount(course.papers)}</span>
                         </div>
                       </div>
 

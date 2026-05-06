@@ -1,7 +1,7 @@
 import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, Loader2, Sparkles, X, CheckCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Paper, usePaper, useBookmarks, useDownloadedPapers } from '@/hooks/useData';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,7 +17,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
  * Avoids cross-origin iframe blocking (e.g. Brave, Safari).
  */
 function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -31,7 +30,11 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
 
     const loadPdf = async () => {
       try {
-        const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+        const pdf = await pdfjsLib.getDocument({
+          url: pdfUrl,
+          disableAutoFetch: true,
+          disableStream: false,
+        }).promise;
         if (cancelled) { await pdf.destroy(); return; }
         pdfDocRef.current = pdf;
         setPageCount(pdf.numPages);
@@ -54,41 +57,6 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
       }
     };
   }, [pdfUrl]);
-
-  // Render all pages when PDF is loaded or scale changes
-  const renderPages = useCallback(async () => {
-    const pdf = pdfDocRef.current;
-    const container = containerRef.current;
-    if (!pdf || !container) return;
-
-    // Clear previous canvases
-    container.innerHTML = '';
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: scale * 1.5 }); // 1.5x base for crisp text
-
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = '100%';
-      canvas.style.maxWidth = `${viewport.width}px`;
-      canvas.style.height = 'auto';
-      canvas.style.display = 'block';
-      canvas.style.marginBottom = '12px';
-      canvas.style.boxShadow = '0 2px 12px rgba(0,0,0,0.15)';
-      canvas.style.borderRadius = '4px';
-
-      const ctx = canvas.getContext('2d')!;
-      await page.render({ canvasContext: ctx, viewport }).promise;
-
-      container.appendChild(canvas);
-    }
-  }, [scale]);
-
-  useEffect(() => {
-    if (pageCount > 0) renderPages();
-  }, [pageCount, scale, renderPages]);
 
   if (pdfLoading) {
     return (
@@ -114,7 +82,96 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col items-center w-full max-w-[800px]" />
+    <div className="flex flex-col items-center w-full max-w-[800px] gap-3">
+      {Array.from({ length: pageCount }, (_, index) => (
+        <PdfPageCanvas
+          key={`${index + 1}-${scale}`}
+          pdf={pdfDocRef.current}
+          pageNumber={index + 1}
+          scale={scale}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: number; scale: number }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [shouldRender, setShouldRender] = useState(pageNumber === 1);
+  const [height, setHeight] = useState(520);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper || shouldRender) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldRender(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '900px 0px' }
+    );
+
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [shouldRender]);
+
+  useEffect(() => {
+    if (!pdf || !shouldRender || !canvasRef.current) return;
+
+    let cancelled = false;
+    let renderTask: any;
+
+    const renderPage = async () => {
+      const page = await pdf.getPage(pageNumber);
+      if (cancelled) return;
+
+      const viewport = page.getViewport({ scale: scale * 1.5 });
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.maxWidth = `${viewport.width}px`;
+      setHeight(viewport.height);
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      renderTask = page.render({ canvasContext: ctx, viewport });
+      await renderTask.promise;
+    };
+
+    renderPage().catch(err => {
+      if (!cancelled && err?.name !== 'RenderingCancelledException') {
+        console.error(`PDF page ${pageNumber} render error:`, err);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      renderTask?.cancel?.();
+    };
+  }, [pdf, pageNumber, scale, shouldRender]);
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="w-full flex justify-center"
+      style={{ minHeight: shouldRender ? undefined : `${height}px` }}
+    >
+      {shouldRender ? (
+        <canvas
+          ref={canvasRef}
+          className="block w-full h-auto rounded shadow-[0_2px_12px_rgba(0,0,0,0.15)] bg-white"
+        />
+      ) : (
+        <div className="w-full h-full min-h-[520px] rounded bg-card/60 border border-border animate-pulse" />
+      )}
+    </div>
   );
 }
 
@@ -322,7 +379,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
             }}
           >
             <div
-              className="native-doc-page"
+              className="native-doc-page native-doc-readonly"
               dangerouslySetInnerHTML={{ __html: offlineHtml || paper!.richTextContent! }}
             />
           </div>

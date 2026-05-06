@@ -135,6 +135,18 @@
     transform: translateX(-50%);
   }
 
+  .native-doc-readonly .native-page-break {
+    border-top: 0;
+    height: 0;
+    margin: 2.5rem -72px;
+    break-after: page;
+  }
+
+  .native-doc-readonly .native-page-break::after {
+    content: "";
+    display: none;
+  }
+
   @media (max-width: 640px) {
     .native-doc-page {
       min-height: 760px;

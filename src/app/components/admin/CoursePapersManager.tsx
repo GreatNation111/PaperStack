@@ -4,7 +4,7 @@ import { Upload, FileText, Trash2, X, CheckCircle, Loader2, Link as LinkIcon, Fi
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import { generatePdfThumbnail, validatePdfFile, MAX_PDF_SIZE_LABEL } from '@/utils/pdfThumbnail';
+import { generatePdfThumbnail, getPdfPageCount, validatePdfFile, MAX_PDF_SIZE_LABEL } from '@/utils/pdfThumbnail';
 import { NativeDocumentEditor } from './NativeDocumentEditor';
 
 interface Paper {
@@ -17,6 +17,7 @@ interface Paper {
   pdfUrl?: string;
   richTextContent?: string;
   thumbnailUrl?: string;
+  pageCount?: number;
   downloads: number;
   courseId?: string;
   departmentId?: string;
@@ -44,6 +45,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     title: ''
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePageCount, setSelectedFilePageCount] = useState<number | null>(null);
   const [richText, setRichText] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +75,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     setEditingPaper(null);
     setFormData({ year: new Date().getFullYear().toString(), semester: 'First', type: 'Exam', title: '' });
     setSelectedFile(null);
+    setSelectedFilePageCount(null);
     setRichText('');
     setUploadProgress(0);
     setFormError('');
@@ -96,6 +99,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     setUploadMode(paper.richTextContent ? 'richtext' : 'pdf');
     setRichText(paper.richTextContent || '');
     setSelectedFile(null);
+    setSelectedFilePageCount(paper.pageCount || null);
     setUploadProgress(0);
     setFormError('');
     setStatusMsg('');
@@ -168,6 +172,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     try {
       let pdfUrl = editingPaper?.pdfUrl || '';
       let thumbnailUrl = editingPaper?.thumbnailUrl || '';
+      let pageCount = editingPaper?.pageCount || selectedFilePageCount || null;
 
       // Handle PDF upload (new or replacement)
       if (uploadMode === 'pdf' && selectedFile) {
@@ -194,6 +199,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
           selectedFile,
           `papers/${courseId}/${Date.now()}_${selectedFile.name}`
         );
+        pageCount = selectedFilePageCount || null;
 
         // Generate and upload thumbnail
         setStatusMsg('Generating thumbnail...');
@@ -226,6 +232,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
       if (uploadMode === 'pdf') {
         if (pdfUrl) payload.pdfUrl = pdfUrl;
         if (thumbnailUrl) payload.thumbnailUrl = thumbnailUrl;
+        if (pageCount) payload.pageCount = pageCount;
         // Clear rich text if switching to PDF
         payload.richTextContent = '';
       } else {
@@ -233,6 +240,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
         // Clear PDF fields if switching to rich text
         payload.pdfUrl = '';
         payload.thumbnailUrl = '';
+        payload.pageCount = null;
       }
 
       setStatusMsg('Saving to database...');
@@ -254,6 +262,27 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     } finally {
       setIsSaving(false);
       setStatusMsg('');
+    }
+  };
+
+  const handleSelectedFileChange = async (file: File | null) => {
+    setSelectedFile(file);
+    setSelectedFilePageCount(null);
+    if (!file) return;
+
+    const validationError = validatePdfFile(file);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    try {
+      const pageCount = await getPdfPageCount(file);
+      setSelectedFilePageCount(pageCount);
+      setFormError('');
+    } catch (err) {
+      console.error('Could not read PDF page count:', err);
+      setFormError('PDF selected, but the page count could not be read automatically.');
     }
   };
 
@@ -351,6 +380,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                           <p className="text-xs text-[#AAA] mt-0.5">
                             {paper.year} • {paper.semester} • {paper.type}
                             {paper.richTextContent ? ' • Native Doc' : paper.pdfUrl ? ' • PDF' : ' • Legacy Link'}
+                            {paper.pageCount ? ` • ${paper.pageCount} page${paper.pageCount === 1 ? '' : 's'}` : ''}
                           </p>
                         </div>
                       </div>
@@ -501,9 +531,12 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                       <input
                         type="file"
                         accept=".pdf"
-                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        onChange={(e) => void handleSelectedFileChange(e.target.files?.[0] || null)}
                         className="block w-full text-sm text-[#AAA] file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
                       />
+                      {selectedFilePageCount !== null && (
+                        <p className="mt-2 text-xs text-[#888]">Selected PDF has {selectedFilePageCount} page{selectedFilePageCount === 1 ? '' : 's'}.</p>
+                      )}
                     </div>
                   ) : (
                     <div>

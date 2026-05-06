@@ -18,6 +18,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { useDepartments } from '@/hooks/useData';
+import { getPdfPageCount, validatePdfFile } from '@/utils/pdfThumbnail';
 import { CoursePapersManager } from './CoursePapersManager';
 import { NativeDocumentEditor } from './NativeDocumentEditor';
 
@@ -39,6 +40,7 @@ interface CoursePaper {
   year?: string;
   pdfUrl?: string;
   richTextContent?: string;
+  courseId?: string;
 }
 
 export function CoursesManagement() {
@@ -72,17 +74,40 @@ export function CoursesManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadMode, setUploadMode] = useState<'pdf' | 'richtext'>('pdf');
   const [richText, setRichText] = useState('');
+  const [isReadingPdfCount, setIsReadingPdfCount] = useState(false);
+  const [attachedPdfPageCount, setAttachedPdfPageCount] = useState<number | null>(null);
 
   // Fetch Courses Real-time
   useEffect(() => {
     const q = query(collection(db, 'courses'), orderBy('code', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetched = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Course));
-      setCourses(fetched);
-      setLoading(false);
+      const loadCoursesWithCounts = async () => {
+        const fetched = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Course));
+
+        try {
+          const papersSnap = await getDocs(collection(db, 'papers'));
+          const paperCountsByCourse = papersSnap.docs.reduce<Record<string, number>>((counts, paperDoc) => {
+            const courseId = (paperDoc.data() as any).courseId;
+            if (courseId) counts[courseId] = (counts[courseId] || 0) + 1;
+            return counts;
+          }, {});
+
+          setCourses(fetched.map(course => ({
+            ...course,
+            papers: paperCountsByCourse[course.id] ?? course.papers ?? 0,
+          })));
+        } catch (countErr) {
+          console.error('Error fetching course paper counts:', countErr);
+          setCourses(fetched);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void loadCoursesWithCounts();
     }, (err) => {
       console.error("Error fetching courses:", err);
       setLoading(false);
@@ -109,6 +134,7 @@ export function CoursesManagement() {
     setFormError('');
     setUploadMode('pdf');
     setRichText('');
+    setAttachedPdfPageCount(null);
     setShowModal(true);
   };
 
@@ -131,6 +157,7 @@ export function CoursesManagement() {
     setFormError('');
     setUploadMode('pdf');
     setRichText('');
+    setAttachedPdfPageCount(null);
     setShowModal(true);
 
     try {
@@ -215,6 +242,7 @@ export function CoursesManagement() {
         const nextPaperPayload = {
           ...paperPayload,
           pdfUrl: downloadUrl,
+          pageCount: attachedPdfPageCount,
           richTextContent: '',
           createdAt: serverTimestamp()
         };
@@ -248,6 +276,31 @@ export function CoursesManagement() {
       setFormError('Failed to save course. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePaperFileChange = async (file: File | null) => {
+    setPaperFile(file);
+    if (!file) return;
+
+    const validationError = validatePdfFile(file);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setIsReadingPdfCount(true);
+    try {
+      const pageCount = await getPdfPageCount(file);
+      setAttachedPdfPageCount(pageCount);
+      setFormData(prev => ({ ...prev, papers: Math.max(1, prev.papers || 1) }));
+      setFormError('');
+    } catch (err) {
+      console.error('Could not read PDF page count:', err);
+      setAttachedPdfPageCount(null);
+      setFormError('PDF selected, but the page count could not be read automatically. You can still edit the paper count manually.');
+    } finally {
+      setIsReadingPdfCount(false);
     }
   };
 
@@ -508,6 +561,12 @@ export function CoursesManagement() {
                         onChange={(e) => setFormData({ ...formData, papers: Math.max(1, parseInt(e.target.value) || 1) })}
                         className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
                       />
+                      {isReadingPdfCount && (
+                        <p className="mt-1 text-xs text-[#888]">Reading PDF page count...</p>
+                      )}
+                      {!isReadingPdfCount && attachedPdfPageCount !== null && (
+                        <p className="mt-1 text-xs text-[#888]">Selected PDF has {attachedPdfPageCount} page{attachedPdfPageCount === 1 ? '' : 's'}.</p>
+                      )}
                     </div>
                   </div>
 
@@ -561,7 +620,7 @@ export function CoursesManagement() {
                         <input
                           type="file"
                           accept="application/pdf"
-                          onChange={(e) => setPaperFile(e.target.files?.[0] || null)}
+                          onChange={(e) => void handlePaperFileChange(e.target.files?.[0] || null)}
                           className="w-full text-sm text-[#AAA] file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
                         />
                         <input

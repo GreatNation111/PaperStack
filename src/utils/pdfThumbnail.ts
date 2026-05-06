@@ -46,6 +46,17 @@ export async function generatePdfThumbnail(file: File, scale = 0.5): Promise<Blo
 }
 
 /**
+ * Reads the page count from a PDF without rendering any pages.
+ */
+export async function getPdfPageCount(file: File): Promise<number> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const pageCount = pdf.numPages;
+  await pdf.destroy();
+  return pageCount;
+}
+
+/**
  * Generates a thumbnail from a PDF URL (e.g. Firebase Storage download URL).
  * Useful for generating thumbnails for already-uploaded PDFs.
  */

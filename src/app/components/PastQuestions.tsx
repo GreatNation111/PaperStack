@@ -26,6 +26,10 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
     // Fetch real thumbnails for courses
     const courseIds = useMemo(() => courses.map(c => c.id), [courses]);
     const { thumbnails } = useCourseThumbnails(courseIds);
+    const formatPaperCount = (count?: number) => {
+        const safeCount = count || 0;
+        return `${safeCount} ${safeCount === 1 ? 'paper' : 'papers'}`;
+    };
 
     // Default semester logic: Sync with global settings until user manually chooses a semester
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
@@ -209,7 +213,7 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
                                             </div>
                                             <div className="flex items-center justify-between mt-3">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="text-xs text-secondary">{course.papers || 0} papers</span>
+                                                    <span className="text-xs text-secondary">{formatPaperCount(course.papers)}</span>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button
