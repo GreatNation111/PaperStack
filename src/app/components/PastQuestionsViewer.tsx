@@ -184,12 +184,14 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const [isDownloading, setIsDownloading] = useState(false);
 
   const { paper: fetchedPaper, loading } = usePaper(paperId);
-  const paper = (location.state?.paper as Paper | undefined) || fetchedPaper;
+  const { papers: downloadedPapers } = useDownloadedPapers(user?.uid);
+  
+  const downloadedPaper = downloadedPapers.find(p => p.id === paperId);
+  const paper = (location.state?.paper as Paper | undefined) || fetchedPaper || downloadedPaper;
 
   const { bookmarkIds } = useBookmarks(user?.uid);
   const isBookmarked = paper?.courseId ? bookmarkIds.includes(paper.courseId) : false;
 
-  const { papers: downloadedPapers } = useDownloadedPapers(user?.uid);
   const isDownloaded = downloadedPapers.some(p => p.id === paper?.id);
 
   const [offlineDocUrl, setOfflineDocUrl] = useState<string | null>(null);

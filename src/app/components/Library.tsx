@@ -157,7 +157,7 @@ export function Library() {
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     <button
                       onClick={() => {
-                        window.location.href = `/view-paper/${paper.id}`;
+                        navigate(`/view-paper/${paper.id}`, { state: { paper } });
                       }}
                       className="text-sm px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-medium"
                     >
