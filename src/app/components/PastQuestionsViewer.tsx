@@ -125,24 +125,19 @@ function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSour
           pdf={pdfDocRef.current}
           pageNumber={index + 1}
           scale={scale}
-          eager={'data' in source}
         />
       ))}
     </div>
   );
 }
 
-function PdfPageCanvas({ pdf, pageNumber, scale, eager = false }: { pdf: any; pageNumber: number; scale: number; eager?: boolean }) {
+function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: number; scale: number }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [shouldRender, setShouldRender] = useState(eager || pageNumber === 1);
+  const [shouldRender, setShouldRender] = useState(pageNumber === 1);
   const [height, setHeight] = useState(520);
 
   useEffect(() => {
-    if (eager && !shouldRender) {
-      setShouldRender(true);
-      return;
-    }
     const wrapper = wrapperRef.current;
     if (!wrapper || shouldRender) return;
 
@@ -158,7 +153,7 @@ function PdfPageCanvas({ pdf, pageNumber, scale, eager = false }: { pdf: any; pa
 
     observer.observe(wrapper);
     return () => observer.disconnect();
-  }, [eager, shouldRender]);
+  }, [shouldRender]);
 
   useEffect(() => {
     if (!pdf || !shouldRender || !canvasRef.current) return;
@@ -176,9 +171,7 @@ function PdfPageCanvas({ pdf, pageNumber, scale, eager = false }: { pdf: any; pa
 
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-      canvas.style.width = '100%';
       canvas.style.maxWidth = `${viewport.width}px`;
-      canvas.style.height = 'auto';
       setHeight(viewport.height);
 
       const ctx = canvas.getContext('2d');
@@ -203,13 +196,13 @@ function PdfPageCanvas({ pdf, pageNumber, scale, eager = false }: { pdf: any; pa
   return (
     <div
       ref={wrapperRef}
-      className="w-full max-w-full flex justify-center overflow-hidden"
+      className="w-full flex justify-center"
       style={{ minHeight: shouldRender ? undefined : `${height}px` }}
     >
       {shouldRender ? (
         <canvas
           ref={canvasRef}
-          className="block max-w-full h-auto rounded shadow-[0_2px_12px_rgba(0,0,0,0.15)] bg-white"
+          className="block w-full h-auto rounded shadow-[0_2px_12px_rgba(0,0,0,0.15)] bg-white"
         />
       ) : (
         <div className="w-full h-full min-h-[520px] rounded bg-card/60 border border-border animate-pulse" />
