@@ -396,10 +396,12 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                       <div className="text-sm text-foreground mb-2 line-clamp-1">{course.title}</div>
 
                       <div className="flex flex-col gap-1.5 mb-3">
-                        <div className="text-xs text-secondary flex items-center gap-1.5">
-                          <UserCircle className="w-3.5 h-3.5" strokeWidth={2} />
-                          <span className="truncate">{course.lecturer || 'Undesignated'}</span>
-                        </div>
+                        {course.lecturer?.trim() && (
+                          <div className="text-xs text-secondary flex items-center gap-1.5">
+                            <UserCircle className="w-3.5 h-3.5" strokeWidth={2} />
+                            <span className="truncate">{course.lecturer.trim()}</span>
+                          </div>
+                        )}
                         <div className="text-xs text-secondary flex items-center gap-2">
                           <span>{course.level}</span>
                           <span className="w-1 h-1 bg-secondary/30 rounded-full" />

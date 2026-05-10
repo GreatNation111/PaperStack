@@ -4,8 +4,11 @@ import { Upload, FileText, Trash2, X, CheckCircle, Loader2, Link as LinkIcon, Fi
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
+import { clearCourseDataCaches } from '@/hooks/useData';
 import { generatePdfThumbnail, getPdfPageCount, validatePdfFile, MAX_PDF_SIZE_LABEL } from '@/utils/pdfThumbnail';
 import { NativeDocumentEditor } from './NativeDocumentEditor';
+import { findDuplicatePaper } from '@/utils/courseAdmin';
+import { createPdfFromImageFiles } from '@/utils/imageToPdf';
 
 interface Paper {
   id: string;
@@ -170,6 +173,25 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
 
     setIsSaving(true);
     try {
+      const duplicate = await findDuplicatePaper({
+        courseId,
+        year: formData.year,
+        type: formData.type,
+        semester: formData.semester,
+        excludePaperId: editingPaper?.id
+      });
+
+      if (duplicate && editingPaper) {
+        setFormError('Another paper already exists for this course, year, type, and semester.');
+        setIsSaving(false);
+        return;
+      }
+
+      if (duplicate && !confirm('A paper already exists for this course, year, type, and semester. Overwrite it?')) {
+        setIsSaving(false);
+        return;
+      }
+
       let pdfUrl = editingPaper?.pdfUrl || '';
       let thumbnailUrl = editingPaper?.thumbnailUrl || '';
       let pageCount = editingPaper?.pageCount || selectedFilePageCount || null;
@@ -245,14 +267,19 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
 
       setStatusMsg('Saving to database...');
 
-      if (editingPaper) {
-        await updateDoc(doc(db, 'papers', editingPaper.id), payload);
+      const targetPaperId = editingPaper?.id || duplicate?.id || null;
+      if (targetPaperId) {
+        await updateDoc(doc(db, 'papers', targetPaperId), payload);
       } else {
         payload.downloads = 0;
         payload.createdAt = serverTimestamp();
         await addDoc(collection(db, 'papers'), payload);
       }
+      if (typeof pageCount === 'number' && pageCount > 0) {
+        await updateDoc(doc(db, 'courses', courseId), { papers: pageCount, lastUpdated: serverTimestamp() });
+      }
 
+      clearCourseDataCaches();
       setShowForm(false);
       resetForm();
       fetchPapers();
@@ -265,10 +292,28 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     }
   };
 
-  const handleSelectedFileChange = async (file: File | null) => {
-    setSelectedFile(file);
+  const handleSelectedFileChange = async (files: FileList | File[] | null) => {
+    const selectedFiles = Array.from(files || []);
+    const firstFile = selectedFiles[0] || null;
+    setSelectedFile(null);
     setSelectedFilePageCount(null);
-    if (!file) return;
+    if (!firstFile) return;
+
+    let file = firstFile;
+    if (selectedFiles.every(selectedFile => selectedFile.type.startsWith('image/'))) {
+      try {
+        file = await createPdfFromImageFiles(selectedFiles, `${courseCode.toLowerCase().replace(/[^a-z0-9]/g, '') || 'scanned-paper'}.pdf`);
+        setSelectedFile(file);
+        setSelectedFilePageCount(selectedFiles.length);
+        setFormError('');
+      } catch (err) {
+        console.error('Could not create PDF from scanned images:', err);
+        setFormError('Could not convert the scanned images to PDF.');
+      }
+      return;
+    }
+
+    setSelectedFile(file);
 
     const validationError = validatePdfFile(file);
     if (validationError) {
@@ -512,7 +557,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                   {uploadMode === 'pdf' ? (
                     <div>
                       <label className="block text-sm font-medium text-[#DDD] mb-2">
-                        PDF File {!isEditing && '*'}{' '}
+                        Scan or Choose PDF {!isEditing && '*'}{' '}
                         <span className="text-xs text-[#888] font-normal">Max {MAX_PDF_SIZE_LABEL}</span>
                       </label>
                       {isEditing && editingPaper?.pdfUrl && !selectedFile && (
@@ -530,10 +575,13 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                       )}
                       <input
                         type="file"
-                        accept=".pdf"
-                        onChange={(e) => void handleSelectedFileChange(e.target.files?.[0] || null)}
+                        accept="application/pdf,image/*"
+                        multiple
+                        capture="environment"
+                        onChange={(e) => void handleSelectedFileChange(e.target.files || null)}
                         className="block w-full text-sm text-[#AAA] file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
                       />
+                      <p className="mt-2 text-xs text-[#888]">Choose a PDF or scan paper pages with your camera. Image scans are converted into one PDF before upload.</p>
                       {selectedFilePageCount !== null && (
                         <p className="mt-2 text-xs text-[#888]">Selected PDF has {selectedFilePageCount} page{selectedFilePageCount === 1 ? '' : 's'}.</p>
                       )}

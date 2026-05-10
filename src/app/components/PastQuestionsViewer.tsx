@@ -1,7 +1,7 @@
 import { ArrowLeft, Download, Bookmark, ZoomIn, ZoomOut, Minimize2, Maximize2, Loader2, Sparkles, X, CheckCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Paper, usePaper, useBookmarks, useDownloadedPapers } from '@/hooks/useData';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -16,7 +16,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
  * Canvas-based PDF viewer using pdf.js.
  * Avoids cross-origin iframe blocking (e.g. Brave, Safari).
  */
-function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
+type PdfSource = { url: string } | { data: ArrayBuffer };
+
+function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSource; scale: number; retryKey: number; onRetry?: () => void }) {
   const [pageCount, setPageCount] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -30,11 +32,14 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
 
     const loadPdf = async () => {
       try {
-        const pdf = await pdfjsLib.getDocument({
-          url: pdfUrl,
-          disableAutoFetch: true,
-          disableStream: false,
-        }).promise;
+        const loadingTask = 'data' in source
+          ? pdfjsLib.getDocument({ data: source.data.slice(0) })
+          : pdfjsLib.getDocument({
+              url: source.url,
+              disableAutoFetch: true,
+              disableStream: false,
+            });
+        const pdf = await loadingTask.promise;
         if (cancelled) { await pdf.destroy(); return; }
         pdfDocRef.current = pdf;
         setPageCount(pdf.numPages);
@@ -56,7 +61,7 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
         pdfDocRef.current = null;
       }
     };
-  }, [pdfUrl]);
+  }, [source, retryKey]);
 
   if (pdfLoading) {
     return (
@@ -72,7 +77,7 @@ function PdfCanvasViewer({ pdfUrl, scale }: { pdfUrl: string; scale: number }) {
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <p className="text-destructive text-sm">{pdfError}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={onRetry}
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           Retry
@@ -194,36 +199,37 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
 
   const isDownloaded = downloadedPapers.some(p => p.id === paper?.id);
 
-  const [offlineDocUrl, setOfflineDocUrl] = useState<string | null>(null);
+  const [offlinePdfData, setOfflinePdfData] = useState<ArrayBuffer | null>(null);
   const [offlineHtml, setOfflineHtml] = useState<string | null>(null);
+  const [pdfRetryKey, setPdfRetryKey] = useState(0);
 
-  useEffect(() => {
-    if (paperId) {
-      getOfflinePaper(paperId).then(data => {
-        if (data) {
-          if (data.type === 'pdf') {
-            const blob = new Blob([data.data as ArrayBuffer], { type: 'application/pdf' });
-            setOfflineDocUrl(URL.createObjectURL(blob));
-          } else if (data.type === 'html') {
-            setOfflineHtml(data.data as string);
-          }
-        }
-      }).catch(err => console.error('Error loading offline paper:', err));
-    }
-  }, [paperId]);
-
-  // If paper has driveFolderUrl and no other content, open it directly and go back
-  useEffect(() => {
-    if (paper && !loading) {
-      if (paper.driveFolderUrl && !paper.pdfUrl && !paper.richTextContent) {
-        window.open(paper.driveFolderUrl, '_blank');
-        navigate(-1);
+  const loadOfflinePaper = async () => {
+    if (!paperId) return;
+    try {
+      const data = await getOfflinePaper(paperId);
+      if (data?.type === 'pdf') {
+        setOfflinePdfData(data.data as ArrayBuffer);
+        setOfflineHtml(null);
+      } else if (data?.type === 'html') {
+        setOfflineHtml(data.data as string);
+        setOfflinePdfData(null);
       }
+    } catch (err) {
+      console.error('Error loading offline paper:', err);
     }
-  }, [paper, loading, navigate]);
+  };
+
+  useEffect(() => {
+    void loadOfflinePaper();
+  }, [paperId]);
 
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const pdfSource = useMemo<PdfSource | null>(() => {
+    if (offlinePdfData) return { data: offlinePdfData };
+    if (paper?.pdfUrl) return { url: paper.pdfUrl };
+    return null;
+  }, [offlinePdfData, paper?.pdfUrl]);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
@@ -250,8 +256,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
         await savePaperOffline(paper.id, 'pdf', arrayBuffer);
         
         // Update local viewer to use offline copy immediately
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        setOfflineDocUrl(URL.createObjectURL(blob));
+        setOfflinePdfData(arrayBuffer);
       } else if (paper.richTextContent) {
         // Native Doc Offline Download
         await savePaperOffline(paper.id, 'html', paper.richTextContent);
@@ -385,8 +390,16 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
               dangerouslySetInnerHTML={{ __html: offlineHtml || paper!.richTextContent! }}
             />
           </div>
-        ) : (offlineDocUrl || (paper && paper.pdfUrl)) ? (
-          <PdfCanvasViewer pdfUrl={offlineDocUrl || paper!.pdfUrl!} scale={scale} />
+        ) : pdfSource ? (
+          <PdfCanvasViewer
+            source={pdfSource}
+            scale={scale}
+            retryKey={pdfRetryKey}
+            onRetry={() => {
+              void loadOfflinePaper();
+              setPdfRetryKey(key => key + 1);
+            }}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-20 gap-4 text-center text-secondary">
             <p>No content available for this paper.</p>

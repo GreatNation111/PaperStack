@@ -59,6 +59,7 @@ export interface Paper {
     richTextContent?: string;
     driveFolderUrl?: string;
     thumbnailUrl?: string;
+    pageCount?: number;
     downloads: number;
     isBookmarked?: boolean;
     courseId?: string;
@@ -95,6 +96,13 @@ let contributorsCache: Contributor[] | null = null;
 const bookmarkedCoursesCache: Record<string, Course[]> = {};
 const recentCoursesCache: Record<string, Course[]> = {};
 const downloadedPapersCache: Record<string, Paper[]> = {};
+
+export function clearCourseDataCaches() {
+    Object.keys(coursesCache).forEach(key => delete coursesCache[key]);
+    Object.keys(bookmarkedCoursesCache).forEach(key => delete bookmarkedCoursesCache[key]);
+    Object.keys(recentCoursesCache).forEach(key => delete recentCoursesCache[key]);
+    Object.keys(downloadedPapersCache).forEach(key => delete downloadedPapersCache[key]);
+}
 
 export function useDepartments() {
     const [departments, setDepartments] = useState<Department[]>(departmentsCache || []);
@@ -160,14 +168,16 @@ export function useCourses(departmentId: string | undefined) {
                 if (!isMounted) return;
                 const baseCourses: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
                 const papersSnapshot = await getDocs(query(collection(db, 'papers'), where('departmentId', '==', departmentId)));
-                const paperCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
-                    const courseId = (paperDoc.data() as any).courseId;
-                    if (courseId) counts[courseId] = (counts[courseId] || 0) + 1;
+                const pageCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
+                    const data = paperDoc.data() as any;
+                    const courseId = data.courseId;
+                    const pageCount = Number(data.pageCount || 0);
+                    if (courseId && pageCount > 0) counts[courseId] = Math.max(counts[courseId] || 0, pageCount);
                     return counts;
                 }, {});
                 const cs = baseCourses.map(course => ({
                     ...course,
-                    papers: paperCountsByCourse[course.id] ?? course.papers ?? 0,
+                    papers: pageCountsByCourse[course.id] ?? course.papers ?? 0,
                 }));
                 coursesCache[departmentId] = cs;
                 setCourses(cs);
@@ -241,6 +251,7 @@ export function useRecentPapers(departmentId: string | undefined) {
                         type: data.type || '',
                         pdfUrl: data.pdfUrl || data.url || '',
                         thumbnailUrl: data.thumbnailUrl || '',
+                        pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || data.course || undefined,
                     } as Paper;
@@ -722,6 +733,7 @@ export function usePapers(_courseId: string | undefined, departmentId: string | 
                         type: data.type || '',
                         pdfUrl: data.pdfUrl || data.url || '',
                         thumbnailUrl: data.thumbnailUrl || '',
+                        pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || data.course || undefined,
                     } as Paper;
@@ -772,6 +784,7 @@ export function usePaper(paperId: string | undefined) {
                         pdfUrl: data.pdfUrl || data.url || '',
                         richTextContent: data.richTextContent || '',
                         thumbnailUrl: data.thumbnailUrl || '',
+                        pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || undefined,
                         departmentId: data.departmentId || undefined,
@@ -824,6 +837,7 @@ export function useCoursePapers(courseId: string | undefined) {
                         pdfUrl: data.pdfUrl || data.url || '',
                         richTextContent: data.richTextContent || '',
                         thumbnailUrl: data.thumbnailUrl || '',
+                        pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || undefined,
                         departmentId: data.departmentId || undefined,
