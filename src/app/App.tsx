@@ -70,10 +70,22 @@ function AppContent() {
 
   // Offline detection and auto-redirect
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [showBackOnline, setShowBackOnline] = useState(false);
+  const [hasBeenOffline, setHasBeenOffline] = useState(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => {
+      setIsOffline(false);
+      if (hasBeenOffline) {
+        setShowBackOnline(true);
+        window.setTimeout(() => setShowBackOnline(false), 3000);
+      }
+    };
+    const handleOffline = () => {
+      setHasBeenOffline(true);
+      setShowBackOnline(false);
+      setIsOffline(true);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -82,7 +94,7 @@ function AppContent() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [hasBeenOffline]);
 
   useEffect(() => {
     if (isOffline && user && !adminPersisted && !authLoading) {
@@ -162,12 +174,15 @@ function AppContent() {
     const path = location.pathname;
     if (path === '/' || path === '/home') return 'home';
     if (path.startsWith('/explore')) return 'explore';
+    if (path.startsWith('/past-questions')) return 'explore';
+    if (path.startsWith('/course/')) return 'explore';
     if (path.startsWith('/library')) return 'library';
     if (path.startsWith('/profile')) return 'profile';
     return 'home';
   };
 
-  const showBottomNav = ['/home', '/explore', '/library', '/profile'].includes(location.pathname);
+  const showBottomNav = ['/home', '/explore', '/library', '/profile', '/past-questions'].includes(location.pathname)
+    || location.pathname.startsWith('/course/');
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLandingRoute = location.pathname === '/';
   const isFullWidthRoute = isAdminRoute || isLandingRoute;
@@ -228,6 +243,35 @@ function AppContent() {
 
         {showBottomNav && (
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />
+        )}
+
+        {(isOffline || showBackOnline) && !isAdminRoute && (
+          <div className="fixed top-4 left-0 right-0 z-[70] px-4 pointer-events-none">
+            <div className={`max-w-md mx-auto rounded-2xl border px-4 py-3 shadow-lg pointer-events-auto ${
+              isOffline
+                ? 'bg-card border-border text-foreground'
+                : 'bg-green-600 text-white border-green-500'
+            }`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">
+                    {isOffline ? "You're offline" : 'Back online'}
+                  </p>
+                  <p className={`text-xs ${isOffline ? 'text-secondary' : 'text-white/80'}`}>
+                    {isOffline ? 'Downloads and saved papers are available.' : 'Your connection is restored.'}
+                  </p>
+                </div>
+                {isOffline && (
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold"
+                  >
+                    Reload app
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
