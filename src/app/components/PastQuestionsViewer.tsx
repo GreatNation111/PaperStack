@@ -18,6 +18,33 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
  */
 type PdfSource = { url: string } | { data: ArrayBuffer; fallbackUrl?: string };
 
+async function inlineImagesForOffline(html: string) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const images = Array.from(doc.querySelectorAll('img[src]'));
+
+  await Promise.all(images.map(async image => {
+    const src = image.getAttribute('src');
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+
+    try {
+      const response = await fetch(src);
+      if (!response.ok) return;
+      const blob = await response.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+      image.setAttribute('src', dataUrl);
+    } catch (err) {
+      console.warn('Could not cache native document image for offline use:', err);
+    }
+  }));
+
+  return doc.body.innerHTML;
+}
+
 function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSource; scale: number; retryKey: number; onRetry?: () => void }) {
   const [pageCount, setPageCount] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(true);
@@ -290,8 +317,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
         setHasOfflineCopy(true);
       } else if (paper.richTextContent) {
         // Native Doc Offline Download
-        await savePaperOffline(paper.id, 'html', paper.richTextContent);
-        setOfflineHtml(paper.richTextContent);
+        const offlineHtmlContent = await inlineImagesForOffline(paper.richTextContent);
+        await savePaperOffline(paper.id, 'html', offlineHtmlContent);
+        setOfflineHtml(offlineHtmlContent);
         setHasOfflineCopy(true);
       }
 
@@ -348,7 +376,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   return (
     <div className={`h-screen flex flex-col bg-background ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
-      <div className="min-h-14 bg-card border-b border-border flex items-center justify-between gap-2 px-3 sm:px-4 shadow-sm z-10">
+      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 shadow-sm z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
@@ -356,23 +384,23 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="text-foreground font-medium truncate max-w-[130px] sm:max-w-[200px] md:max-w-md">
+          <div className="text-foreground font-medium truncate max-w-[200px] md:max-w-md">
             {paper ? `${paper.code} - ${paper.year} (${paper.semester})` : 'Question Paper'}
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             <ZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-xs text-secondary font-mono w-10 sm:w-12 text-center">
+          <span className="text-xs text-secondary font-mono w-12 text-center hidden sm:block">
             {Math.round(scale * 100)}%
           </span>
-          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
+          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             <ZoomIn className="w-5 h-5" />
           </button>
 
-          <div className="h-6 w-px bg-border mx-1" />
+          <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
 
           <button 
             onClick={async () => {
@@ -399,7 +427,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           >
             {isDownloading ? <Loader2 className="w-5 h-5 animate-spin text-secondary" /> : isDownloaded || hasOfflineCopy ? <CheckCircle className="w-5 h-5" /> : <Download className="w-5 h-5" />}
           </button>
-          <button onClick={toggleFullscreen} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
+          <button onClick={toggleFullscreen} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
         </div>
