@@ -16,7 +16,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
  * Canvas-based PDF viewer using pdf.js.
  * Avoids cross-origin iframe blocking (e.g. Brave, Safari).
  */
-type PdfSource = { url: string } | { data: ArrayBuffer };
+type PdfSource = { url: string } | { data: ArrayBuffer; fallbackUrl?: string };
 
 function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSource; scale: number; retryKey: number; onRetry?: () => void }) {
   const [pageCount, setPageCount] = useState(0);
@@ -33,7 +33,7 @@ function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSour
     const loadPdf = async () => {
       try {
         const loadingTask = 'data' in source
-          ? pdfjsLib.getDocument({ data: source.data.slice(0) })
+          ? pdfjsLib.getDocument({ data: new Uint8Array(source.data.slice(0)) })
           : pdfjsLib.getDocument({
               url: source.url,
               disableAutoFetch: true,
@@ -73,6 +73,14 @@ function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSour
   }
 
   if (pdfError) {
+    if ('fallbackUrl' in source && source.fallbackUrl) {
+      return (
+        <div className="w-full max-w-[900px] h-full min-h-[75vh] bg-card border border-border rounded-lg overflow-hidden">
+          <iframe title="Saved PDF" src={source.fallbackUrl} className="w-full h-full min-h-[75vh] bg-white" />
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
         <p className="text-destructive text-sm">{pdfError}</p>
@@ -200,7 +208,9 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   const isDownloaded = downloadedPapers.some(p => p.id === paper?.id);
 
   const [offlinePdfData, setOfflinePdfData] = useState<ArrayBuffer | null>(null);
+  const [offlinePdfUrl, setOfflinePdfUrl] = useState<string | null>(null);
   const [offlineHtml, setOfflineHtml] = useState<string | null>(null);
+  const [hasOfflineCopy, setHasOfflineCopy] = useState(false);
   const [pdfRetryKey, setPdfRetryKey] = useState(0);
 
   const loadOfflinePaper = async () => {
@@ -208,11 +218,22 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     try {
       const data = await getOfflinePaper(paperId);
       if (data?.type === 'pdf') {
-        setOfflinePdfData(data.data as ArrayBuffer);
+        const buffer = data.data as ArrayBuffer;
+        setOfflinePdfData(buffer);
+        setOfflinePdfUrl(currentUrl => {
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          return URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' }));
+        });
         setOfflineHtml(null);
+        setHasOfflineCopy(true);
       } else if (data?.type === 'html') {
         setOfflineHtml(data.data as string);
         setOfflinePdfData(null);
+        setOfflinePdfUrl(currentUrl => {
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          return null;
+        });
+        setHasOfflineCopy(true);
       }
     } catch (err) {
       console.error('Error loading offline paper:', err);
@@ -223,13 +244,17 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
     void loadOfflinePaper();
   }, [paperId]);
 
+  useEffect(() => () => {
+    if (offlinePdfUrl) URL.revokeObjectURL(offlinePdfUrl);
+  }, [offlinePdfUrl]);
+
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const pdfSource = useMemo<PdfSource | null>(() => {
-    if (offlinePdfData) return { data: offlinePdfData };
+    if (offlinePdfData) return { data: offlinePdfData, fallbackUrl: offlinePdfUrl || undefined };
     if (paper?.pdfUrl) return { url: paper.pdfUrl };
     return null;
-  }, [offlinePdfData, paper?.pdfUrl]);
+  }, [offlinePdfData, offlinePdfUrl, paper?.pdfUrl]);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
@@ -252,15 +277,22 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
       if (paper.pdfUrl) {
         // PDF Offline Download
         const response = await fetch(paper.pdfUrl);
+        if (!response.ok) throw new Error(`PDF download failed: ${response.status}`);
         const arrayBuffer = await response.arrayBuffer();
         await savePaperOffline(paper.id, 'pdf', arrayBuffer);
         
         // Update local viewer to use offline copy immediately
         setOfflinePdfData(arrayBuffer);
+        setOfflinePdfUrl(currentUrl => {
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          return URL.createObjectURL(new Blob([arrayBuffer], { type: 'application/pdf' }));
+        });
+        setHasOfflineCopy(true);
       } else if (paper.richTextContent) {
         // Native Doc Offline Download
         await savePaperOffline(paper.id, 'html', paper.richTextContent);
         setOfflineHtml(paper.richTextContent);
+        setHasOfflineCopy(true);
       }
 
       if (user) {
@@ -316,7 +348,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
   return (
     <div className={`h-screen flex flex-col bg-background ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
-      <div className="h-14 bg-card border-b border-border flex items-center justify-between px-4 shadow-sm z-10">
+      <div className="min-h-14 bg-card border-b border-border flex items-center justify-between gap-2 px-3 sm:px-4 shadow-sm z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={handleBack}
@@ -324,23 +356,23 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="text-foreground font-medium truncate max-w-[200px] md:max-w-md">
+          <div className="text-foreground font-medium truncate max-w-[130px] sm:max-w-[200px] md:max-w-md">
             {paper ? `${paper.code} - ${paper.year} (${paper.semester})` : 'Question Paper'}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
             <ZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-xs text-secondary font-mono w-12 text-center hidden sm:block">
+          <span className="text-xs text-secondary font-mono w-10 sm:w-12 text-center">
             {Math.round(scale * 100)}%
           </span>
-          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
+          <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
             <ZoomIn className="w-5 h-5" />
           </button>
 
-          <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+          <div className="h-6 w-px bg-border mx-1" />
 
           <button 
             onClick={async () => {
@@ -361,13 +393,13 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           </button>
           <button
             onClick={handleDownload}
-            disabled={isDownloading || (!paper?.pdfUrl && !paper?.richTextContent) || isDownloaded}
-            className={`p-2 rounded-full transition-colors ${isDownloaded ? 'text-green-500 bg-green-500/10' : 'text-secondary hover:text-foreground hover:bg-foreground/10'} disabled:opacity-100`}
-            title={isDownloaded ? "Saved Offline" : "Save for Offline"}
+            disabled={isDownloading || (!paper?.pdfUrl && !paper?.richTextContent) || isDownloaded || hasOfflineCopy}
+            className={`p-2 rounded-full transition-colors ${isDownloaded || hasOfflineCopy ? 'text-green-500 bg-green-500/10' : 'text-secondary hover:text-foreground hover:bg-foreground/10'} disabled:opacity-100`}
+            title={isDownloaded || hasOfflineCopy ? "Saved Offline" : "Save for Offline"}
           >
-            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin text-secondary" /> : isDownloaded ? <CheckCircle className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin text-secondary" /> : isDownloaded || hasOfflineCopy ? <CheckCircle className="w-5 h-5" /> : <Download className="w-5 h-5" />}
           </button>
-          <button onClick={toggleFullscreen} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full hidden sm:block">
+          <button onClick={toggleFullscreen} className="p-2 text-secondary hover:text-foreground hover:bg-foreground/10 rounded-full">
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
         </div>

@@ -28,7 +28,7 @@ export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel:
     const { thumbnails } = useCourseThumbnails(courseIds);
     const formatPaperCount = (count?: number) => {
         const safeCount = count || 0;
-        return `${safeCount} ${safeCount === 1 ? 'paper' : 'papers'}`;
+        return `${safeCount} PDF ${safeCount === 1 ? 'page' : 'pages'}`;
     };
 
     // Default semester logic: Sync with global settings until user manually chooses a semester

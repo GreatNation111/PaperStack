@@ -11,7 +11,8 @@ import {
     doc,
     setDoc,
     addDoc,
-    deleteDoc
+    deleteDoc,
+    documentId
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -593,6 +594,14 @@ export async function recordPaperDownload(userId: string, paper: Paper) {
     });
 }
 
+export async function removePaperDownload(userId: string, paperId: string) {
+    if (!userId || !paperId) return;
+    await deleteDoc(doc(db, 'users', userId, 'downloaded_papers', paperId));
+    if (downloadedPapersCache[userId]) {
+        downloadedPapersCache[userId] = downloadedPapersCache[userId].filter(paper => paper.id !== paperId);
+    }
+}
+
 export function useDownloadedPapers(userId: string | undefined) {
     const cacheKey = userId || '';
     const [papers, setPapers] = useState<Paper[]>(downloadedPapersCache[cacheKey] || []);
@@ -652,18 +661,48 @@ export function useRecentCourses(userId: string | undefined) {
             limit(10)
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetched = snapshot.docs.map(docSnap => {
-                const data = docSnap.data();
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const recentRows = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+            const courseIds = recentRows.map(row => row.id);
+            const liveCourses: Record<string, any> = {};
+            const livePageCounts: Record<string, number> = {};
+
+            for (let i = 0; i < courseIds.length; i += 30) {
+                const batch = courseIds.slice(i, i + 30);
+                try {
+                    const coursesSnap = await getDocs(query(collection(db, 'courses'), where(documentId(), 'in', batch)));
+                    coursesSnap.docs.forEach(courseDoc => {
+                        liveCourses[courseDoc.id] = courseDoc.data();
+                    });
+                } catch (err) {
+                    console.warn('[useRecentCourses] Error refreshing course batch:', err);
+                }
+
+                try {
+                    const papersSnap = await getDocs(query(collection(db, 'papers'), where('courseId', 'in', batch)));
+                    papersSnap.docs.forEach(paperDoc => {
+                        const data = paperDoc.data() as any;
+                        const pageCount = Number(data.pageCount || 0);
+                        if (data.courseId && pageCount > 0) {
+                            livePageCounts[data.courseId] = Math.max(livePageCounts[data.courseId] || 0, pageCount);
+                        }
+                    });
+                } catch (err) {
+                    console.warn('[useRecentCourses] Error refreshing page counts:', err);
+                }
+            }
+
+            const fetched = recentRows.map(row => {
+                const data = { ...row.data, ...(liveCourses[row.id] || {}) };
                 return {
-                    id: docSnap.id,
+                    id: row.id,
                     code: data.code || '',
                     title: data.title || '',
                     departmentId: data.departmentId || '',
                     level: data.level || '',
                     semester: data.semester,
                     lecturer: data.lecturer,
-                    papers: data.papers || 0,
+                    papers: livePageCounts[row.id] ?? data.papers ?? 0,
                     driveFolderUrl: data.driveFolderUrl
                 } as Course;
             });

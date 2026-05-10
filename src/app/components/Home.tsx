@@ -63,8 +63,9 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { thumbnails } = useCourseThumbnails(courseIds);
   const formatPaperCount = (count?: number) => {
     const safeCount = count || 0;
-    return `${safeCount} ${safeCount === 1 ? 'paper' : 'papers'}`;
+    return `${safeCount} PDF ${safeCount === 1 ? 'page' : 'pages'}`;
   };
+  const formatViewPaperLabel = (count?: number) => `View ${count === 1 ? 'Paper' : 'Papers'}`;
 
   // Check notification permission status on mount
   useEffect(() => {
@@ -410,7 +411,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-xs text-primary font-semibold">View Papers</span>
+                        <span className="text-xs text-primary font-semibold">{formatViewPaperLabel(course.papers)}</span>
                         <ChevronRight className="w-4 h-4 text-primary" strokeWidth={2} />
                       </div>
                     </div>

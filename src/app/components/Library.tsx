@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import { Search, Bookmark, FileText, ExternalLink, Download } from 'lucide-react';
+import { Search, Bookmark, FileText, ExternalLink, Download, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
-import { useBookmarkedCourses, toggleBookmark, Course, useCourseThumbnails, useDownloadedPapers } from '@/hooks/useData';
+import { useBookmarkedCourses, toggleBookmark, Course, useCourseThumbnails, useDownloadedPapers, removePaperDownload } from '@/hooks/useData';
+import { removeOfflinePaper } from '@/lib/indexedDB';
 
 export function Library() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { courses, loading } = useBookmarkedCourses(user?.uid);
   const { papers: downloadedPapers, loading: downloadsLoading } = useDownloadedPapers(user?.uid);
 
@@ -24,6 +25,25 @@ export function Library() {
 
   const handleOpenCourse = (course: Course) => {
     navigate(`/course/${course.id}/papers`);
+  };
+
+  const canDeleteDownloads = !!userProfile?.isPremium || (userProfile?.downloadsCount || 0) > 3;
+
+  const handleDeleteDownload = async (paperId: string) => {
+    if (!user?.uid) return;
+    if (!canDeleteDownloads) {
+      alert('Free users can keep up to 3 downloads. Delete becomes available after the free download limit has been passed.');
+      return;
+    }
+    if (!confirm('Remove this paper from your downloads?')) return;
+
+    try {
+      await removeOfflinePaper(paperId);
+      await removePaperDownload(user.uid, paperId);
+    } catch (err) {
+      console.error('Failed to delete downloaded paper:', err);
+      alert('Failed to delete this download.');
+    }
   };
 
   const EmptyState = () => (
@@ -162,6 +182,19 @@ export function Library() {
                       className="text-sm px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all font-medium"
                     >
                       Open
+                    </button>
+                    <button
+                      onClick={() => void handleDeleteDownload(paper.id)}
+                      disabled={!canDeleteDownloads}
+                      title={canDeleteDownloads ? 'Delete download' : 'Delete unlocks after more than 3 lifetime downloads'}
+                      className={`text-sm px-3 py-1.5 rounded-lg transition-all font-medium flex items-center justify-center gap-1.5 ${
+                        canDeleteDownloads
+                          ? 'bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                          : 'bg-muted/60 text-secondary/50 cursor-not-allowed'
+                      }`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
                     </button>
                   </div>
                 </motion.div>

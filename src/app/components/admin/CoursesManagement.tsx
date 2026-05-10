@@ -333,30 +333,10 @@ export function CoursesManagement() {
     }
   };
 
-  const handlePaperFileChange = async (files: FileList | File[] | null) => {
-    const selectedFiles = Array.from(files || []);
-    const firstFile = selectedFiles[0] || null;
+  const handlePaperFileChange = async (file: File | null) => {
     setPaperFile(null);
     setAttachedPdfPageCount(null);
-    if (!firstFile) return;
-
-    let file = firstFile;
-    if (selectedFiles.every(selectedFile => selectedFile.type.startsWith('image/'))) {
-      setIsReadingPdfCount(true);
-      try {
-        file = await createPdfFromImageFiles(selectedFiles, `${courseIdFromCode(formData.code || 'scanned-paper')}.pdf`);
-        setPaperFile(file);
-        setAttachedPdfPageCount(selectedFiles.length);
-        setFormData(prev => ({ ...prev, papers: selectedFiles.length }));
-        setFormError('');
-      } catch (err) {
-        console.error('Could not create PDF from scanned images:', err);
-        setFormError('Could not convert the scanned images to PDF.');
-      } finally {
-        setIsReadingPdfCount(false);
-      }
-      return;
-    }
+    if (!file) return;
 
     setPaperFile(file);
 
@@ -375,7 +355,34 @@ export function CoursesManagement() {
     } catch (err) {
       console.error('Could not read PDF page count:', err);
       setAttachedPdfPageCount(null);
-      setFormError('PDF selected, but the page count could not be read automatically. You can still edit the paper count manually.');
+      setFormError('PDF selected, but the page count could not be read automatically. You can still edit the page count manually.');
+    } finally {
+      setIsReadingPdfCount(false);
+    }
+  };
+
+  const handleScannedImagesChange = async (files: FileList | File[] | null) => {
+    const selectedFiles = Array.from(files || []);
+    setPaperFile(null);
+    setAttachedPdfPageCount(null);
+    if (selectedFiles.length === 0) return;
+
+    if (!selectedFiles.every(selectedFile => selectedFile.type.startsWith('image/'))) {
+      setFormError('Scan mode only accepts image pages.');
+      return;
+    }
+
+    setIsReadingPdfCount(true);
+    try {
+      const scannedPdf = await createPdfFromImageFiles(selectedFiles, `${courseIdFromCode(formData.code || 'scanned-paper')}.pdf`);
+      setPaperFile(scannedPdf);
+      setAttachedPdfPageCount(selectedFiles.length);
+      setFormData(prev => ({ ...prev, papers: selectedFiles.length }));
+      setFormError('');
+    } catch (err) {
+      console.error('Could not create PDF from scanned images:', err);
+      setAttachedPdfPageCount(null);
+      setFormError('Could not convert the scanned images to PDF.');
     } finally {
       setIsReadingPdfCount(false);
     }
@@ -732,16 +739,27 @@ export function CoursesManagement() {
                     </div>
 
                     {uploadMode === 'pdf' ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <input
                           type="file"
-                          accept="application/pdf,image/*"
-                          multiple
-                          capture="environment"
-                          onChange={(e) => void handlePaperFileChange(e.target.files || null)}
+                          accept="application/pdf"
+                          onChange={(e) => void handlePaperFileChange(e.target.files?.[0] || null)}
                           className="w-full text-sm text-[#AAA] file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
                         />
-                        <p className="text-xs text-[#888]">Choose a PDF or scan paper pages with your camera. Image scans are converted into one PDF before upload.</p>
+                        <div>
+                          <label className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-[#0F1115] border border-[#333] text-sm font-semibold text-[#DDD] hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors cursor-pointer">
+                            Scan pages to PDF
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              capture="environment"
+                              onChange={(e) => void handleScannedImagesChange(e.target.files || null)}
+                              className="sr-only"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-[#888]">Choose an existing PDF, or use Scan pages to photograph paper pages and convert them into one PDF.</p>
                         <input
                           type="text"
                           placeholder="Year (e.g. 2023)"

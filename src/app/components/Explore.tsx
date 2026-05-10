@@ -265,7 +265,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
                       <span>{course.semester === 'First' ? '1st' : '2nd'} Sem</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-secondary font-medium">View Papers</span>
+                      <span className="text-xs text-secondary font-medium">View {course.papers === 1 ? 'Paper' : 'Papers'}</span>
                       <ChevronRight className="w-4 h-4 text-primary" strokeWidth={2} />
                     </div>
                   </div>

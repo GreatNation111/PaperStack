@@ -292,26 +292,10 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     }
   };
 
-  const handleSelectedFileChange = async (files: FileList | File[] | null) => {
-    const selectedFiles = Array.from(files || []);
-    const firstFile = selectedFiles[0] || null;
+  const handleSelectedFileChange = async (file: File | null) => {
     setSelectedFile(null);
     setSelectedFilePageCount(null);
-    if (!firstFile) return;
-
-    let file = firstFile;
-    if (selectedFiles.every(selectedFile => selectedFile.type.startsWith('image/'))) {
-      try {
-        file = await createPdfFromImageFiles(selectedFiles, `${courseCode.toLowerCase().replace(/[^a-z0-9]/g, '') || 'scanned-paper'}.pdf`);
-        setSelectedFile(file);
-        setSelectedFilePageCount(selectedFiles.length);
-        setFormError('');
-      } catch (err) {
-        console.error('Could not create PDF from scanned images:', err);
-        setFormError('Could not convert the scanned images to PDF.');
-      }
-      return;
-    }
+    if (!file) return;
 
     setSelectedFile(file);
 
@@ -328,6 +312,28 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     } catch (err) {
       console.error('Could not read PDF page count:', err);
       setFormError('PDF selected, but the page count could not be read automatically.');
+    }
+  };
+
+  const handleScannedImagesChange = async (files: FileList | File[] | null) => {
+    const selectedFiles = Array.from(files || []);
+    setSelectedFile(null);
+    setSelectedFilePageCount(null);
+    if (selectedFiles.length === 0) return;
+
+    if (!selectedFiles.every(selectedFile => selectedFile.type.startsWith('image/'))) {
+      setFormError('Scan mode only accepts image pages.');
+      return;
+    }
+
+    try {
+      const scannedPdf = await createPdfFromImageFiles(selectedFiles, `${courseCode.toLowerCase().replace(/[^a-z0-9]/g, '') || 'scanned-paper'}.pdf`);
+      setSelectedFile(scannedPdf);
+      setSelectedFilePageCount(selectedFiles.length);
+      setFormError('');
+    } catch (err) {
+      console.error('Could not create PDF from scanned images:', err);
+      setFormError('Could not convert the scanned images to PDF.');
     }
   };
 
@@ -575,13 +581,24 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                       )}
                       <input
                         type="file"
-                        accept="application/pdf,image/*"
-                        multiple
-                        capture="environment"
-                        onChange={(e) => void handleSelectedFileChange(e.target.files || null)}
+                        accept="application/pdf"
+                        onChange={(e) => void handleSelectedFileChange(e.target.files?.[0] || null)}
                         className="block w-full text-sm text-[#AAA] file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#4F46E5]/10 file:text-[#4F46E5] hover:file:bg-[#4F46E5]/20 focus:outline-none"
                       />
-                      <p className="mt-2 text-xs text-[#888]">Choose a PDF or scan paper pages with your camera. Image scans are converted into one PDF before upload.</p>
+                      <div className="mt-3">
+                        <label className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-[#0F1115] border border-[#333] text-sm font-semibold text-[#DDD] hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors cursor-pointer">
+                          Scan pages to PDF
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            capture="environment"
+                            onChange={(e) => void handleScannedImagesChange(e.target.files || null)}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                      <p className="mt-2 text-xs text-[#888]">Choose an existing PDF, or use Scan pages to photograph paper pages and convert them into one PDF.</p>
                       {selectedFilePageCount !== null && (
                         <p className="mt-2 text-xs text-[#888]">Selected PDF has {selectedFilePageCount} page{selectedFilePageCount === 1 ? '' : 's'}.</p>
                       )}
