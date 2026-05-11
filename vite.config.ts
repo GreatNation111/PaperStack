@@ -40,6 +40,9 @@ export default defineConfig({
       },
       // Ensure SW never intercepts Firebase Auth handlers/iframes
       workbox: {
+        // Include .mjs files (pdf.js worker) in precache – this is THE fix for offline PDF rendering
+        globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB – pdf.worker.min.mjs is ~1.5MB
         // Do not apply SPA navigation fallback to auth handlers
         navigateFallbackDenylist: [/^\/__\/auth\//],
         runtimeCaching: [

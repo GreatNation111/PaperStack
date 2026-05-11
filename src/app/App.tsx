@@ -1,5 +1,5 @@
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Splash } from '@/app/components/Splash';
 import { Welcome } from '@/app/components/Welcome';
@@ -39,6 +39,67 @@ const GlobalLoader = () => (
 );
 import { AuthProvider, useAuth } from '@/app/context/AuthContext';
 import { RequireAuth, PublicOnly, RequireAdmin } from '@/app/cards/RouteGuards';
+
+/** Swipe-to-dismiss offline/online status banner */
+function OfflineBanner({ isOffline, showBackOnline, isAdminRoute }: { isOffline: boolean; showBackOnline: boolean; isAdminRoute: boolean }) {
+  const [dismissed, setDismissed] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  // Reset dismissed state when connectivity status changes
+  useEffect(() => { setDismissed(false); }, [isOffline, showBackOnline]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    // Swipe up (dy < -40) or horizontal (|dx| > 80) to dismiss
+    if (dy < -40 || Math.abs(dx) > 80) {
+      setDismissed(true);
+    }
+    touchStartRef.current = null;
+  }, []);
+
+  if (dismissed || ((!isOffline && !showBackOnline) || isAdminRoute)) return null;
+
+  return (
+    <div className="fixed top-4 left-0 right-0 z-[70] px-4 pointer-events-none">
+      <div
+        ref={bannerRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`max-w-md mx-auto rounded-2xl border px-4 py-3 shadow-lg pointer-events-auto transition-all duration-300 ${
+          isOffline
+            ? 'bg-card border-border text-foreground'
+            : 'bg-green-600 text-white border-green-500'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">
+              {isOffline ? "You're offline" : 'Back online'}
+            </p>
+            <p className={`text-xs ${isOffline ? 'text-secondary' : 'text-white/80'}`}>
+              {isOffline ? 'Swipe to dismiss · Downloads are available.' : 'Your connection is restored.'}
+            </p>
+          </div>
+          <button
+            onClick={() => setDismissed(true)}
+            className={`p-1.5 rounded-full transition-colors ${isOffline ? 'hover:bg-foreground/10 text-secondary' : 'hover:bg-white/20 text-white/70'}`}
+            aria-label="Dismiss"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function AppContent() {
   const navigate = useNavigate();
@@ -245,34 +306,7 @@ function AppContent() {
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />
         )}
 
-        {(isOffline || showBackOnline) && !isAdminRoute && (
-          <div className="fixed top-4 left-0 right-0 z-[70] px-4 pointer-events-none">
-            <div className={`max-w-md mx-auto rounded-2xl border px-4 py-3 shadow-lg pointer-events-auto ${
-              isOffline
-                ? 'bg-card border-border text-foreground'
-                : 'bg-green-600 text-white border-green-500'
-            }`}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">
-                    {isOffline ? "You're offline" : 'Back online'}
-                  </p>
-                  <p className={`text-xs ${isOffline ? 'text-secondary' : 'text-white/80'}`}>
-                    {isOffline ? 'Downloads and saved papers are available.' : 'Your connection is restored.'}
-                  </p>
-                </div>
-                {isOffline && (
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold"
-                  >
-                    Reload app
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <OfflineBanner isOffline={isOffline} showBackOnline={showBackOnline} isAdminRoute={isAdminRoute} />
       </div>
     </div>
   );
