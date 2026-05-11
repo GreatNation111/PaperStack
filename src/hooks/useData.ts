@@ -607,6 +607,30 @@ export function useDownloadedPapers(userId: string | undefined) {
     const [papers, setPapers] = useState<Paper[]>(downloadedPapersCache[cacheKey] || []);
     const [loading, setLoading] = useState(!downloadedPapersCache[cacheKey]);
 
+    // Step 1: Immediately load from IndexedDB (the true offline source of truth)
+    useEffect(() => {
+        let cancelled = false;
+        import('@/lib/indexedDB').then(({ getAllOfflinePapers }) => {
+            getAllOfflinePapers().then(offlinePapers => {
+                if (cancelled) return;
+                if (offlinePapers.length > 0 && papers.length === 0) {
+                    const localPapers: Paper[] = offlinePapers.map(op => ({
+                        id: op.paperId,
+                        title: op.title || 'Downloaded Paper',
+                        code: '',
+                        year: '',
+                        semester: '',
+                        type: op.type === 'pdf' ? 'pdf' : 'native',
+                    } as Paper));
+                    setPapers(localPapers);
+                    setLoading(false);
+                }
+            }).catch(() => {});
+        });
+        return () => { cancelled = true; };
+    }, [userId]);
+
+    // Step 2: Listen to Firestore for full metadata (when online, this overrides the IndexedDB list)
     useEffect(() => {
         if (!userId) {
             setPapers([]);
@@ -631,8 +655,8 @@ export function useDownloadedPapers(userId: string | undefined) {
             setPapers(fetched);
             setLoading(false);
         }, (err) => {
-            console.error('[useDownloadedPapers] Error:', err);
-            setPapers([]);
+            console.error('[useDownloadedPapers] Firestore error (likely offline):', err);
+            // CRITICAL: Do NOT wipe papers to []. Keep whatever we already have.
             setLoading(false);
         });
 

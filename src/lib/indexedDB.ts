@@ -94,3 +94,25 @@ export async function removeOfflinePaper(paperId: string): Promise<void> {
     transaction.oncomplete = () => db.close();
   });
 }
+
+/**
+ * Returns a list of all papers stored locally in IndexedDB.
+ * This is the true offline source of truth — it reads what's
+ * physically on the device, no network needed.
+ */
+export async function getAllOfflinePapers(): Promise<OfflinePaperData[]> {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      resolve(request.result || []);
+    };
+
+    request.onerror = () => reject(request.error);
+
+    transaction.oncomplete = () => db.close();
+  });
+}

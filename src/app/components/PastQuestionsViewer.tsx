@@ -279,6 +279,10 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
       }
 
       if (!paper?.pdfUrl) return;
+      if (!navigator.onLine) {
+        setPdfLoadError('You are offline and this paper has not been downloaded yet. Connect to the internet or download it first.');
+        return;
+      }
       setPdfLoadingBytes(true);
       const { buffer } = await fetchPdfBytes(paper.pdfUrl);
       pdfSessionCache.set(paperId, buffer);
