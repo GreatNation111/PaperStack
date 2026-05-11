@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Search, Bookmark, FileText, ExternalLink, Download, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -27,14 +27,8 @@ export function Library() {
     navigate(`/course/${course.id}/papers`);
   };
 
-  const canDeleteDownloads = !!userProfile?.isPremium || (userProfile?.downloadsCount || 0) > 3;
-
   const handleDeleteDownload = async (paperId: string) => {
     if (!user?.uid) return;
-    if (!canDeleteDownloads) {
-      alert('Free users can keep up to 3 downloads. Delete becomes available after the free download limit has been passed.');
-      return;
-    }
     if (!confirm('Remove this paper from your downloads?')) return;
 
     try {
@@ -185,13 +179,8 @@ export function Library() {
                     </button>
                     <button
                       onClick={() => void handleDeleteDownload(paper.id)}
-                      disabled={!canDeleteDownloads}
-                      title={canDeleteDownloads ? 'Delete download' : 'Delete unlocks after more than 3 lifetime downloads'}
-                      className={`text-sm px-3 py-1.5 rounded-lg transition-all font-medium flex items-center justify-center gap-1.5 ${
-                        canDeleteDownloads
-                          ? 'bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                          : 'bg-muted/60 text-secondary/50 cursor-not-allowed'
-                      }`}
+                      title="Delete download"
+                      className="text-sm px-3 py-1.5 rounded-lg transition-all font-medium flex items-center justify-center gap-1.5 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Delete
