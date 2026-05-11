@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle } from 'lucide-react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle, RefreshCw } from 'lucide-react';
+import { collection, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface AdminDashboardProps {
@@ -16,32 +16,35 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     requests: 0,
     notifications: 0
   });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchCounts = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [depts, courses, contribs, requests, notifs] = await Promise.all([
+        getCountFromServer(collection(db, 'departments')),
+        getCountFromServer(collection(db, 'courses')),
+        getCountFromServer(collection(db, 'contributors')),
+        getCountFromServer(collection(db, 'feature_interest')),
+        getCountFromServer(collection(db, 'notifications')),
+      ]);
+      setCounts({
+        departments: depts.data().count,
+        courses: courses.data().count,
+        contributors: contribs.data().count,
+        requests: requests.data().count,
+        notifications: notifs.data().count,
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard counts:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const unsubDepts = onSnapshot(collection(db, 'departments'), snap =>
-      setCounts(prev => ({ ...prev, departments: snap.size }))
-    );
-    const unsubCourses = onSnapshot(collection(db, 'courses'), snap =>
-      setCounts(prev => ({ ...prev, courses: snap.size }))
-    );
-    const unsubContributors = onSnapshot(collection(db, 'contributors'), snap =>
-      setCounts(prev => ({ ...prev, contributors: snap.size }))
-    );
-    const unsubRequests = onSnapshot(collection(db, 'feature_interest'), snap =>
-      setCounts(prev => ({ ...prev, requests: snap.size }))
-    );
-    const unsubNotifs = onSnapshot(collection(db, 'notifications'), snap =>
-      setCounts(prev => ({ ...prev, notifications: snap.size }))
-    );
-
-    return () => {
-      unsubDepts();
-      unsubCourses();
-      unsubContributors();
-      unsubRequests();
-      unsubNotifs();
-    };
-  }, []);
+    fetchCounts();
+  }, [fetchCounts]);
 
   const stats = [
     { label: 'Total Departments', value: counts.departments.toString(), icon: Building2, color: 'var(--primary)' },
@@ -63,6 +66,13 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             System Live & Operational
           </p>
         </div>
+        <button
+          onClick={fetchCounts}
+          disabled={refreshing}
+          className="relative z-10 w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center hover:bg-primary/10 transition-all"
+        >
+          <RefreshCw className={`w-5 h-5 text-secondary ${refreshing ? 'animate-spin' : ''}`} strokeWidth={2} />
+        </button>
       </div>
 
       {/* Stats Grid */}

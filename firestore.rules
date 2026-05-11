@@ -11,14 +11,9 @@ service cloud.firestore {
       return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Development/Seeding: Allow unauthenticated writes to seed collection
-    match /seed/{document=**} {
-      allow read, write: if true;
-    }
-
     // --- ADMINS Collection ---
     match /admins/{uid} {
-      allow read: if true; 
+      allow read: if isAuthenticated(); 
       allow write: if false; 
     }
 
@@ -95,7 +90,8 @@ service cloud.firestore {
     
     match /feature_interest/{id} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {

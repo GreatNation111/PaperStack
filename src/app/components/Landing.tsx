@@ -52,7 +52,7 @@ export function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4F46E5] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4F46E5]"></span>
             </span>
-            The Ultimate Learning Repository
+            Exam Season? We Got You.
           </motion.div>
           
           <motion.h1 
@@ -70,7 +70,7 @@ export function Landing() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg lg:text-xl text-[#0A2540]/80 max-w-2xl leading-relaxed mb-10 font-medium bg-white/40 rounded-2xl p-4 backdrop-blur-sm"
           >
-            Stop begging seniors for materials. Access thousands of verified past questions, curated by department and year, directly on your device.
+            No more begging seniors or searching WhatsApp groups. Every past question your department has — organized, verified, and ready to download.
           </motion.p>
           
           <motion.div 
@@ -101,7 +101,7 @@ export function Landing() {
         <div className="max-w-7xl mx-auto relative z-10 text-center mb-16">
           <h2 className="text-3xl lg:text-5xl font-bold mb-6">What is PaperStack?</h2>
           <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
-            PaperStack is a digital repository crafted exclusively for university students perfectly organizing years of exam history into a seamless, accessible experience. We bridge the gap between unpreparedness and academic excellence.
+            PaperStack puts every past question your department has ever had right in your pocket. No WhatsApp hunting, no photocopying, no wahala — just open, find your course, and start studying.
           </p>
         </div>
 
@@ -110,17 +110,17 @@ export function Landing() {
             {
               icon: Search,
               title: "Discover Easily",
-              desc: "Filter through courses by semester, level, and department in seconds."
+              desc: "Find any course in seconds. Filter by semester, level, and department — no scrolling forever."
             },
             {
               icon: Shield,
               title: "Verified Content",
-              desc: "All questions are curated and verified for accuracy by trusted student contributors."
+              desc: "Every question is checked and verified. No incomplete papers or wrong answers floating around."
             },
             {
               icon: LayoutDashboard,
               title: "Premium Insights",
-              desc: "Unlock analytics revealing highly repeated questions and lecturer tendencies."
+              desc: "See which questions keep coming back year after year. Study what actually matters."
             }
           ].map((feature, i) => (
             <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors">

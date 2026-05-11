@@ -91,35 +91,12 @@ export function CoursesManagement() {
   useEffect(() => {
     const q = query(collection(db, 'courses'), orderBy('code', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadCoursesWithCounts = async () => {
-        const fetched = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Course));
-
-        try {
-          const papersSnap = await getDocs(collection(db, 'papers'));
-          const pageCountsByCourse = papersSnap.docs.reduce<Record<string, number>>((counts, paperDoc) => {
-            const data = paperDoc.data() as any;
-            const courseId = data.courseId;
-            const pageCount = Number(data.pageCount || 0);
-            if (courseId && pageCount > 0) counts[courseId] = Math.max(counts[courseId] || 0, pageCount);
-            return counts;
-          }, {});
-
-          setCourses(fetched.map(course => ({
-            ...course,
-            papers: pageCountsByCourse[course.id] ?? course.papers ?? 0,
-          })));
-        } catch (countErr) {
-          console.error('Error fetching course paper counts:', countErr);
-          setCourses(fetched);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      void loadCoursesWithCounts();
+      const fetched = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Course));
+      setCourses(fetched);
+      setLoading(false);
     }, (err) => {
       console.error("Error fetching courses:", err);
       setLoading(false);
@@ -133,7 +110,7 @@ export function CoursesManagement() {
     setFormData({
       code: '',
       title: '',
-      departmentId: '', // Default empty, user must select
+      departmentId: '',
       level: '',
       semester: 'First',
       lecturer: '',

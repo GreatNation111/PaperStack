@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2 } from 'lucide-react';
-import { collection, doc, onSnapshot, query, updateDoc, setDoc } from 'firebase/firestore';
+import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2, RefreshCw } from 'lucide-react';
+import { collection, doc, query, updateDoc, setDoc, deleteDoc, getDocs, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface User {
@@ -15,13 +15,19 @@ interface User {
   createdAt?: any;
 }
 
+const PAGE_SIZE = 50;
+
 export function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'admin' | 'contributor'>('all');
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [openUserMenuId, setOpenUserMenuId] = useState<string | null>(null);
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   // Contributor Modal State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -33,28 +39,45 @@ export function UsersManagement() {
   });
   const [isPromoting, setIsPromoting] = useState(false);
 
-  // Fetch Users
-  useEffect(() => {
-    const q = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+  // Fetch Users with pagination
+  const fetchUsers = useCallback(async (isLoadMore = false) => {
+    if (isLoadMore) setLoadingMore(true); else setLoading(true);
+    try {
+      let q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+      if (isLoadMore && lastDoc) {
+        q = query(collection(db, 'users'), orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(PAGE_SIZE));
+      }
+      const snapshot = await getDocs(q);
       const fetched = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as User));
 
-      const sorted = fetched.sort((a, b) => {
-        const timeA = a.createdAt?.toMillis?.() || a.createdAt || 0;
-        const timeB = b.createdAt?.toMillis?.() || b.createdAt || 0;
-        return timeB - timeA;
-      });
+      if (!isLoadMore) {
+        // Also get total count (1 read)
+        const countSnap = await getCountFromServer(collection(db, 'users'));
+        setTotalUsers(countSnap.data().count);
+      }
 
-      setUsers(sorted);
-      setLoading(false);
-    }, (error) => {
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
+
+      if (isLoadMore) {
+        setUsers(prev => [...prev, ...fetched]);
+      } else {
+        setUsers(fetched);
+      }
+    } catch (error) {
       console.error("Error fetching users:", error);
+    } finally {
       setLoading(false);
-    });
-    return () => unsubscribe();
+      setLoadingMore(false);
+    }
+  }, [lastDoc]);
+
+  useEffect(() => {
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePromoteToContributor = async () => {
@@ -145,8 +168,11 @@ export function UsersManagement() {
       <div className="mb-6">
         <h1 className="text-3xl font-semibold text-[#E5E5E5] mb-2">Users Management</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-[#AAA]">{users.length} total users</span>
+          <span className="text-sm text-[#AAA]">{totalUsers} total users (showing {users.length})</span>
           {roleFilter !== 'all' && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full capitalize">{roleFilter}s only</span>}
+          <button onClick={() => { setLastDoc(null); fetchUsers(); }} className="text-xs text-primary hover:underline flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </button>
         </div>
       </div>
 
@@ -375,6 +401,20 @@ export function UsersManagement() {
           ))
         )}
       </div>
+
+      {/* Load More */}
+      {hasMore && !loading && (
+        <div className="flex justify-center py-6">
+          <button
+            onClick={() => fetchUsers(true)}
+            disabled={loadingMore}
+            className="px-6 py-3 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl text-sm font-medium text-[#AAA] hover:text-[#E5E5E5] hover:border-primary transition-all flex items-center gap-2"
+          >
+            {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {loadingMore ? 'Loading...' : `Load More Users (${users.length} of ${totalUsers})`}
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {/* Detail Modal */}
