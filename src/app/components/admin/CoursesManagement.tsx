@@ -29,6 +29,7 @@ interface Course {
   code: string;
   title: string;
   departmentId: string;
+  departmentIds?: string[];
   level: string; // e.g., '100L'
   semester: string; // 'First' | 'Second'
   lecturer?: string;
@@ -49,7 +50,7 @@ interface CoursePaper {
 interface CourseFormData {
   code: string;
   title: string;
-  departmentId: string;
+  departmentIds: string[];
   level: string;
   semester: string;
   lecturer: string;
@@ -73,7 +74,7 @@ export function CoursesManagement() {
   const [formData, setFormData] = useState<CourseFormData>({
     code: '',
     title: '',
-    departmentId: '',
+    departmentIds: [],
     level: '',
     semester: 'First',
     lecturer: '',
@@ -110,7 +111,7 @@ export function CoursesManagement() {
     setFormData({
       code: '',
       title: '',
-      departmentId: '',
+      departmentIds: [],
       level: '',
       semester: 'First',
       lecturer: '',
@@ -133,7 +134,7 @@ export function CoursesManagement() {
     setFormData({
       code: course.code,
       title: course.title,
-      departmentId: course.departmentId,
+      departmentIds: course.departmentIds || (course.departmentId ? [course.departmentId] : []),
       level: course.level,
       semester: course.semester || 'First',
       lecturer: course.lecturer || '',
@@ -175,15 +176,18 @@ export function CoursesManagement() {
     setFormError('');
 
     // Validation
-    if (!formData.code || !formData.title || !formData.departmentId || !formData.level) {
+    if (!formData.code || !formData.title || formData.departmentIds.length === 0 || !formData.level) {
       setFormError('Please fill in all required fields.');
       return;
     }
     setIsSaving(true);
     try {
       const normalizedCode = normalizeCourseCode(formData.code);
+      const primaryDepartmentId = formData.departmentIds[0] || '';
       const payload = {
         ...formData,
+        departmentId: primaryDepartmentId,
+        departmentIds: formData.departmentIds,
         code: normalizedCode,
         lastUpdated: serverTimestamp()
       };
@@ -205,7 +209,8 @@ export function CoursesManagement() {
             const titleWasGenerated = !data.title || data.title === `${data.code || data.courseCode || ''} Past Question`;
             batch.update(paperDoc.ref, {
               code: normalizedCode,
-              departmentId: formData.departmentId,
+              departmentId: primaryDepartmentId,
+              departmentIds: formData.departmentIds,
               semester: formData.semester,
               pageCount: Number(formData.papers) || data.pageCount || null,
               ...(titleWasGenerated ? { title: `${normalizedCode} Past Question` } : {}),
@@ -228,7 +233,8 @@ export function CoursesManagement() {
 
       const paperPayload = {
         courseId: customId,
-        departmentId: formData.departmentId,
+        departmentId: primaryDepartmentId,
+        departmentIds: formData.departmentIds,
         code: normalizedCode,
         title: `${normalizedCode} Past Question`,
         year: paperYear || new Date().getFullYear().toString(),
@@ -386,12 +392,27 @@ export function CoursesManagement() {
   };
 
   const getDepartmentName = (id: string) => departments.find(d => d.id === id)?.name || id;
+  const getCourseDepartmentIds = (course: Pick<Course, 'departmentId' | 'departmentIds'>) =>
+    course.departmentIds?.length ? course.departmentIds : (course.departmentId ? [course.departmentId] : []);
 
-  const filteredCourses = courses.filter(c =>
-    c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getDepartmentName(c.departmentId).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const toggleDepartment = (departmentId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.departmentIds.includes(departmentId);
+      return {
+        ...prev,
+        departmentIds: isSelected
+          ? prev.departmentIds.filter(id => id !== departmentId)
+          : [...prev.departmentIds, departmentId],
+      };
+    });
+  };
+
+  const filteredCourses = courses.filter(c => {
+    const deptNames = getCourseDepartmentIds(c).map(id => getDepartmentName(id)).join(' ');
+    return c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           deptNames.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const handleCodeChange = (value: string) => {
     const suggestions = buildCourseCodeSuggestions(value, departments);
@@ -399,21 +420,26 @@ export function CoursesManagement() {
       ...prev,
       code: suggestions.normalizedCode,
       level: suggestions.level || prev.level,
-      departmentId: suggestions.departmentId || prev.departmentId,
+      departmentIds: suggestions.departmentId && !prev.departmentIds.includes(suggestions.departmentId) 
+        ? [...prev.departmentIds, suggestions.departmentId] 
+        : prev.departmentIds,
     }));
   };
 
   const groupedCourses = departments.map(dept => {
-    const deptCourses = filteredCourses.filter(course => course.departmentId === dept.id);
+    const deptCourses = filteredCourses.filter(course => 
+      getCourseDepartmentIds(course).includes(dept.id)
+    );
     return {
       department: dept,
       courses: deptCourses,
-      paperCount: courses
-        .filter(course => course.departmentId === dept.id)
-        .reduce((total, course) => total + (course.papers || 0), 0),
+      paperCount: deptCourses.reduce((total, course) => total + (course.papers || 0), 0),
     };
   });
-  const unknownDepartmentCourses = filteredCourses.filter(course => !departments.some(dept => dept.id === course.departmentId));
+  const unknownDepartmentCourses = filteredCourses.filter(course => {
+    const ids = getCourseDepartmentIds(course);
+    return !ids.some(id => departments.some(dept => dept.id === id));
+  });
 
   if (loading) return <div className="p-8 text-[#AAA]">Loading courses...</div>;
 
@@ -511,7 +537,7 @@ export function CoursesManagement() {
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-[#4F46E5]">{course.code}</p>
                   <p className="text-sm text-[#E5E5E5]">{course.title}</p>
-                  <p className="text-xs text-[#AAA] mt-1">{getDepartmentName(course.departmentId)}</p>
+                  <p className="text-xs text-[#AAA] mt-1">{getCourseDepartmentIds(course).map(id => getDepartmentName(id)).join(', ')}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => handleOpenEdit(course)} className="h-9 px-3 border border-[#333] text-[#AAA] rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors text-sm">Edit</button>
@@ -540,7 +566,7 @@ export function CoursesManagement() {
               <span className="text-xs px-2 py-1 bg-[#2A2A2F] rounded text-[#AAA]">{course.level}</span>
             </div>
             <div className="text-xs text-[#AAA] mb-3">
-              {getDepartmentName(course.departmentId)} • {course.semester} Semester
+              {getCourseDepartmentIds(course).map(id => getDepartmentName(id)).join(', ')} • {course.semester} Semester
             </div>
 
             <div className="flex gap-2 pt-3 border-t border-[#2A2A2F]">
@@ -634,19 +660,38 @@ export function CoursesManagement() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_160px] gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-[#DDD] mb-2">Department *</label>
-                      <select
-                        value={formData.departmentId}
-                        onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                        className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] focus:outline-none focus:border-[#4F46E5]"
-                      >
-                        <option value="">Select Dept</option>
-                        {departments.map(dept => (
-                          <option key={dept.id} value={dept.id}>{dept.name}</option>
-                        ))}
-                      </select>
+                      <label className="block text-sm font-medium text-[#DDD] mb-2">Departments *</label>
+                      <div className="max-h-44 overflow-y-auto rounded-xl border border-[#333] bg-[#0F1115] p-2 space-y-1">
+                        {departments.length === 0 ? (
+                          <p className="px-2 py-3 text-sm text-[#777]">No departments found.</p>
+                        ) : departments.map(dept => {
+                          const selected = formData.departmentIds.includes(dept.id);
+                          return (
+                            <label
+                              key={dept.id}
+                              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors cursor-pointer ${
+                                selected ? 'bg-[#4F46E5]/15 text-[#E5E5E5]' : 'text-[#AAA] hover:bg-[#222227]'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleDepartment(dept.id)}
+                                className="h-4 w-4 rounded border-[#444] bg-[#0F1115] accent-[#4F46E5]"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{dept.name}</span>
+                              <span className="text-[11px] text-[#777]">{dept.code || dept.id}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {formData.departmentIds.length > 0 && (
+                        <p className="mt-2 text-xs text-[#888]">
+                          Selected: {formData.departmentIds.map(id => getDepartmentName(id)).join(', ')}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#DDD] mb-2">PDF Pages</label>

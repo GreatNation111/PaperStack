@@ -12,7 +12,8 @@ import {
     setDoc,
     addDoc,
     deleteDoc,
-    documentId
+    documentId,
+    or
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -30,6 +31,7 @@ export interface Course {
     code: string;
     title: string;
     departmentId: string;
+    departmentIds?: string[];
     level: string;
     semester?: string;
     papers?: number;
@@ -65,6 +67,7 @@ export interface Paper {
     isBookmarked?: boolean;
     courseId?: string;
     departmentId?: string;
+    departmentIds?: string[];
 }
 
 export interface UserProfile {
@@ -103,6 +106,13 @@ export function clearCourseDataCaches() {
     Object.keys(bookmarkedCoursesCache).forEach(key => delete bookmarkedCoursesCache[key]);
     Object.keys(recentCoursesCache).forEach(key => delete recentCoursesCache[key]);
     Object.keys(downloadedPapersCache).forEach(key => delete downloadedPapersCache[key]);
+}
+
+function normalizeDepartmentIds(data: { departmentId?: string; departmentIds?: unknown }) {
+    if (Array.isArray(data.departmentIds) && data.departmentIds.length > 0) {
+        return data.departmentIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
+    }
+    return data.departmentId ? [data.departmentId] : [];
 }
 
 export function useDepartments() {
@@ -164,11 +174,23 @@ export function useCourses(departmentId: string | undefined) {
         const fetchCourses = async () => {
             setLoading(!coursesCache[departmentId]);
             try {
-                const q = query(collection(db, 'courses'), where('departmentId', '==', departmentId));
+                const q = query(
+                    collection(db, 'courses'),
+                    or(
+                        where('departmentId', '==', departmentId),
+                        where('departmentIds', 'array-contains', departmentId)
+                    )
+                );
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
                 const baseCourses: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-                const papersSnapshot = await getDocs(query(collection(db, 'papers'), where('departmentId', '==', departmentId)));
+                const papersSnapshot = await getDocs(query(
+                    collection(db, 'papers'),
+                    or(
+                        where('departmentId', '==', departmentId),
+                        where('departmentIds', 'array-contains', departmentId)
+                    )
+                ));
                 const pageCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
                     const data = paperDoc.data() as any;
                     const courseId = data.courseId;
@@ -234,7 +256,15 @@ export function useRecentPapers(departmentId: string | undefined) {
             try {
                 let q;
                 if (departmentId) {
-                    q = query(collection(db, 'papers'), where('departmentId', '==', departmentId), orderBy('createdAt', 'desc'), limit(20));
+                    q = query(
+                        collection(db, 'papers'),
+                        or(
+                            where('departmentId', '==', departmentId),
+                            where('departmentIds', 'array-contains', departmentId)
+                        ),
+                        orderBy('createdAt', 'desc'),
+                        limit(20)
+                    );
                 } else {
                     q = query(collection(db, 'papers'), orderBy('createdAt', 'desc'), limit(20));
                 }
@@ -243,6 +273,7 @@ export function useRecentPapers(departmentId: string | undefined) {
                 if (!isMounted) return;
                 const docs = snapshot.docs.map(d => {
                     const data = d.data() as any;
+                    const departmentIds = normalizeDepartmentIds(data);
                     return {
                         id: d.id,
                         title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
@@ -255,6 +286,8 @@ export function useRecentPapers(departmentId: string | undefined) {
                         pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || data.course || undefined,
+                        departmentId: data.departmentId || departmentIds[0],
+                        departmentIds,
                     } as Paper;
                 });
                 setPapers(docs);
@@ -573,6 +606,8 @@ export async function recordRecentCourse(userId: string, course: Course) {
         lecturer: course.lecturer,
         papers: course.papers,
         driveFolderUrl: course.driveFolderUrl,
+        departmentId: course.departmentId || course.departmentIds?.[0] || '',
+        departmentIds: course.departmentIds?.length ? course.departmentIds : (course.departmentId ? [course.departmentId] : []),
         viewedAt: new Date()
     });
 }
@@ -590,6 +625,8 @@ export async function recordPaperDownload(userId: string, paper: Paper) {
         pdfUrl: paper.pdfUrl || null,
         richTextContent: paper.richTextContent || null,
         courseId: paper.courseId || null,
+        departmentId: paper.departmentId || paper.departmentIds?.[0] || null,
+        departmentIds: paper.departmentIds || [],
         downloadedAt: new Date()
     });
 }
@@ -718,11 +755,13 @@ export function useRecentCourses(userId: string | undefined) {
 
             const fetched = recentRows.map(row => {
                 const data = { ...row.data, ...(liveCourses[row.id] || {}) };
+                const departmentIds = normalizeDepartmentIds(data);
                 return {
                     id: row.id,
                     code: data.code || '',
                     title: data.title || '',
-                    departmentId: data.departmentId || '',
+                    departmentId: data.departmentId || departmentIds[0] || '',
+                    departmentIds,
                     level: data.level || '',
                     semester: data.semester,
                     lecturer: data.lecturer,
@@ -782,11 +821,18 @@ export function usePapers(_courseId: string | undefined, departmentId: string | 
         const fetchDepartmentPapers = async () => {
             setLoading(true);
             try {
-                const q = query(collection(db, 'papers'), where('departmentId', '==', departmentId));
+                const q = query(
+                    collection(db, 'papers'),
+                    or(
+                        where('departmentId', '==', departmentId),
+                        where('departmentIds', 'array-contains', departmentId)
+                    )
+                );
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
                 const docs = snapshot.docs.map(d => {
                     const data = d.data() as any;
+                    const departmentIds = normalizeDepartmentIds(data);
                     return {
                         id: d.id,
                         title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
@@ -799,6 +845,8 @@ export function usePapers(_courseId: string | undefined, departmentId: string | 
                         pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || data.course || undefined,
+                        departmentId: data.departmentId || departmentIds[0],
+                        departmentIds,
                     } as Paper;
                 });
                 setPapers(docs);
@@ -837,6 +885,7 @@ export function usePaper(paperId: string | undefined) {
                 if (!isMounted) return;
                 if (docSnap.exists()) {
                     const data = docSnap.data() as any;
+                    const departmentIds = normalizeDepartmentIds(data);
                     setPaper({
                         id: docSnap.id,
                         title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
@@ -850,7 +899,8 @@ export function usePaper(paperId: string | undefined) {
                         pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || undefined,
-                        departmentId: data.departmentId || undefined,
+                        departmentId: data.departmentId || departmentIds[0],
+                        departmentIds,
                     });
                 } else {
                     setPaper(null);
@@ -890,6 +940,7 @@ export function useCoursePapers(courseId: string | undefined) {
                 if (!isMounted) return;
                 const docs = snapshot.docs.map(d => {
                     const data = d.data() as any;
+                    const departmentIds = normalizeDepartmentIds(data);
                     return {
                         id: d.id,
                         title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
@@ -903,7 +954,8 @@ export function useCoursePapers(courseId: string | undefined) {
                         pageCount: data.pageCount || undefined,
                         downloads: data.downloads || 0,
                         courseId: data.courseId || undefined,
-                        departmentId: data.departmentId || undefined,
+                        departmentId: data.departmentId || departmentIds[0],
+                        departmentIds,
                     } as Paper;
                 });
                 setPapers(docs);
