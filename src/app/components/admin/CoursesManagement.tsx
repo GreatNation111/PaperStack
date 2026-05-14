@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Edit3, Trash2, X, CheckCircle, Loader2, BookOpen } from 'lucide-react';
+import { Plus, Search, Edit3, Trash2, X, CheckCircle, Loader2, BookOpen, ChevronDown, Check } from 'lucide-react';
 import {
   collection,
   onSnapshot,
@@ -63,6 +63,7 @@ export function CoursesManagement() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
   const { departments } = useDepartments();
 
   // Form State
@@ -122,6 +123,7 @@ export function CoursesManagement() {
     setAttachedPaperId(null);
     setPaperYear('');
     setFormError('');
+    setDepartmentPickerOpen(false);
     setUploadMode('pdf');
     setRichText('');
     setAttachedPdfPageCount(null);
@@ -145,6 +147,7 @@ export function CoursesManagement() {
     setAttachedPaperId(null);
     setPaperYear('');
     setFormError('');
+    setDepartmentPickerOpen(false);
     setUploadMode('pdf');
     setRichText('');
     setAttachedPdfPageCount(null);
@@ -394,6 +397,7 @@ export function CoursesManagement() {
   const getDepartmentName = (id: string) => departments.find(d => d.id === id)?.name || id;
   const getCourseDepartmentIds = (course: Pick<Course, 'departmentId' | 'departmentIds'>) =>
     course.departmentIds?.length ? course.departmentIds : (course.departmentId ? [course.departmentId] : []);
+  const selectedDepartmentNames = formData.departmentIds.map(id => getDepartmentName(id));
 
   const toggleDepartment = (departmentId: string) => {
     setFormData(prev => {
@@ -661,36 +665,49 @@ export function CoursesManagement() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_160px] gap-4">
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium text-[#DDD] mb-2">Departments *</label>
-                      <div className="max-h-44 overflow-y-auto rounded-xl border border-[#333] bg-[#0F1115] p-2 space-y-1">
-                        {departments.length === 0 ? (
-                          <p className="px-2 py-3 text-sm text-[#777]">No departments found.</p>
-                        ) : departments.map(dept => {
-                          const selected = formData.departmentIds.includes(dept.id);
-                          return (
-                            <label
-                              key={dept.id}
-                              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors cursor-pointer ${
-                                selected ? 'bg-[#4F46E5]/15 text-[#E5E5E5]' : 'text-[#AAA] hover:bg-[#222227]'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={() => toggleDepartment(dept.id)}
-                                className="h-4 w-4 rounded border-[#444] bg-[#0F1115] accent-[#4F46E5]"
-                              />
-                              <span className="min-w-0 flex-1 truncate">{dept.name}</span>
-                              <span className="text-[11px] text-[#777]">{dept.code || dept.id}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      {formData.departmentIds.length > 0 && (
-                        <p className="mt-2 text-xs text-[#888]">
-                          Selected: {formData.departmentIds.map(id => getDepartmentName(id)).join(', ')}
-                        </p>
+                      <button
+                        type="button"
+                        onClick={() => setDepartmentPickerOpen(open => !open)}
+                        className="w-full min-h-11 px-4 py-2 bg-[#0F1115] border border-[#333] rounded-xl text-left text-[#E5E5E5] focus:outline-none focus:border-[#4F46E5] flex items-center gap-3"
+                      >
+                        <span className={`min-w-0 flex-1 truncate ${selectedDepartmentNames.length ? 'text-[#E5E5E5]' : 'text-[#666]'}`}>
+                          {selectedDepartmentNames.length ? selectedDepartmentNames.join(', ') : 'Select departments'}
+                        </span>
+                        {selectedDepartmentNames.length > 0 && (
+                          <span className="shrink-0 text-[11px] px-2 py-0.5 rounded bg-[#2A2A2F] text-[#AAA]">
+                            {selectedDepartmentNames.length}
+                          </span>
+                        )}
+                        <ChevronDown className={`w-4 h-4 shrink-0 text-[#777] transition-transform ${departmentPickerOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {departmentPickerOpen && (
+                        <div className="absolute z-20 mt-2 w-full max-h-56 overflow-y-auto rounded-xl border border-[#333] bg-[#0F1115] shadow-2xl p-2 space-y-1">
+                          {departments.length === 0 ? (
+                            <p className="px-2 py-3 text-sm text-[#777]">No departments found.</p>
+                          ) : departments.map(dept => {
+                            const selected = formData.departmentIds.includes(dept.id);
+                            return (
+                              <button
+                                key={dept.id}
+                                type="button"
+                                onClick={() => toggleDepartment(dept.id)}
+                                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-left ${
+                                  selected ? 'bg-[#4F46E5]/15 text-[#E5E5E5]' : 'text-[#AAA] hover:bg-[#222227]'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                                  selected ? 'border-[#4F46E5] bg-[#4F46E5] text-white' : 'border-[#444] text-transparent'
+                                }`}>
+                                  <Check className="w-3.5 h-3.5" />
+                                </span>
+                                <span className="min-w-0 flex-1 truncate">{dept.name}</span>
+                                <span className="text-[11px] text-[#777]">{dept.code || dept.id}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                     <div>
