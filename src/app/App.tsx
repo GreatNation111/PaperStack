@@ -18,8 +18,8 @@ import { CoursePapers } from '@/app/components/CoursePapers';
 import { PremiumPlans } from '@/app/components/PremiumPlans';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
-import { SeedData } from '@/app/components/SeedData';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
+import { SEO } from '@/app/components/SEO';
 import { useAnalytics } from '@/app/hooks/useAnalytics';
 
 // --- Lazy Loaded Heavyweight/Secondary Routes ---
@@ -84,7 +84,7 @@ function OfflineBanner({ isOffline, showBackOnline, isAdminRoute }: { isOffline:
               {isOffline ? "You're offline" : 'Back online'}
             </p>
             <p className={`text-xs ${isOffline ? 'text-secondary' : 'text-white/80'}`}>
-              {isOffline ? 'Swipe to dismiss · Downloads are available.' : 'Your connection is restored.'}
+              {isOffline ? 'Swipe to dismiss. Downloads are available.' : 'Your connection is restored.'}
             </p>
           </div>
           <button
@@ -250,6 +250,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
+      <SEO />
       <div className={`${isFullWidthRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
         <Suspense fallback={<GlobalLoader />}>
           <Routes location={location}>

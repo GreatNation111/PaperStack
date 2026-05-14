@@ -1,22 +1,30 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+             && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
 
     // --- PAPER PDFs ---
     // Public read so students can view/download papers
     // Admin-only write so only admins can upload/delete
     match /papers/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+      allow create, update: if isAdmin()
+                            && request.resource.size < 50 * 1024 * 1024
+                            && request.resource.contentType.matches('application/pdf|image/.*');
+      allow delete: if isAdmin();
     }
 
     // --- PAPER THUMBNAILS ---
     // Same access pattern as papers
     match /thumbnails/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+      allow create, update: if isAdmin()
+                            && request.resource.size < 5 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin();
     }
 
     // --- DEFAULT: deny everything else ---

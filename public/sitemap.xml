@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://calebdeck.com/</loc>
+    <loc>https://paperstack.com.ng/</loc>
     <priority>1.0</priority>
     <changefreq>weekly</changefreq>
   </url>
   <url>
-    <loc>https://calebdeck.com/explore</loc>
+    <loc>https://paperstack.com.ng/explore</loc>
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://calebdeck.com/library</loc>
+    <loc>https://paperstack.com.ng/library</loc>
     <priority>0.7</priority>
     <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://calebdeck.com/timetable</loc>
+    <loc>https://paperstack.com.ng/timetable</loc>
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://calebdeck.com/repeated-questions</loc>
+    <loc>https://paperstack.com.ng/repeated-questions</loc>
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://calebdeck.com/premium</loc>
+    <loc>https://paperstack.com.ng/premium</loc>
     <priority>0.6</priority>
     <changefreq>monthly</changefreq>
   </url>

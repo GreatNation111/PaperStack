@@ -7,7 +7,7 @@ import { useBookmarkedCourses, toggleBookmark, Course, useCourseThumbnails, useD
 import { removeOfflinePaper } from '@/lib/indexedDB';
 
 export function Library() {
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { courses, loading } = useBookmarkedCourses(user?.uid);
   const { papers: downloadedPapers, loading: downloadsLoading } = useDownloadedPapers(user?.uid);
 

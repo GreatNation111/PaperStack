@@ -97,7 +97,7 @@ export async function removeOfflinePaper(paperId: string): Promise<void> {
 
 /**
  * Returns a list of all papers stored locally in IndexedDB.
- * This is the true offline source of truth — it reads what's
+ * This is the true offline source of truth. It reads what's
  * physically on the device, no network needed.
  */
 export async function getAllOfflinePapers(): Promise<OfflinePaperData[]> {

@@ -10,50 +10,48 @@ interface SEOProps {
 }
 
 export function SEO({
-    title = 'PaperStack — Your Ultimate Past Questions Repository',
-    description = 'Caleb University\'s premier platform for past examination questions, study resources, and digital timetables.',
+    title = 'PaperStack for UNN Students - Past Questions and Offline Study',
+    description = 'PaperStack helps UNN students in affiliation with YABATECH find verified past questions, course materials, timetables, repeated questions and offline study resources by department, level and semester.',
     name = 'PaperStack',
     type = 'website',
-    image = 'https://calebdeck.com/pwa-512x512.png', // Assuming canonical URL for open graph images
-    url = 'https://calebdeck.com/' // Assuming target domain from the user's guide
+    image = 'https://paperstack.com.ng/pwa-512x512.png',
+    url = 'https://paperstack.com.ng/'
 }: SEOProps) {
-
-    // JSON-LD structured data for Google Knowledge Graph
     const structuredData = {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": name,
-        "description": description,
-        "url": url,
-        "image": image,
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Imota",
-            "addressRegion": "Lagos",
-            "addressCountry": "NG"
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name,
+        applicationCategory: 'EducationalApplication',
+        operatingSystem: 'Web',
+        description,
+        url,
+        image,
+        offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'NGN'
         }
     };
 
     return (
         <Helmet>
-            {/* Standard Meta Tags */}
             <title>{title}</title>
             <meta name="description" content={description} />
+            <meta name="robots" content="index, follow" />
+            <link rel="canonical" href={url} />
 
-            {/* Open Graph Meta Tags (Facebook/LinkedIn) */}
             <meta property="og:type" content={type} />
+            <meta property="og:site_name" content="PaperStack" />
             <meta property="og:title" content={title} />
             <meta property="og:description" content={description} />
             <meta property="og:image" content={image} />
             <meta property="og:url" content={url} />
 
-            {/* Twitter Meta Tags */}
             <meta name="twitter:card" content="summary_large_image" />
             <meta name="twitter:title" content={title} />
             <meta name="twitter:description" content={description} />
             <meta name="twitter:image" content={image} />
 
-            {/* Structured Data */}
             <script type="application/ld+json">
                 {JSON.stringify(structuredData)}
             </script>

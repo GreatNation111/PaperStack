@@ -542,17 +542,17 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
                 <Sparkles className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">
-                Download Limit Reached
+                Your 3 free offline saves are used
               </h3>
               <p className="text-secondary text-sm mb-6">
-                Free users can download up to <span className="text-foreground font-bold">3 papers</span>. Upgrade to Premium for unlimited downloads and more academic tools.
+                Offline access is for serious exam prep. Premium unlocks unlimited saved papers, so your materials stay ready when data is slow, expensive, or unavailable.
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/premium')}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors"
                 >
-                  Unlock Premium
+                  Unlock Unlimited Offline Access
                 </button>
                 <button
                   onClick={() => setShowUpsellModal(false)}

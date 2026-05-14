@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin/dashboard
 
-Sitemap: https://calebdeck.com/sitemap.xml
+Sitemap: https://paperstack.com.ng/sitemap.xml
