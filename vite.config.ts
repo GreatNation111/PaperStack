@@ -82,10 +82,47 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'firebase/messaging'],
-          'ui-vendor': ['lucide-react', 'motion/react', 'recharts']
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+
+          if (id.includes('node_modules/@tiptap/')) {
+            return 'tiptap-vendor';
+          }
+          if (
+            id.includes('node_modules/jszip') ||
+            id.includes('node_modules/pako') ||
+            id.includes('node_modules/readable-stream')
+          ) {
+            return 'docx-zip-vendor';
+          }
+          if (
+            id.includes('node_modules/@xmldom') ||
+            id.includes('node_modules/xmlbuilder') ||
+            id.includes('node_modules/underscore') ||
+            id.includes('node_modules/bluebird') ||
+            id.includes('node_modules/argparse') ||
+            id.includes('node_modules/base64-js') ||
+            id.includes('node_modules/dingbat-to-unicode') ||
+            id.includes('node_modules/lop') ||
+            id.includes('node_modules/path-is-absolute')
+          ) {
+            return 'docx-support-vendor';
+          }
+          if (id.includes('node_modules/mammoth')) {
+            return 'mammoth';
+          }
+          if (id.includes('node_modules/firebase/app')) return 'firebase-core';
+          if (id.includes('node_modules/firebase/auth')) return 'firebase-auth';
+          if (id.includes('node_modules/firebase/firestore')) return 'firebase-firestore';
+          if (id.includes('node_modules/firebase/storage')) return 'firebase-storage';
+          if (id.includes('node_modules/firebase/messaging')) return 'firebase-messaging';
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/lucide-react') || id.includes('node_modules/motion') || id.includes('node_modules/recharts')) {
+            return 'ui-vendor';
+          }
+          return undefined;
         }
       }
     }

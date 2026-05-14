@@ -37,7 +37,6 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
-import mammoth from 'mammoth';
 
 const PageBreak = Node.create({
   name: 'pageBreak',
@@ -148,6 +147,7 @@ export function NativeDocumentEditor({ value, onChange, onUploadImage, onStatus,
     setIsImportingDocx(true);
     onStatus?.('Importing Word document...');
     try {
+      const mammoth = await import('mammoth');
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml(
         { arrayBuffer },

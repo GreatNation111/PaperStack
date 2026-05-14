@@ -1,30 +1,30 @@
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Splash } from '@/app/components/Splash';
-import { Welcome } from '@/app/components/Welcome';
-import { Landing } from '@/app/components/Landing';
-import { SignIn } from '@/app/components/SignIn';
-import { SignUp } from '@/app/components/SignUp';
-import { Home } from '@/app/components/Home';
-import { Explore } from '@/app/components/Explore';
-import { Library } from '@/app/components/Library';
-import { Profile } from '@/app/components/Profile';
-import { Notifications } from '@/app/components/Notifications';
-import { PastQuestions } from '@/app/components/PastQuestions';
-import { Timetable } from '@/app/components/Timetable';
-import { RepeatedQuestions } from '@/app/components/RepeatedQuestions';
-import { CoursePapers } from '@/app/components/CoursePapers';
-import { PremiumPlans } from '@/app/components/PremiumPlans';
 import { BottomNav } from '@/app/components/BottomNav';
 import { Forbidden } from '@/app/components/Forbidden';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
 import { SEO } from '@/app/components/SEO';
 import { useAnalytics } from '@/app/hooks/useAnalytics';
 
-// --- Lazy Loaded Heavyweight/Secondary Routes ---
-const AdminLogin = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminLogin })));
-const AdminContainer = lazy(() => import('@/app/components/admin').then(m => ({ default: m.AdminContainer })));
+// --- Lazy Loaded Routes ---
+const Splash = lazy(() => import('@/app/components/Splash').then(m => ({ default: m.Splash })));
+const Welcome = lazy(() => import('@/app/components/Welcome').then(m => ({ default: m.Welcome })));
+const Landing = lazy(() => import('@/app/components/Landing').then(m => ({ default: m.Landing })));
+const SignIn = lazy(() => import('@/app/components/SignIn').then(m => ({ default: m.SignIn })));
+const SignUp = lazy(() => import('@/app/components/SignUp').then(m => ({ default: m.SignUp })));
+const Home = lazy(() => import('@/app/components/Home').then(m => ({ default: m.Home })));
+const Explore = lazy(() => import('@/app/components/Explore').then(m => ({ default: m.Explore })));
+const Library = lazy(() => import('@/app/components/Library').then(m => ({ default: m.Library })));
+const Profile = lazy(() => import('@/app/components/Profile').then(m => ({ default: m.Profile })));
+const Notifications = lazy(() => import('@/app/components/Notifications').then(m => ({ default: m.Notifications })));
+const PastQuestions = lazy(() => import('@/app/components/PastQuestions').then(m => ({ default: m.PastQuestions })));
+const Timetable = lazy(() => import('@/app/components/Timetable').then(m => ({ default: m.Timetable })));
+const RepeatedQuestions = lazy(() => import('@/app/components/RepeatedQuestions').then(m => ({ default: m.RepeatedQuestions })));
+const CoursePapers = lazy(() => import('@/app/components/CoursePapers').then(m => ({ default: m.CoursePapers })));
+const PremiumPlans = lazy(() => import('@/app/components/PremiumPlans').then(m => ({ default: m.PremiumPlans })));
+const AdminLogin = lazy(() => import('@/app/components/admin/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const AdminContainer = lazy(() => import('@/app/components/admin/AdminContainer').then(m => ({ default: m.AdminContainer })));
 const PastQuestionsViewer = lazy(() => import('@/app/components/PastQuestionsViewer').then(m => ({ default: m.PastQuestionsViewer })));
 const HelpSupport = lazy(() => import('@/app/components/HelpSupport').then(m => ({ default: m.HelpSupport })));
 const TermsPrivacy = lazy(() => import('@/app/components/TermsPrivacy').then(m => ({ default: m.TermsPrivacy })));

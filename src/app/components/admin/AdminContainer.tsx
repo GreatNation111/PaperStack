@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
-import { AdminDashboard } from './AdminDashboard';
-import { NotificationsManager } from './NotificationsManager';
-import { CoursesManagement } from './CoursesManagement';
-import { UsersManagement } from './UsersManagement';
-import { AdminSettings } from './AdminSettings';
-import { DepartmentsManager } from './DepartmentsManager';
-import { FeatureRequestsViewer } from './FeatureRequestsViewer';
-import { TimetableManagement } from './TimetableManagement';
-import { RepeatedQuestionsManagement } from './RepeatedQuestionsManagement';
+
+const AdminDashboard = lazy(() => import('./AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const NotificationsManager = lazy(() => import('./NotificationsManager').then(m => ({ default: m.NotificationsManager })));
+const CoursesManagement = lazy(() => import('./CoursesManagement').then(m => ({ default: m.CoursesManagement })));
+const UsersManagement = lazy(() => import('./UsersManagement').then(m => ({ default: m.UsersManagement })));
+const AdminSettings = lazy(() => import('./AdminSettings').then(m => ({ default: m.AdminSettings })));
+const DepartmentsManager = lazy(() => import('./DepartmentsManager').then(m => ({ default: m.DepartmentsManager })));
+const FeatureRequestsViewer = lazy(() => import('./FeatureRequestsViewer').then(m => ({ default: m.FeatureRequestsViewer })));
+const TimetableManagement = lazy(() => import('./TimetableManagement').then(m => ({ default: m.TimetableManagement })));
+const RepeatedQuestionsManagement = lazy(() => import('./RepeatedQuestionsManagement').then(m => ({ default: m.RepeatedQuestionsManagement })));
+
+const AdminPageLoader = () => (
+  <div className="flex min-h-[320px] items-center justify-center text-[#AAA]">
+    Loading...
+  </div>
+);
 
 interface AdminContainerProps {
   onLogout: () => void;
@@ -67,7 +74,9 @@ export function AdminContainer({ onLogout, isDarkMode, onToggleDarkMode }: Admin
       isDarkMode={isDarkMode}
       onToggleDarkMode={onToggleDarkMode}
     >
-      {renderPage()}
+      <Suspense fallback={<AdminPageLoader />}>
+        {renderPage()}
+      </Suspense>
     </AdminLayout>
   );
 }

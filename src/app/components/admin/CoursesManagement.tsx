@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, Edit3, Trash2, X, CheckCircle, Loader2, BookOpen, ChevronDown, Check } from 'lucide-react';
 import {
@@ -19,10 +19,9 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { clearCourseDataCaches, useDepartments } from '@/hooks/useData';
-import { getPdfPageCount, validatePdfFile } from '@/utils/pdfThumbnail';
-import { NativeDocumentEditor } from './NativeDocumentEditor';
 import { buildCourseCodeSuggestions, courseIdFromCode, findDuplicatePaper, normalizeCourseCode } from '@/utils/courseAdmin';
-import { createPdfFromImageFiles } from '@/utils/imageToPdf';
+
+const NativeDocumentEditor = lazy(() => import('./NativeDocumentEditor').then(m => ({ default: m.NativeDocumentEditor })));
 
 interface Course {
   id: string;
@@ -326,6 +325,7 @@ export function CoursesManagement() {
 
     setPaperFile(file);
 
+    const { getPdfPageCount, validatePdfFile } = await import('@/utils/pdfThumbnail');
     const validationError = validatePdfFile(file);
     if (validationError) {
       setFormError(validationError);
@@ -360,6 +360,7 @@ export function CoursesManagement() {
 
     setIsReadingPdfCount(true);
     try {
+      const { createPdfFromImageFiles } = await import('@/utils/imageToPdf');
       const scannedPdf = await createPdfFromImageFiles(selectedFiles, `${courseIdFromCode(formData.code || 'scanned-paper')}.pdf`);
       setPaperFile(scannedPdf);
       setAttachedPdfPageCount(selectedFiles.length);
@@ -809,12 +810,14 @@ export function CoursesManagement() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <NativeDocumentEditor
-                          value={richText}
-                          onChange={setRichText}
-                          onUploadImage={uploadNativeDocumentImage}
-                          onError={setFormError}
-                        />
+                        <Suspense fallback={<div className="rounded-xl border border-[#333] bg-[#0F1115] p-4 text-sm text-[#AAA]">Loading document editor...</div>}>
+                          <NativeDocumentEditor
+                            value={richText}
+                            onChange={setRichText}
+                            onUploadImage={uploadNativeDocumentImage}
+                            onError={setFormError}
+                          />
+                        </Suspense>
                         <input
                           type="text"
                           placeholder="Year (e.g. 2023)"
