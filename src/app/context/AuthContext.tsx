@@ -47,6 +47,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                     if (userDoc.exists()) {
                         setUserProfile(userDoc.data());
+                    } else {
+                        // User exists in Auth but missing from Firestore (e.g. signup connection drop)
+                        const { setDoc, serverTimestamp } = await import('firebase/firestore');
+                        const defaultData = {
+                            name: currentUser.displayName || 'Student',
+                            email: currentUser.email,
+                            departmentId: 'General',
+                            level: '100L',
+                            role: 'student',
+                            isPremium: false,
+                            bookmarks: [],
+                            readNotifications: [],
+                            recentCourses: [],
+                            createdAt: serverTimestamp(),
+                        };
+                        try {
+                            await setDoc(doc(db, 'users', currentUser.uid), defaultData, { merge: true });
+                            setUserProfile(defaultData);
+                        } catch (err) {
+                            console.error('[AuthContext] Failed to auto-create missing user doc:', err);
+                        }
                     }
 
                     const isAdminUser = adminDoc.exists();

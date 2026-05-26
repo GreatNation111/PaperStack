@@ -179,7 +179,9 @@ function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: numbe
       const page = await pdf.getPage(pageNumber);
       if (cancelled) return;
 
-      const viewport = page.getViewport({ scale: scale * 1.5 });
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const deviceScale = isMobile ? 1.0 : 1.5;
+      const viewport = page.getViewport({ scale: scale * deviceScale });
       const canvas = canvasRef.current;
       if (!canvas) return;
 
