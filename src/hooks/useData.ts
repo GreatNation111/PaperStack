@@ -49,6 +49,7 @@ export interface Contributor {
     contributionCount?: number;
     levelOrYear?: string;
     badge?: string;
+    avatar?: string;
 }
 
 export interface Paper {

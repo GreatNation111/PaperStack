@@ -288,7 +288,17 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
               contributors.map((contributor, index) => (
                 <motion.div key={contributor.id || `${contributor.name}-${index}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + index * 0.1 }} className="flex-shrink-0 w-64 bg-card border border-border rounded-2xl p-5">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold flex-shrink-0">{contributor.name.split(' ').map(n => n[0]).join('')}</div>
+                    <div className="w-12 h-12 bg-primary rounded-full overflow-hidden flex items-center justify-center text-primary-foreground font-semibold flex-shrink-0">
+                      {contributor.avatar ? (
+                        <img 
+                          src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${contributor.avatar}&backgroundColor=b6e3f4,c0aede,d1d4f9`} 
+                          alt={`${contributor.name}'s avatar`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        contributor.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{contributor.name}</div>
                       <div className="text-xs text-secondary">{contributor.department} • {contributor.levelOrYear}</div>

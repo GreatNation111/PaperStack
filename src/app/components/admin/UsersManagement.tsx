@@ -13,6 +13,7 @@ interface User {
   level?: string;
   role?: 'student' | 'contributor' | 'admin';
   createdAt?: any;
+  avatar?: string;
 }
 
 const PAGE_SIZE = 50;
@@ -95,7 +96,8 @@ export function UsersManagement() {
         department: selectedUser.department || selectedUser.departmentId || 'Unassigned',
         levelOrYear: selectedUser.level || 'Unknown',
         contributionCount: contributorForm.contributionCount,
-        badge: contributorForm.badge
+        badge: contributorForm.badge,
+        avatar: selectedUser.avatar || null
       }, { merge: true });
 
       setShowContributorModal(false);

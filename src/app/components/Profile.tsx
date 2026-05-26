@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
 import { useUserProfile, updateUserProfile, useDepartments, useContributors } from '@/hooks/useData';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface ProfileProps {
   userName: string;
@@ -51,6 +53,11 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   const handleUpdateAvatar = async (key: string) => {
     if (!user) return;
     await updateUserProfile(user.uid, { avatar: key });
+    if (userContributor) {
+      await updateDoc(doc(db, 'contributors', userContributor.id!), {
+        avatar: key
+      });
+    }
     setIsEditingAvatar(false);
   };
 
