@@ -7,10 +7,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOfflinePaper } from '@/lib/indexedDB';
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore - Vite ?url import for local worker bundling
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 /**
  * Canvas-based PDF viewer using pdf.js.

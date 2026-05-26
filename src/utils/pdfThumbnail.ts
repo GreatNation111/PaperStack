@@ -1,9 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore - Vite ?url import for local worker bundling
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// Use locally bundled worker instead of CDN (CDN fetch was failing)
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 /** Maximum allowed PDF file size in bytes (20MB) */
 export const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;
