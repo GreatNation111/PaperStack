@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { useDepartments, RepeatedQuestionsData, RepeatedQuestion } from '@/hooks/useData';
 
 export function RepeatedQuestionsManagement() {
-    const { departments, loading: loadingDepts } = useDepartments();
+    const { departments } = useDepartments();
     const [selectedDeptId, setSelectedDeptId] = useState<string>('');
     const [data, setData] = useState<RepeatedQuestionsData | null>(null);
     const [loading, setLoading] = useState(false);

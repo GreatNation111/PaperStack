@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, Phone, MessageCircle, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Mail, MessageCircle, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 

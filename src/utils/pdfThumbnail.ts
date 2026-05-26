@@ -28,7 +28,7 @@ export async function generatePdfThumbnail(file: File, scale = 0.5): Promise<Blo
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
 
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
 
   // Clean up
   await pdf.destroy();
@@ -70,7 +70,7 @@ export async function generatePdfThumbnailFromUrl(pdfUrl: string, scale = 0.5): 
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
 
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
 
   await pdf.destroy();
 

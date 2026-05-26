@@ -10,7 +10,7 @@ interface NotificationsProps {
 
 export function Notifications({ onBack }: NotificationsProps) {
   const { user } = useAuth();
-  const { notifications, loading, unreadCount, setReading } = useNotifications(user?.uid);
+  const { notifications, loading, setReading } = useNotifications(user?.uid);
   const { interests } = useFeatureInterests(user?.uid);
 
   // Local state for optimistic UI updates

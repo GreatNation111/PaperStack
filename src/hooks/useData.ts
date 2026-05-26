@@ -127,7 +127,7 @@ export function useDepartments() {
                 const q = query(collection(db, 'departments'));
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const depts: Department[] = snapshot.docs.map(d => {
+                const depts: Department[] = snapshot.docs.map((d: any) => {
                     const data = d.data() as any;
                     return {
                         id: d.id,
@@ -560,8 +560,7 @@ export function useBookmarkedPapers(userId: string | undefined) {
         const fetchBookmarks = async () => {
             try {
                 const q = collection(db, 'users', userId, 'bookmarks');
-                const snapshot = await getDocs(q);
-                const _bookmarkedIds = snapshot.docs.map(doc => doc.id);
+                await getDocs(q);
                 // For MVP, papers aren't used - courses are primary entity
                 setPapers([]);
             } catch (e) {

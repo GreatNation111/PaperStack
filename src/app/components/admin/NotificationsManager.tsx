@@ -38,7 +38,7 @@ export function NotificationsManager() {
   // Data State
   const [liveNotifications, setLiveNotifications] = useState<Notification[]>([]);
   const [queueNotifications, setQueueNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+
 
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export function NotificationsManager() {
     const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       setLiveNotifications(snap.docs.map(d => ({ id: d.id, ...d.data(), status: 'sent' } as Notification)));
-      setLoading(false);
+
     });
     return () => unsub();
   }, []);

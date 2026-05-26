@@ -54,7 +54,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses: recentCourses, loading: loadingCourses } = useRecentCourses(user?.uid);
   const { unreadCount } = useNotifications(user?.uid);
-  const { timetable, loading: loadingTimetable } = useTimetable(profile?.departmentId);
+  const { timetable, } = useTimetable(profile?.departmentId);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotificationBanner, setShowNotificationBanner] = useState(false);
 

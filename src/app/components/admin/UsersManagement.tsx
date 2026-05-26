@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2, RefreshCw } from 'lucide-react';
-import { collection, doc, query, updateDoc, setDoc, deleteDoc, getDocs, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
+import { collection, doc, query, updateDoc, setDoc, getDocs, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface User {

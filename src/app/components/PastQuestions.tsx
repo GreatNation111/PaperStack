@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, useGlobalConfig, useUserProfile, useCourseThumbnails } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Crown, AlertCircle, X } from 'lucide-react';
+import { Crown, X } from 'lucide-react';
 
 interface PastQuestionsProps {
     onBack: () => void;
@@ -13,7 +13,7 @@ interface PastQuestionsProps {
     selectedLevel?: string | null;
 }
 
-export function PastQuestions({ onBack, departmentId, courseCode, selectedLevel: initialLevel }: PastQuestionsProps) {
+export function PastQuestions({ onBack, departmentId, selectedLevel: initialLevel }: PastQuestionsProps) {
     const { config } = useGlobalConfig();
     const { courses, loading: loadingCourses } = useCourses(departmentId);
     const { user } = useAuth();

@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, MapPin, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/app/context/AuthContext';
 import { useUserProfile, useTimetable, useGlobalConfig } from '@/hooks/useData';

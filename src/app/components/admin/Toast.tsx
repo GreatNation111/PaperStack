@@ -102,6 +102,7 @@ export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // This would be exposed via a context or hook
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const addToast = (message: string, type: ToastType = 'success') => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, message, type }]);

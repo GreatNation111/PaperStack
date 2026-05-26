@@ -2,7 +2,7 @@ import { ArrowLeft, Crown, MessageCircleQuestion, Sparkles, Clock } from 'lucide
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
-import { useUserProfile, useRepeatedQuestions, useGlobalConfig } from '@/hooks/useData';
+import { useUserProfile, useRepeatedQuestions } from '@/hooks/useData';
 import { PremiumLock } from './PremiumLock';
 import { format } from 'date-fns';
 
@@ -10,7 +10,6 @@ export function RepeatedQuestions() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { profile } = useUserProfile(user?.uid);
-    const { config } = useGlobalConfig();
     const { data, loading } = useRepeatedQuestions(profile?.departmentId);
 
     return (

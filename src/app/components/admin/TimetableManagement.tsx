@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { useDepartments, Timetable, Exam } from '@/hooks/useData';
 
 export function TimetableManagement() {
-    const { departments, loading: loadingDepts } = useDepartments();
+    const { departments } = useDepartments();
     const [selectedDeptId, setSelectedDeptId] = useState<string>('');
     const [timetable, setTimetable] = useState<Timetable | null>(null);
     const [loading, setLoading] = useState(false);
