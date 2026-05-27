@@ -1,7 +1,10 @@
-import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore - pdf.js ships this legacy browser build without TypeScript declarations.
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+// @ts-ignore - Vite ?url import for bundling the matching legacy worker.
+import pdfjsWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 
-// Worker file lives in public/pdf.worker.min.mjs — fixed URL, no Vite hashing, no deploy breakage
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Keep the worker version/build matched with the main pdf.js bundle.
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 /** Maximum allowed PDF file size in bytes (20MB) */
 export const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;

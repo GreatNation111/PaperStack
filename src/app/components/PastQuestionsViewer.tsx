@@ -6,10 +6,13 @@ import { useAuth } from '@/app/context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOfflinePaper } from '@/lib/indexedDB';
-import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore - pdf.js ships this legacy browser build without TypeScript declarations.
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+// @ts-ignore - Vite ?url import for bundling the matching legacy worker.
+import pdfjsWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 
-// Worker file lives in public/pdf.worker.min.mjs — fixed URL, no Vite hashing, no deploy breakage
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Keep the worker version/build matched with the main pdf.js bundle.
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 /**
  * Canvas-based PDF viewer using pdf.js.
@@ -153,6 +156,7 @@ function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: numbe
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [shouldRender, setShouldRender] = useState(pageNumber === 1);
   const [height, setHeight] = useState(520);
+  const [renderError, setRenderError] = useState<string | null>(null);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -179,6 +183,7 @@ function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: numbe
     let renderTask: any;
 
     const renderPage = async () => {
+      setRenderError(null);
       const page = await pdf.getPage(pageNumber);
       if (cancelled) return;
 
@@ -194,13 +199,14 @@ function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: numbe
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      renderTask = page.render({ canvasContext: ctx, viewport });
+      renderTask = page.render({ canvasContext: ctx, viewport, canvas } as any);
       await renderTask.promise;
     };
 
     renderPage().catch(err => {
       if (!cancelled && err?.name !== 'RenderingCancelledException') {
         console.error(`PDF page ${pageNumber} render error:`, err);
+        setRenderError(err?.message || 'This page could not render.');
       }
     });
 
@@ -217,10 +223,16 @@ function PdfPageCanvas({ pdf, pageNumber, scale }: { pdf: any; pageNumber: numbe
       style={{ minHeight: shouldRender ? undefined : `${height}px` }}
     >
       {shouldRender ? (
-        <canvas
-          ref={canvasRef}
-          className="block w-full h-auto rounded shadow-[0_2px_12px_rgba(0,0,0,0.15)] bg-white"
-        />
+        renderError ? (
+          <div className="w-full min-h-[280px] rounded bg-card border border-border p-6 text-center text-sm text-destructive flex items-center justify-center">
+            Page {pageNumber} could not render: {renderError}
+          </div>
+        ) : (
+          <canvas
+            ref={canvasRef}
+            className="block w-full h-auto rounded shadow-[0_2px_12px_rgba(0,0,0,0.15)] bg-white"
+          />
+        )
       ) : (
         <div className="w-full h-full min-h-[520px] rounded bg-card/60 border border-border animate-pulse" />
       )}
