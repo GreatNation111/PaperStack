@@ -1,5 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// @ts-ignore - Vite ?url import bundles the worker into dist/assets/ for offline PWA support
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 /** Maximum allowed PDF file size in bytes (20MB) */
 export const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;
@@ -24,7 +27,7 @@ export async function generatePdfThumbnail(file: File, scale = 0.5): Promise<Blo
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
 
-  await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 
   // Clean up
   await pdf.destroy();
@@ -66,7 +69,7 @@ export async function generatePdfThumbnailFromUrl(pdfUrl: string, scale = 0.5): 
   canvas.height = viewport.height;
   const ctx = canvas.getContext('2d')!;
 
-  await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 
   await pdf.destroy();
 
