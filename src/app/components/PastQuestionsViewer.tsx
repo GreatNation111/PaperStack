@@ -7,10 +7,9 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOfflinePaper } from '@/lib/indexedDB';
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore - Vite ?url import bundles the worker into dist/assets/ for offline PWA support
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+// Worker file lives in public/pdf.worker.min.mjs — fixed URL, no Vite hashing, no deploy breakage
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 /**
  * Canvas-based PDF viewer using pdf.js.
@@ -95,7 +94,8 @@ function PdfCanvasViewer({ source, scale, retryKey, onRetry }: { source: PdfSour
       } catch (err: any) {
         console.error('PDF load error:', err);
         if (!cancelled) {
-          setPdfError('Could not load PDF. Try opening it directly.');
+          const errMsg = err?.message || String(err);
+          setPdfError(`Could not load PDF: ${errMsg}`);
           setPdfLoading(false);
         }
       }
