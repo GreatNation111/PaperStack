@@ -165,6 +165,81 @@ export function UsersManagement() {
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const formatRelativeTime = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
+    return `${Math.floor(diffInSeconds / 31536000)}y ago`;
+  };
+
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    
+    // 14 days chart data
+    const chartData = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      return { date: d.toDateString(), count: 0, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) };
+    });
+
+    let newToday = 0;
+    let thisWeek = 0;
+    let thisMonth = 0;
+    let contributorsCount = 0;
+    const deptCounts: Record<string, number> = {};
+    const levelCounts: Record<string, number> = {};
+
+    users.forEach(u => {
+      // Role
+      if (u.role === 'contributor') contributorsCount++;
+
+      // Department
+      const dept = u.department || u.departmentId || 'Unassigned';
+      deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+
+      // Level
+      const level = u.level || 'Unknown';
+      levelCounts[level] = (levelCounts[level] || 0) + 1;
+
+      // Dates
+      if (!u.createdAt) return;
+      const createdAt = u.createdAt.toDate ? u.createdAt.toDate() : new Date(u.createdAt);
+      const diffTime = now.getTime() - createdAt.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (createdAt.toDateString() === todayStr) newToday++;
+      if (diffDays < 7) thisWeek++;
+      if (diffDays < 30) thisMonth++;
+
+      // Chart
+      const chartEntry = chartData.find(d => d.date === createdAt.toDateString());
+      if (chartEntry) {
+        chartEntry.count++;
+      }
+    });
+
+    const maxChartCount = Math.max(...chartData.map(d => d.count), 1);
+
+    return {
+      newToday,
+      thisWeek,
+      thisMonth,
+      contributorsCount,
+      departments: Object.entries(deptCounts).sort((a, b) => b[1] - a[1]),
+      levels: Object.entries(levelCounts).sort((a, b) => b[1] - a[1]),
+      chartData,
+      maxChartCount
+    };
+  }, [users]);
+
   return (
     <div className="min-h-screen p-4 lg:p-8">
       <div className="mb-6">
@@ -175,6 +250,75 @@ export function UsersManagement() {
           <button onClick={() => { setLastDoc(null); fetchUsers(); }} className="text-xs text-primary hover:underline flex items-center gap-1">
             <RefreshCw className="w-3 h-3" /> Refresh
           </button>
+        </div>
+      </div>
+
+      {/* Analytics Overview Section */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+          <div className="text-[#AAA] text-xs font-bold uppercase tracking-widest mb-1">New Today</div>
+          <div className="text-3xl font-black text-[#E5E5E5]">{analytics.newToday}</div>
+        </div>
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+          <div className="text-[#AAA] text-xs font-bold uppercase tracking-widest mb-1">New This Week</div>
+          <div className="text-3xl font-black text-[#10B981]">{analytics.thisWeek}</div>
+        </div>
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+          <div className="text-[#AAA] text-xs font-bold uppercase tracking-widest mb-1">New This Month</div>
+          <div className="text-3xl font-black text-[#4F46E5]">{analytics.thisMonth}</div>
+        </div>
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+          <div className="text-[#AAA] text-xs font-bold uppercase tracking-widest mb-1">Contributors</div>
+          <div className="text-3xl font-black text-[#F59E0B]">{analytics.contributorsCount}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Signups Chart */}
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 lg:col-span-2">
+          <h3 className="text-sm font-black text-[#E5E5E5] uppercase tracking-widest mb-6">Signups (Last 14 Days)</h3>
+          <div className="flex items-end gap-2 h-32 w-full">
+            {analytics.chartData.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
+                <div 
+                  className="w-full bg-[#4F46E5]/20 hover:bg-[#4F46E5] rounded-t-sm transition-all duration-300 relative"
+                  style={{ height: `${Math.max((d.count / analytics.maxChartCount) * 100, 2)}%` }}
+                >
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#333] text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    {d.count} signups
+                  </div>
+                </div>
+                <div className="text-[9px] text-[#666] font-bold rotate-[-45deg] origin-top-left translate-y-2 translate-x-1 whitespace-nowrap">{d.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="h-6"></div>
+        </div>
+
+        {/* Breakdowns */}
+        <div className="space-y-4">
+          <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+            <h3 className="text-xs font-black text-[#E5E5E5] uppercase tracking-widest mb-4">Top Departments</h3>
+            <div className="space-y-3 max-h-32 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#333]">
+              {analytics.departments.slice(0, 5).map(([dept, count]) => (
+                <div key={dept} className="flex items-center justify-between">
+                  <span className="text-sm text-[#AAA] truncate max-w-[150px]">{dept}</span>
+                  <span className="text-sm font-bold text-[#E5E5E5]">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5">
+            <h3 className="text-xs font-black text-[#E5E5E5] uppercase tracking-widest mb-4">Level Distribution</h3>
+            <div className="space-y-3 max-h-32 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#333]">
+              {analytics.levels.map(([level, count]) => (
+                <div key={level} className="flex items-center justify-between">
+                  <span className="text-sm text-[#AAA]">{level}</span>
+                  <span className="text-sm font-bold text-[#E5E5E5]">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -273,7 +417,12 @@ export function UsersManagement() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-[#AAA]">{user.department || user.departmentId || 'GENERAL'}</td>
-                    <td className="px-4 py-4 text-sm text-[#AAA]">{formatDate(user.createdAt)}</td>
+                    <td className="px-4 py-4 text-sm text-[#AAA]">
+                      <div className="flex flex-col">
+                        <span>{formatDate(user.createdAt)}</span>
+                        <span className="text-[10px] text-[#666] uppercase tracking-wider">{formatRelativeTime(user.createdAt)}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
                         {(!user.role || user.role === 'student') ? (
@@ -354,7 +503,7 @@ export function UsersManagement() {
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 text-right shrink-0">
-                  <div className="text-[9px] text-[#555] font-bold uppercase tracking-widest">{formatDate(user.createdAt)}</div>
+                  <div className="text-[9px] text-[#555] font-bold uppercase tracking-widest">{formatRelativeTime(user.createdAt)}</div>
                   <div className="text-[10px] text-primary/80 font-bold max-w-[100px] truncate">{(user.department || user.departmentId || 'GENERAL').toUpperCase()}</div>
                 </div>
               </div>
@@ -440,7 +589,8 @@ export function UsersManagement() {
                     {selectedUser.name?.charAt(0) || 'U'}
                   </div>
                   <div className="text-xl font-black text-[#E5E5E5] leading-tight mb-1">{selectedUser.name || 'Unknown User'}</div>
-                  <div className="text-sm text-[#888] font-medium">{selectedUser.email}</div>
+                  <div className="text-sm text-[#888] font-medium mb-2">{selectedUser.email}</div>
+                  <div className="text-xs text-[#666] bg-[#222] px-3 py-1 rounded-full border border-[#333]">Joined {formatRelativeTime(selectedUser.createdAt)}</div>
                 </div>
 
                 <div className="bg-[#0F1115] rounded-2xl p-4 space-y-4">

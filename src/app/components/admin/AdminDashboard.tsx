@@ -10,6 +10,7 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [counts, setCounts] = useState({
+    users: 0,
     departments: 0,
     courses: 0,
     contributors: 0,
@@ -21,7 +22,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const fetchCounts = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [depts, courses, contribs, requests, notifs] = await Promise.all([
+      const [users, depts, courses, contribs, requests, notifs] = await Promise.all([
+        getCountFromServer(collection(db, 'users')),
         getCountFromServer(collection(db, 'departments')),
         getCountFromServer(collection(db, 'courses')),
         getCountFromServer(collection(db, 'contributors')),
@@ -29,6 +31,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         getCountFromServer(collection(db, 'notifications')),
       ]);
       setCounts({
+        users: users.data().count,
         departments: depts.data().count,
         courses: courses.data().count,
         contributors: contribs.data().count,
@@ -47,6 +50,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   }, [fetchCounts]);
 
   const stats = [
+    { label: 'Total Users', value: counts.users.toString(), icon: Users, color: '#8B5CF6' },
     { label: 'Total Departments', value: counts.departments.toString(), icon: Building2, color: 'var(--primary)' },
     { label: 'Total Courses', value: counts.courses.toString(), icon: BookOpen, color: '#10B981' },
     { label: 'Active Contributors', value: counts.contributors.toString(), icon: Users, color: '#F59E0B' },
@@ -76,7 +80,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
