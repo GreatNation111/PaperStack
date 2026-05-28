@@ -18,7 +18,7 @@ export function Notifications({ onBack }: NotificationsProps) {
 
   const handleNotifyInterest = async (title: string) => {
     if (!user) return;
-    await recordFeatureInterest(user.uid, title);
+    await recordFeatureInterest(user, title);
   };
 
 

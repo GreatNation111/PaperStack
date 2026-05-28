@@ -11,6 +11,7 @@ export function AdminSettings() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { pricingConfig, loading: pricingLoading } = usePricingConfig();
   const [pricingStats, setPricingStats] = useState<Record<string, number>>({ total: 0 });
+  const [pricingVoters, setPricingVoters] = useState<Record<string, any[]>>({});
   const [localPricingConfig, setLocalPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
 
   // Local state for immediate UI feedback before blur/save
@@ -33,13 +34,19 @@ export function AdminSettings() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'pricingFeedback'), (snap) => {
       const stats: Record<string, number> = { total: snap.size };
+      const voters: Record<string, any[]> = {};
+      
       snap.docs.forEach(doc => {
-        const choice = doc.data().suggestedPrice?.toString();
+        const data = doc.data();
+        const choice = data.suggestedPrice?.toString();
         if (choice) {
           stats[choice] = (stats[choice] || 0) + 1;
+          if (!voters[choice]) voters[choice] = [];
+          if (data.userName) voters[choice].push(data); // only push if denormalized data exists
         }
       });
       setPricingStats(stats);
+      setPricingVoters(voters);
     });
     return () => unsub();
   }, []);
@@ -359,6 +366,34 @@ export function AdminSettings() {
                       <div className="text-center">
                         <span className="text-[11px] font-bold text-secondary opacity-60 uppercase">{count} Total Votes</span>
                       </div>
+                      
+                      {/* Avatar Stack */}
+                      {(pricingVoters[price] && pricingVoters[price].length > 0) && (
+                        <div className="flex justify-center pt-2">
+                          <div className="flex -space-x-3 hover:space-x-1 transition-all duration-300">
+                            {pricingVoters[price].slice(0, 5).map((voter, i) => (
+                              <div
+                                key={voter.userId + i}
+                                className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-primary text-[10px] font-black uppercase shadow-sm relative group cursor-help z-10 hover:z-20 hover:scale-110 transition-transform overflow-hidden"
+                              >
+                                {voter.userAvatar ? (
+                                  <img src={voter.userAvatar} alt={voter.userName} className="w-full h-full object-cover" />
+                                ) : (
+                                  voter.userName?.charAt(0) || 'U'
+                                )}
+                                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                  {voter.userName}
+                                </div>
+                              </div>
+                            ))}
+                            {pricingVoters[price].length > 5 && (
+                              <div className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-secondary text-[10px] font-black shadow-sm z-0">
+                                +{pricingVoters[price].length - 5}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

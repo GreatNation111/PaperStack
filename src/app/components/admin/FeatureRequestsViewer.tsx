@@ -7,6 +7,9 @@ import { db } from '@/lib/firebase';
 interface FeatureRequest {
     id: string;
     userId: string;
+    userName?: string;
+    userEmail?: string;
+    userAvatar?: string;
     feature: string;
     timestamp: any;
 }
@@ -15,6 +18,7 @@ interface GroupedRequest {
     featureKey: string;
     count: number;
     lastRequested: any;
+    voters: FeatureRequest[];
 }
 
 export function FeatureRequestsViewer() {
@@ -44,10 +48,14 @@ export function FeatureRequestsViewer() {
             acc[key] = {
                 featureKey: key,
                 count: 0,
-                lastRequested: curr.timestamp
+                lastRequested: curr.timestamp,
+                voters: []
             };
         }
         acc[key].count += 1;
+        if (curr.userName) {
+            acc[key].voters.push(curr);
+        }
         if (curr.timestamp > acc[key].lastRequested) {
             acc[key].lastRequested = curr.timestamp;
         }
@@ -108,6 +116,7 @@ export function FeatureRequestsViewer() {
                             <tr className="border-b border-[#2A2A2F]">
                                 <th className="px-6 py-4 text-left text-xs font-medium text-[#AAA] uppercase tracking-wider">Feature / Request</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-[#AAA] uppercase tracking-wider">Interest Count</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-[#AAA] uppercase tracking-wider">Voters</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-[#AAA] uppercase tracking-wider">Last Requested</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-[#AAA] uppercase tracking-wider">Status</th>
                             </tr>
@@ -148,6 +157,34 @@ export function FeatureRequestsViewer() {
                                                 </div>
                                                 <span className="text-sm font-medium text-[#E5E5E5]">{item.count}</span>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {item.voters.length > 0 ? (
+                                                <div className="flex -space-x-2 overflow-hidden py-1">
+                                                    {item.voters.slice(0, 5).map((voter, i) => (
+                                                        <div
+                                                            key={voter.userId + i}
+                                                            className="w-7 h-7 rounded-full border-2 border-[#1A1A1F] bg-[#EC4899]/20 flex items-center justify-center text-[#EC4899] text-[9px] font-black uppercase shadow-sm relative group cursor-help z-10 hover:z-20 hover:scale-110 transition-transform overflow-hidden"
+                                                        >
+                                                            {voter.userAvatar ? (
+                                                                <img src={voter.userAvatar} alt={voter.userName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                voter.userName?.charAt(0) || 'U'
+                                                            )}
+                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#E5E5E5] text-[#1A1A1F] text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                                                {voter.userName}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {item.voters.length > 5 && (
+                                                        <div className="w-7 h-7 rounded-full border-2 border-[#1A1A1F] bg-[#333] flex items-center justify-center text-[#AAA] text-[9px] font-black shadow-sm z-0">
+                                                            +{item.voters.length - 5}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-[#666]">Anonymous</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-[#AAA]">{formatDate(item.lastRequested)}</td>
                                         <td className="px-6 py-4">

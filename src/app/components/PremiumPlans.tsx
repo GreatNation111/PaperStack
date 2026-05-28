@@ -51,7 +51,7 @@ export function PremiumPlans() {
         if (!user || !selectedPrice || submitted) return;
         setIsSubmitting(true);
         try {
-            await submitPricingFeedback(user.uid, selectedPrice);
+            await submitPricingFeedback(user, selectedPrice);
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting feedback:', error);

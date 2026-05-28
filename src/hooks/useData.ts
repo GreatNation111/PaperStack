@@ -432,10 +432,13 @@ export async function updateUserProfile(userId: string, data: any) {
     await setDoc(userRef, data, { merge: true });
 }
 
-export async function recordFeatureInterest(userId: string, featureName: string) {
-    if (!userId) return;
+export async function recordFeatureInterest(user: any, featureName: string) {
+    if (!user?.uid) return;
     await addDoc(collection(db, 'feature_interest'), {
-        userId,
+        userId: user.uid,
+        userName: user.displayName || user.name || 'Anonymous',
+        userEmail: user.email || '',
+        userAvatar: user.photoURL || user.avatar || '',
         feature: featureName,
         timestamp: new Date()
     });
@@ -1201,10 +1204,13 @@ export function useRepeatedQuestions(departmentId: string | undefined) {
     return { data, loading };
 }
 
-export async function submitPricingFeedback(userId: string, suggestedPrice: number) {
-    if (!userId) return;
-    await setDoc(doc(db, 'pricingFeedback', userId), {
-        userId,
+export async function submitPricingFeedback(user: any, suggestedPrice: number) {
+    if (!user?.uid) return;
+    await setDoc(doc(db, 'pricingFeedback', user.uid), {
+        userId: user.uid,
+        userName: user.displayName || user.name || 'Anonymous',
+        userEmail: user.email || '',
+        userAvatar: user.photoURL || user.avatar || '',
         suggestedPrice,
         createdAt: new Date()
     });
