@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Shield, UserCheck, MoreVertical, ChevronDown, X, Loader2, RefreshCw, Copy, Check } from 'lucide-react';
 import { collection, doc, query, updateDoc, setDoc, getDocs, orderBy, limit, startAfter, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -14,6 +14,8 @@ interface User {
   role?: 'student' | 'contributor' | 'admin';
   createdAt?: any;
   avatar?: string;
+  isPremium?: boolean;
+  downloadsCount?: number;
 }
 
 const PAGE_SIZE = 50;
@@ -39,6 +41,7 @@ export function UsersManagement() {
     contributionCount: 0
   });
   const [isPromoting, setIsPromoting] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Fetch Users with pagination
   const fetchUsers = useCallback(async (isLoadMore = false) => {
@@ -275,24 +278,48 @@ export function UsersManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Signups Chart */}
-        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 lg:col-span-2">
-          <h3 className="text-sm font-black text-[#E5E5E5] uppercase tracking-widest mb-6">Signups (Last 14 Days)</h3>
-          <div className="flex items-end gap-2 h-32 w-full">
-            {analytics.chartData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
-                <div 
-                  className="w-full bg-[#4F46E5]/20 hover:bg-[#4F46E5] rounded-t-sm transition-all duration-300 relative"
-                  style={{ height: `${Math.max((d.count / analytics.maxChartCount) * 100, 2)}%` }}
-                >
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#333] text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+        <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-2xl p-5 lg:col-span-2 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#4F46E5]/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-[#4F46E5]/10 transition-colors duration-700 pointer-events-none" />
+          <h3 className="text-xs font-black text-[#666] uppercase tracking-[0.3em] mb-8 relative z-10">Signups (Last 14 Days)</h3>
+          
+          <div className="flex items-end justify-between gap-1 sm:gap-2 h-40 w-full mt-4 relative z-10">
+            {analytics.chartData.map((d, i) => {
+              const heightPct = Math.max((d.count / analytics.maxChartCount) * 100, 4);
+              const isZero = d.count === 0;
+
+              return (
+                <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                  {/* Tooltip */}
+                  <div className="absolute -top-10 bg-[#E5E5E5] text-[#1A1A1F] text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-y-1 pointer-events-none whitespace-nowrap shadow-xl z-20">
                     {d.count} signups
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#E5E5E5]" />
+                  </div>
+                  
+                  {/* Bar Wrapper */}
+                  <div className="w-full h-full flex items-end justify-center pb-6">
+                    <div 
+                      className={`w-full max-w-[40px] rounded-t-xl transition-all duration-500 relative ${
+                        isZero 
+                          ? 'bg-[#333] group-hover:bg-[#444]' 
+                          : 'bg-gradient-to-t from-[#4F46E5]/40 to-[#4F46E5] group-hover:from-[#4F46E5]/60 group-hover:to-[#4F46E5] shadow-lg shadow-[#4F46E5]/20 group-hover:shadow-[#4F46E5]/40'
+                      }`}
+                      style={{ height: `${heightPct}%` }}
+                    >
+                      {!isZero && (
+                        <div className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-xl" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Date Label */}
+                  <div className="absolute bottom-0 text-[9px] text-[#666] font-bold rotate-[-45deg] origin-left translate-y-4 translate-x-2 whitespace-nowrap group-hover:text-[#AAA] transition-colors">
+                    {d.label}
                   </div>
                 </div>
-                <div className="text-[9px] text-[#666] font-bold rotate-[-45deg] origin-top-left translate-y-2 translate-x-1 whitespace-nowrap">{d.label}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <div className="h-6"></div>
+          <div className="h-10"></div>
         </div>
 
         {/* Breakdowns */}
@@ -503,7 +530,10 @@ export function UsersManagement() {
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 text-right shrink-0">
-                  <div className="text-[9px] text-[#555] font-bold uppercase tracking-widest">{formatRelativeTime(user.createdAt)}</div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-[#888] font-bold uppercase tracking-widest">{formatDate(user.createdAt)}</span>
+                    <span className="text-[9px] text-[#555] font-bold uppercase tracking-widest">{formatRelativeTime(user.createdAt)}</span>
+                  </div>
                   <div className="text-[10px] text-primary/80 font-bold max-w-[100px] truncate">{(user.department || user.departmentId || 'GENERAL').toUpperCase()}</div>
                 </div>
               </div>
@@ -588,8 +618,28 @@ export function UsersManagement() {
                   <div className="w-20 h-20 rounded-full bg-[#4F46E5]/10 flex items-center justify-center text-[#4F46E5] mb-4 text-3xl font-black shadow-inner">
                     {selectedUser.name?.charAt(0) || 'U'}
                   </div>
-                  <div className="text-xl font-black text-[#E5E5E5] leading-tight mb-1">{selectedUser.name || 'Unknown User'}</div>
-                  <div className="text-sm text-[#888] font-medium mb-2">{selectedUser.email}</div>
+                  <div className="text-xl font-black text-[#E5E5E5] leading-tight mb-1 flex items-center justify-center gap-2">
+                    {selectedUser.name || 'Unknown User'}
+                    {selectedUser.isPremium && (
+                      <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg shadow-orange-500/20">
+                        Pro
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <span className="text-sm text-[#888] font-medium">{selectedUser.email}</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedUser.email);
+                        setCopiedEmail(true);
+                        setTimeout(() => setCopiedEmail(false), 2000);
+                      }}
+                      className="text-[#666] hover:text-[#E5E5E5] transition-colors p-1 bg-[#222] rounded-md"
+                      title="Copy email"
+                    >
+                      {copiedEmail ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                   <div className="text-xs text-[#666] bg-[#222] px-3 py-1 rounded-full border border-[#333]">Joined {formatRelativeTime(selectedUser.createdAt)}</div>
                 </div>
 
@@ -605,6 +655,10 @@ export function UsersManagement() {
                   <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
                     <span className="text-[#666] font-semibold uppercase tracking-tighter">Level/Year</span>
                     <span className="text-[#E5E5E5] font-bold">{selectedUser.level || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                    <span className="text-[#666] font-semibold uppercase tracking-tighter">Total Downloads</span>
+                    <span className="text-[#E5E5E5] font-bold">{selectedUser.downloadsCount || 0}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[#666] font-semibold uppercase tracking-tighter">Registered On</span>
