@@ -1,6 +1,9 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
+// Firebase client configuration is intentionally included here.
+// These are public identifiers, not secrets. App security is enforced
+// by Firebase Security Rules, not by keeping client config private.
 const firebaseConfig = {
     apiKey: "AIzaSyAW02_7RDWZEZl7osaIW9mxEVGDSJxpK4k",
     authDomain: "paperstack-96201.firebaseapp.com",
