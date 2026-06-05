@@ -3,9 +3,12 @@
 .env.local
 .env.*.local
 .env.production.local
+*.local
 
 # Dependencies
 node_modules
+
+# Build outputs
 dist
 build
 
@@ -15,7 +18,10 @@ build
 *.swp
 *.swo
 *~
+
+# OS files
 .DS_Store
+Thumbs.db
 
 # Logs
 logs
@@ -25,13 +31,15 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+firebase-debug.log
 
-# Build outputs
-/dist
-/build
+# Firebase
+serviceAccountKey.json
+.firebase
 
 # Testing
 coverage
 
 # Misc
 .turbo
+.qodo

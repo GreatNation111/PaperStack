@@ -1,7 +1,25 @@
 {
-  "name": "@figma/my-make-file",
-  "private": true,
-  "version": "0.0.1",
+  "name": "paperstack",
+  "private": false,
+  "version": "1.0.0",
+  "description": "An open-source academic resource platform for organizing, searching, and accessing past questions and course materials.",
+  "author": "Babalola Samuel Obabiolorunkosi",
+  "license": "MIT",
+  "keywords": [
+    "education",
+    "past-questions",
+    "academic",
+    "pwa",
+    "react",
+    "firebase",
+    "university",
+    "open-source"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/paperstack.git"
+  },
+  "homepage": "https://paperstack.com.ng",
   "type": "module",
   "scripts": {
     "build": "vite build",
