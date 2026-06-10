@@ -72,7 +72,7 @@ function OfflineBanner({ isOffline, showBackOnline, isAdminRoute }: { isOffline:
         ref={bannerRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`max-w-md mx-auto rounded-2xl border px-4 py-3 shadow-lg pointer-events-auto transition-all duration-300 ${
+        className={`w-full max-w-xl mx-auto rounded-2xl border px-4 py-3 shadow-lg pointer-events-auto transition-all duration-300 ${
           isOffline
             ? 'bg-card border-border text-foreground'
             : 'bg-green-600 text-white border-green-500'
@@ -251,7 +251,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
       <SEO />
-      <div className={`${isFullWidthRoute ? 'w-full' : 'max-w-md mx-auto'} bg-background min-h-screen relative`}>
+      <div className={`${isFullWidthRoute ? 'w-full' : 'w-full max-w-xl mx-auto'} bg-background min-h-screen relative`}>
         <Suspense fallback={<GlobalLoader />}>
           <Routes location={location}>
             {/* Admin Routes - NOT Gated */}

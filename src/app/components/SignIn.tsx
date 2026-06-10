@@ -85,7 +85,7 @@ export function SignIn({ onBack, onSignUp, onComplete }: SignInProps) {
       </div>
 
       <div className="flex-1 bg-white rounded-t-[32px] overflow-y-auto flex flex-col px-6 pt-6 pb-6">
-        <form onSubmit={handleSignIn} className="space-y-4 flex-1 flex flex-col max-w-md mx-auto w-full">
+        <form onSubmit={handleSignIn} className="space-y-4 flex-1 flex flex-col w-full max-w-xl mx-auto">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground ml-1">Email Address</label>
             <div className="relative">

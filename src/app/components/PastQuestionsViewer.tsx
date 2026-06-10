@@ -436,7 +436,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="text-foreground font-medium truncate max-w-[200px] md:max-w-md">
+          <div className="text-foreground font-medium truncate max-w-[200px] md:max-w-xl">
             {paper ? `${paper.code} - ${paper.year} (${paper.semester})` : offlineTitle || 'Saved Paper'}
           </div>
         </div>
@@ -542,7 +542,7 @@ export function PastQuestionsViewer(_props: { onBack: () => void; courseCode?: s
       {/* Premium Upsell Modal */}
       {showUpsellModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-card w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 text-center relative">
               <button
                 onClick={() => setShowUpsellModal(false)}
