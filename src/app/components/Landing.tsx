@@ -92,8 +92,17 @@ export function Landing() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="text-sm text-[#0A2540]/50 mt-4 font-medium"
           >
-            Opens in your browser — no download, no app store, no storage space. <a href="#install" className="underline hover:text-[#4F46E5] transition-colors">Want it on your home screen?</a>
+            Opens in your browser — no download, no app store, no storage space.
           </motion.p>
+          <motion.a
+            href="#install"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-full bg-[#4F46E5]/10 text-[#4F46E5] text-sm font-semibold hover:bg-[#4F46E5]/20 transition-colors"
+          >
+            Want it on your home screen? ↓
+          </motion.a>
         </div>
       </section>
 
