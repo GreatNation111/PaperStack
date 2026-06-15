@@ -188,7 +188,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
                     className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
                   >
                     <option value="">Select Level</option>
-                    {['100L', '200L', '300L', '400L', '500L'].map(l => (
+                    {['100L', '200L', '300L', '400L'].map(l => (
                       <option key={l} value={l}>{l}</option>
                     ))}
                   </select>

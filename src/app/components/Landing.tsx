@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ChevronRight, Download, Share, PlusSquare, LayoutDashboard, Search, Shield } from 'lucide-react';
+import { ChevronRight, Share, PlusSquare, LayoutDashboard, Search, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -52,7 +52,7 @@ export function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4F46E5] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4F46E5]"></span>
             </span>
-            Exam Season? We Got You.
+            Used by students like you — 100% free
           </motion.div>
           
           <motion.h1 
@@ -61,7 +61,7 @@ export function Landing() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-5xl lg:text-7xl font-black text-[#0A2540] tracking-tight leading-[1.1] mb-6 drop-shadow-sm"
           >
-            Nail your exams with <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4F46E5] to-[#F59E0B]">PaperStack</span>
+            Your next exam is closer than you think. <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4F46E5] to-[#F59E0B]">Are you ready?</span>
           </motion.h1>
           
           <motion.p 
@@ -70,7 +70,7 @@ export function Landing() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg lg:text-xl text-[#0A2540]/80 max-w-2xl leading-relaxed mb-10 font-medium bg-white/40 rounded-2xl p-4 backdrop-blur-sm"
           >
-            No more begging seniors or searching WhatsApp groups. Every past question your department has — organized, verified, and ready to download.
+            Every past question your department has — organized by course, year, and semester. No more begging seniors, no blurry photocopies, no "I'll send it later." Just open and read.
           </motion.p>
           
           <motion.div 
@@ -83,12 +83,17 @@ export function Landing() {
               onClick={() => navigate('/welcome')}
               className="w-full sm:w-auto px-8 py-4 bg-[#0A2540] text-white rounded-2xl font-bold text-lg hover:bg-[#4F46E5] transition-all shadow-xl hover:shadow-[#4F46E5]/20 active:scale-95 flex items-center justify-center gap-2"
             >
-              Start Exploring Now
+              Start Reading Past Questions
             </button>
-            <a href="#install" className="w-full sm:w-auto px-8 py-4 bg-white/70 backdrop-blur-md border border-white/50 text-[#0A2540] rounded-2xl font-bold text-lg hover:bg-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-              <Download className="w-5 h-5" /> Install App
-            </a>
           </motion.div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-sm text-[#0A2540]/50 mt-4 font-medium"
+          >
+            Opens in your browser — no download, no app store, no storage space. <a href="#install" className="underline hover:text-[#4F46E5] transition-colors">Want it on your home screen?</a>
+          </motion.p>
         </div>
       </section>
 
@@ -99,9 +104,9 @@ export function Landing() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#F59E0B] rounded-full mix-blend-multiply filter blur-[128px] opacity-20 translate-x-[50%] translate-y-[50%] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto relative z-10 text-center mb-16">
-          <h2 className="text-3xl lg:text-5xl font-bold mb-6">What is PaperStack?</h2>
+          <h2 className="text-3xl lg:text-5xl font-bold mb-6">You know the struggle.</h2>
           <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
-            PaperStack puts every past question your department has ever had right in your pocket. No WhatsApp hunting, no photocopying, no wahala — just open, find your course, and start studying.
+            Exam is next week and you're still hunting for past questions on WhatsApp. Someone sends a blurry photo. Half the pages are missing. Sound familiar? PaperStack fixes that — every past question, neatly organized, ready when you are.
           </p>
         </div>
 
@@ -109,18 +114,18 @@ export function Landing() {
           {[
             {
               icon: Search,
-              title: "Discover Easily",
-              desc: "Find any course in seconds. Filter by semester, level, and department — no scrolling forever."
+              title: "Find it in seconds",
+              desc: "Type your course code. Pick your level. That's it — no scrolling through 500 files in a WhatsApp group."
             },
             {
               icon: Shield,
-              title: "Verified Content",
-              desc: "Every question is checked and verified. No incomplete papers or wrong answers floating around."
+              title: "Complete papers, not fragments",
+              desc: "Full question papers — not a photo of page 2 with someone's thumb covering the corner."
             },
             {
               icon: LayoutDashboard,
-              title: "Premium Insights",
-              desc: "See which questions keep coming back year after year. Study what actually matters."
+              title: "See what keeps repeating",
+              desc: "Some lecturers recycle questions. We track which ones come back every year so you study what actually matters."
             }
           ].map((feature, i) => (
             <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-colors">
@@ -138,9 +143,9 @@ export function Landing() {
       <section id="install" className="py-24 px-6 bg-[#F8FAFC]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-5xl font-bold text-[#0A2540] mb-6">Install PaperStack App</h2>
+            <h2 className="text-3xl lg:text-5xl font-bold text-[#0A2540] mb-6">Want faster access?</h2>
             <p className="text-lg text-[#64748B] max-w-2xl mx-auto">
-              You don't need the App Store. Install PaperStack directly to your home screen for immediate offline access and native push notifications.
+              You don't <em>need</em> to do this — PaperStack already works in your browser. But if you want it to feel like a real app on your phone (with its own icon and everything), here's how:
             </p>
           </div>
 
@@ -173,7 +178,7 @@ export function Landing() {
                     <div className="w-10 h-10 rounded-full bg-[#0A2540] text-white font-bold flex items-center justify-center flex-shrink-0 mt-1">1</div>
                     <div>
                       <h4 className="text-xl font-bold text-[#0A2540] mb-2">Open Safari</h4>
-                      <p className="text-[#64748B] leading-relaxed">Open <span className="text-[#4F46E5] font-semibold">paperstack.edu.ng</span> in your Safari browser.</p>
+                      <p className="text-[#64748B] leading-relaxed">Open <span className="text-[#4F46E5] font-semibold">papers-stack.vercel.app</span> in your Safari browser.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -208,7 +213,7 @@ export function Landing() {
                     <div className="w-10 h-10 rounded-full bg-[#0A2540] text-white font-bold flex items-center justify-center flex-shrink-0 mt-1">1</div>
                     <div>
                       <h4 className="text-xl font-bold text-[#0A2540] mb-2">Open Chrome</h4>
-                      <p className="text-[#64748B] leading-relaxed">Open <span className="text-[#4F46E5] font-semibold">paperstack.edu.ng</span> in Chrome or Edge.</p>
+                      <p className="text-[#64748B] leading-relaxed">Open <span className="text-[#4F46E5] font-semibold">papers-stack.vercel.app</span> in Chrome or Edge.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
