@@ -40,6 +40,7 @@ import { useNavigate } from 'react-router-dom';
 import { differenceInDays, parseISO, isAfter } from 'date-fns';
 import { requestNotificationPermissionAndSaveToken } from '@/services/messaging';
 import { getDepartmentArtwork } from '@/utils/departmentArtwork';
+import { courseMatchesSearch } from '@/utils/search';
 
 interface HomeProps {
   userName: string;
@@ -141,10 +142,7 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
     return { Icon, gradient };
   };
 
-  const filteredCourses = recentCourses.filter(course =>
-    (course.code?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (course.title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-  );
+  const filteredCourses = recentCourses.filter(course => courseMatchesSearch(course, searchQuery));
 
   // Logic to find the next imminent exam
   const nextExam = timetable?.exams

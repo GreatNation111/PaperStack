@@ -25,6 +25,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <motion.button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
+              data-tour={`${tab.id}-tab`}
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 ${
                 isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               }`}

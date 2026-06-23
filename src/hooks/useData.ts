@@ -97,6 +97,7 @@ export interface Notification {
 
 let departmentsCache: Department[] | null = null;
 const coursesCache: Record<string, Course[]> = {};
+let allCoursesCache: Course[] | null = null;
 let contributorsCache: Contributor[] | null = null;
 const bookmarkedCoursesCache: Record<string, Course[]> = {};
 const recentCoursesCache: Record<string, Course[]> = {};
@@ -104,6 +105,7 @@ const downloadedPapersCache: Record<string, Paper[]> = {};
 
 export function clearCourseDataCaches() {
     Object.keys(coursesCache).forEach(key => delete coursesCache[key]);
+    allCoursesCache = null;
     Object.keys(bookmarkedCoursesCache).forEach(key => delete bookmarkedCoursesCache[key]);
     Object.keys(recentCoursesCache).forEach(key => delete recentCoursesCache[key]);
     Object.keys(downloadedPapersCache).forEach(key => delete downloadedPapersCache[key]);
@@ -114,6 +116,43 @@ function normalizeDepartmentIds(data: { departmentId?: string; departmentIds?: u
         return data.departmentIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
     }
     return data.departmentId ? [data.departmentId] : [];
+}
+
+function mapCourseDoc(d: any): Course {
+    const data = d.data() as any;
+    const departmentIds = normalizeDepartmentIds(data);
+    return {
+        id: d.id,
+        ...data,
+        departmentId: data.departmentId || departmentIds[0] || '',
+        departmentIds,
+    } as Course;
+}
+
+async function mergeCoursePageCounts(courses: Course[], departmentId?: string) {
+    const papersQuery = departmentId
+        ? query(
+            collection(db, 'papers'),
+            or(
+                where('departmentId', '==', departmentId),
+                where('departmentIds', 'array-contains', departmentId)
+            )
+        )
+        : query(collection(db, 'papers'));
+
+    const papersSnapshot = await getDocs(papersQuery);
+    const pageCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
+        const data = paperDoc.data() as any;
+        const courseId = data.courseId;
+        const pageCount = Number(data.pageCount || 0);
+        if (courseId && pageCount > 0) counts[courseId] = Math.max(counts[courseId] || 0, pageCount);
+        return counts;
+    }, {});
+
+    return courses.map(course => ({
+        ...course,
+        papers: pageCountsByCourse[course.id] ?? course.papers ?? 0,
+    }));
 }
 
 export function useDepartments() {
@@ -184,25 +223,8 @@ export function useCourses(departmentId: string | undefined) {
                 );
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const baseCourses: Course[] = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-                const papersSnapshot = await getDocs(query(
-                    collection(db, 'papers'),
-                    or(
-                        where('departmentId', '==', departmentId),
-                        where('departmentIds', 'array-contains', departmentId)
-                    )
-                ));
-                const pageCountsByCourse = papersSnapshot.docs.reduce<Record<string, number>>((counts, paperDoc) => {
-                    const data = paperDoc.data() as any;
-                    const courseId = data.courseId;
-                    const pageCount = Number(data.pageCount || 0);
-                    if (courseId && pageCount > 0) counts[courseId] = Math.max(counts[courseId] || 0, pageCount);
-                    return counts;
-                }, {});
-                const cs = baseCourses.map(course => ({
-                    ...course,
-                    papers: pageCountsByCourse[course.id] ?? course.papers ?? 0,
-                }));
+                const baseCourses = snapshot.docs.map(mapCourseDoc);
+                const cs = await mergeCoursePageCounts(baseCourses, departmentId);
                 coursesCache[departmentId] = cs;
                 setCourses(cs);
             } catch (err) {
@@ -215,6 +237,41 @@ export function useCourses(departmentId: string | undefined) {
         fetchCourses();
         return () => { isMounted = false; };
     }, [departmentId]);
+    return { courses, loading };
+}
+
+export function useAllCourses() {
+    const [courses, setCourses] = useState<Course[]>(allCoursesCache || []);
+    const [loading, setLoading] = useState(!allCoursesCache);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        if (allCoursesCache) {
+            setCourses(allCoursesCache);
+            setLoading(false);
+        }
+
+        const fetchCourses = async () => {
+            setLoading(!allCoursesCache);
+            try {
+                const snapshot = await getDocs(query(collection(db, 'courses')));
+                if (!isMounted) return;
+                const baseCourses = snapshot.docs.map(mapCourseDoc);
+                const cs = await mergeCoursePageCounts(baseCourses);
+                allCoursesCache = cs;
+                setCourses(cs);
+            } catch (err) {
+                console.error('Error fetching all courses:', err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchCourses();
+        return () => { isMounted = false; };
+    }, []);
+
     return { courses, loading };
 }
 

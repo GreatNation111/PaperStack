@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Search, Filter, FileText, ChevronDown, ChevronRight, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { useDepartments, useCourses, useContributors, useUserProfile, useGlobalConfig } from '@/hooks/useData';
+import { useAllCourses, useDepartments, useCourses, useContributors, useUserProfile, useGlobalConfig } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 import { getDepartmentArtwork } from '@/utils/departmentArtwork';
+import { courseMatchesSearch } from '@/utils/search';
 
 interface ExploreProps {
   selectedDepartment?: string;
@@ -25,6 +26,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
 
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses, loading: loadingCourses } = useCourses(departmentId);
+  const { courses: allCourses, loading: loadingAllCourses } = useAllCourses();
   const { contributors, loading: loadingContribs } = useContributors();
 
   useEffect(() => {
@@ -37,11 +39,14 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
   const currentDepartment = departments.find(d => d.id === departmentId);
   const currentArtwork = currentDepartment ? getDepartmentArtwork(currentDepartment) : null;
   const userLevel = profile?.level || '100L';
+  const hasSearchQuery = searchQuery.trim().length > 0;
+  const searchCourses = hasSearchQuery ? allCourses : courses;
+  const isLoadingCourseList = hasSearchQuery ? loadingAllCourses : loadingCourses;
+  const needsAcademicProfile = !profile?.departmentId || profile.departmentId === 'General' || !profile?.level;
 
-  const coursesForYou = courses.filter(course => {
-    if (searchQuery) {
-      return course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.title.toLowerCase().includes(searchQuery.toLowerCase());
+  const coursesForYou = searchCourses.filter(course => {
+    if (hasSearchQuery) {
+      return courseMatchesSearch(course, searchQuery);
     }
 
     // Must match the effective level (either manually selected or user's level)
@@ -66,6 +71,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
             placeholder="Search course code, lecturer, or topic"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            data-tour="explore-search"
             className="w-full h-14 pl-12 pr-14 bg-card border border-border rounded-xl text-foreground placeholder:text-secondary outline-none focus:border-primary transition-all"
           />
           <button
@@ -105,7 +111,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
           )}
         </AnimatePresence>
 
-        {!profile?.departmentId && (
+        {needsAcademicProfile && (
           <div className="mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3">
             <div className="text-amber-600 text-xs font-medium">Please set your Department and Level in Profile.</div>
           </div>
@@ -228,16 +234,17 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
 
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">
-            {searchQuery ? 'Search Results' : 'Courses for you'}
-            {!searchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel}) • {config.currentSemester === 'First' ? '1st' : '2nd'} Sem</span>}
+            {hasSearchQuery ? 'Search Results' : 'Courses for you'}
+            {!hasSearchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel}) • {config.currentSemester === 'First' ? '1st' : '2nd'} Sem</span>}
+            {hasSearchQuery && <span className="text-primary ml-2 text-sm font-normal">all departments</span>}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
-            {loadingCourses ? (
+            {isLoadingCourseList ? (
               [1, 2].map((i) => <div key={i} className="flex-shrink-0 w-72 h-48 bg-muted/50 animate-pulse rounded-2xl" />)
             ) : coursesForYou.length === 0 ? (
               <div className="w-full flex flex-col items-center justify-center py-8 text-center bg-card/50 rounded-2xl border border-dashed border-border">
                 <FileText className="w-8 h-8 text-secondary/30 mb-2" />
-                <div className="text-secondary text-sm">No courses found matching criteria.</div>
+                <div className="text-secondary text-sm">{hasSearchQuery ? 'No courses match that search.' : 'No courses found matching criteria.'}</div>
               </div>
             ) : (
               coursesForYou.map((course, index) => (
