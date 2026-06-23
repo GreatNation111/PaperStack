@@ -248,6 +248,7 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLandingRoute = location.pathname === '/';
   const isFullWidthRoute = isAdminRoute || isLandingRoute;
+  const needsAcademicProfile = !userProfile?.departmentId || userProfile.departmentId === 'General' || !userProfile?.level;
 
   return (
     <div className="min-h-screen bg-background font-[Inter,system-ui,sans-serif]">
@@ -308,7 +309,7 @@ function AppContent() {
           <BottomNav activeTab={getActiveTab()} onTabChange={handleTabChange} />
         )}
 
-        <OnboardingTour enabled={!!user && showBottomNav && !isAdminRoute && !authLoading} />
+        <OnboardingTour enabled={!!user && showBottomNav && !isAdminRoute && !authLoading && needsAcademicProfile} />
 
         <OfflineBanner isOffline={isOffline} showBackOnline={showBackOnline} isAdminRoute={isAdminRoute} />
       </div>

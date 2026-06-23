@@ -16,26 +16,26 @@ const steps: TourStep[] = [
   {
     target: 'profile-tab',
     title: 'Start with Profile',
-    body: 'Set your department and level here so PaperStack can show courses, timetables, and repeated questions that actually match you.',
+    body: 'Set your department and level so PaperStack can shape courses, timetables, and study tools around your actual class.',
     actionLabel: 'Open Profile',
     route: '/profile',
   },
   {
     target: 'explore-tab',
-    title: 'Find Past Questions',
-    body: 'Explore is where you search for courses and browse by department. Searches now understand both “ITE 403” and “ite403”.',
+    title: 'Find what you need',
+    body: 'Use Explore to browse departments, open past questions, and move from course discovery to reading without digging through menus.',
     actionLabel: 'Open Explore',
     route: '/explore',
   },
   {
     target: 'explore-search',
-    title: 'Search Naturally',
-    body: 'Type a course code with or without spaces. The search checks all departments while you type, so the right course is not hidden by your current filter.',
+    title: 'Search with less friction',
+    body: 'Search by course code, title, lecturer, or topic. Results update across the catalog as you type, following the words students already have in mind.',
   },
   {
     target: 'library-tab',
-    title: 'Keep Papers Offline',
-    body: 'Saved papers live in Library, so you can still study when data is slow or unavailable.',
+    title: 'Keep papers offline',
+    body: 'Saved papers live in Library, so study material remains available when data is slow or unavailable.',
   },
 ];
 
@@ -71,6 +71,13 @@ export function OnboardingTour({ enabled }: { enabled: boolean }) {
 
     const id = window.setTimeout(() => setIsVisible(true), 700);
     return () => window.clearTimeout(id);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsVisible(false);
+      return;
+    }
   }, [enabled]);
 
   useEffect(() => {
@@ -130,8 +137,19 @@ export function OnboardingTour({ enabled }: { enabled: boolean }) {
     setStepIndex(index => Math.max(0, index - 1));
   };
 
+  const panelHeight = 230;
+  const gap = 28;
+  const hasRoomBelow = paddedRect
+    ? paddedRect.top + paddedRect.height + panelHeight + gap < window.innerHeight
+    : true;
   const panelTop = paddedRect
-    ? Math.max(16, Math.min(window.innerHeight - 230, paddedRect.top + paddedRect.height + 22))
+    ? Math.max(
+        16,
+        Math.min(
+          window.innerHeight - panelHeight - 16,
+          hasRoomBelow ? paddedRect.top + paddedRect.height + gap : paddedRect.top - panelHeight - gap
+        )
+      )
     : Math.round(window.innerHeight * 0.28);
   const panelLeft = paddedRect
     ? Math.max(16, Math.min(Math.max(16, window.innerWidth - 344), paddedRect.left + paddedRect.width / 2 - 160))
@@ -141,25 +159,26 @@ export function OnboardingTour({ enabled }: { enabled: boolean }) {
     <div className="fixed inset-0 z-[90] pointer-events-auto">
       {paddedRect ? (
         <>
-          <div className="absolute left-0 right-0 bg-black/70" style={{ top: 0, height: paddedRect.top }} />
-          <div className="absolute left-0 bg-black/70" style={{ top: paddedRect.top, width: paddedRect.left, height: paddedRect.height }} />
-          <div className="absolute right-0 bg-black/70" style={{ top: paddedRect.top, left: paddedRect.left + paddedRect.width, height: paddedRect.height }} />
-          <div className="absolute left-0 right-0 bottom-0 bg-black/70" style={{ top: paddedRect.top + paddedRect.height }} />
+          <div className="absolute left-0 right-0 bg-black/65" style={{ top: 0, height: paddedRect.top }} />
+          <div className="absolute left-0 bg-black/65" style={{ top: paddedRect.top, width: paddedRect.left, height: paddedRect.height }} />
+          <div className="absolute right-0 bg-black/65" style={{ top: paddedRect.top, left: paddedRect.left + paddedRect.width, height: paddedRect.height }} />
+          <div className="absolute left-0 right-0 bottom-0 bg-black/65" style={{ top: paddedRect.top + paddedRect.height }} />
           <div
             className="absolute rounded-2xl border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.04),0_0_32px_rgba(79,70,229,0.55)]"
             style={paddedRect}
           />
         </>
       ) : (
-        <div className="absolute inset-0 bg-black/70" />
+        <div className="absolute inset-0 bg-black/65" />
       )}
 
       {paddedRect && (
         <svg
           className="absolute text-primary pointer-events-none"
           style={{
-            top: paddedRect.top + paddedRect.height + 2,
+            top: hasRoomBelow ? paddedRect.top + paddedRect.height + 2 : paddedRect.top - 54,
             left: Math.max(20, paddedRect.left + paddedRect.width / 2 - 28),
+            transform: hasRoomBelow ? undefined : 'rotate(180deg)',
           }}
           width="72"
           height="54"
@@ -172,7 +191,7 @@ export function OnboardingTour({ enabled }: { enabled: boolean }) {
       )}
 
       <div
-        className="absolute w-[calc(100vw-32px)] max-w-xs rounded-2xl border border-border bg-card p-4 shadow-2xl text-foreground"
+        className="absolute w-[calc(100vw-32px)] max-w-xs rounded-2xl border border-white/20 bg-card/80 p-4 text-foreground shadow-2xl backdrop-blur-xl"
         style={{ top: panelTop, left: panelLeft }}
       >
         <div className="flex items-start justify-between gap-3 mb-3">
