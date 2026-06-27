@@ -11,6 +11,8 @@ export async function seedDatabase() {
         { id: 'industrial_tech', name: 'Industrial Tech Education', code: 'IND TECH', icon: 'wrench' },
         { id: 'business_ed', name: 'Business Education', code: 'BUS ED', icon: 'briefcase' },
         { id: 'chemistry', name: 'Chemistry', code: 'CHM', icon: 'flask' },
+        { id: 'biology_ed', name: 'Biology Education', code: 'BIO ED', icon: 'leaf' },
+        { id: 'art_ed', name: 'Art Education', code: 'ART ED', icon: 'palette' },
     ];
 
     departments.forEach(dept => {

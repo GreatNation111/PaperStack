@@ -28,6 +28,14 @@ const ARTWORK_BY_KEY: Record<string, DepartmentArtwork> = {
         iconUrl: `${ART_BASE}/chemistry-icon.svg`,
         backgroundUrl: `${ART_BASE}/chemistry-bg.svg`,
     },
+    biology: {
+        iconUrl: `${ART_BASE}/biology-icon.svg`,
+        backgroundUrl: `${ART_BASE}/biology-bg.svg`,
+    },
+    art: {
+        iconUrl: `${ART_BASE}/art-icon.svg`,
+        backgroundUrl: `${ART_BASE}/art-bg.svg`,
+    },
     education: {
         iconUrl: `${ART_BASE}/education-icon.svg`,
         backgroundUrl: `${ART_BASE}/education-bg.svg`,
