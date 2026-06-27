@@ -239,13 +239,15 @@ export function Notifications({ onBack }: NotificationsProps) {
                       transition={{ delay: index * 0.05 }}
                       drag="x"
                       dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={0.18}
+                      dragElastic={0.12}
+                      dragMomentum={false}
+                      whileDrag={{ scale: 0.995 }}
                       onDragStart={() => {
                         dragIntentRef.current = true;
                       }}
                       onDragEnd={(_, info) => {
-                        const threshold = 86;
-                        const velocityThreshold = 520;
+                        const threshold = 72;
+                        const velocityThreshold = 460;
                         if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
                           void handleSwipeAction(notification, swipeRightAction, isRead);
                         } else if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
@@ -259,7 +261,7 @@ export function Notifications({ onBack }: NotificationsProps) {
                         if (dragIntentRef.current) return;
                         void handleMarkRead(notification.id, isRead);
                       }}
-                      className={`relative border rounded-2xl bg-card p-4 cursor-pointer transition-all duration-300 touch-pan-y shadow-sm ${isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
+                      className={`relative border rounded-2xl bg-card p-4 cursor-pointer select-none transition-all duration-300 touch-pan-y shadow-sm ${isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
                         }`}
                     >
                       <div className="flex items-start gap-3">

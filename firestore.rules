@@ -29,12 +29,13 @@ service cloud.firestore {
         'createdAt',
         'downloadsCount',
         'avatar',
-        'fcmTokens'
+        'fcmTokens',
+        'notificationSettings'
       ];
     }
 
     function userSelfUpdateFields() {
-      return ['departmentId', 'level', 'avatar', 'fcmTokens', 'downloadsCount'];
+      return ['departmentId', 'level', 'avatar', 'fcmTokens', 'downloadsCount', 'notificationSettings'];
     }
 
     function validStudentCreate() {

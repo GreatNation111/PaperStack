@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle, Bell, BellOff, Settings2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
@@ -22,6 +22,41 @@ const notificationActionOptions: { value: NotificationSwipeAction; label: string
   { value: 'none', label: 'No action' },
 ];
 
+function GestureControl({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: NotificationSwipeAction;
+  disabled: boolean;
+  onChange: (action: NotificationSwipeAction) => void;
+}) {
+  return (
+    <div>
+      <div className="text-xs font-semibold text-secondary mb-2">{label}</div>
+      <div className="grid grid-cols-3 gap-2">
+        {notificationActionOptions.map(option => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            disabled={disabled || value === option.value}
+            className={`h-10 rounded-lg border px-2 text-xs font-semibold transition-all ${
+              value === option.value
+                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                : 'border-border bg-muted/30 text-secondary hover:text-foreground hover:border-primary/40'
+            } disabled:opacity-100`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, onSignOut }: ProfileProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -33,6 +68,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
 
   // Form State
@@ -328,8 +364,13 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
             </button>
           </div>
 
-          <div className="w-full bg-card border border-border rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="w-full bg-card border border-border rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setIsNotificationSettingsOpen(open => !open)}
+              className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-muted/30 transition-colors"
+              aria-expanded={isNotificationSettingsOpen}
+            >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   {notificationSettings.pushEnabled ? (
@@ -345,62 +386,74 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
                   </span>
                 </div>
               </div>
-              <button
-                onClick={handleTogglePushNotifications}
-                disabled={savingNotificationSettings}
-                aria-pressed={notificationSettings.pushEnabled}
-                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 disabled:opacity-60 ${
-                  notificationSettings.pushEnabled ? 'bg-primary' : 'bg-border'
-                }`}
-              >
-                <div
-                  className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-transform flex items-center justify-center ${
-                    notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="w-px h-7 bg-border" />
+                <ChevronDown
+                  className={`w-4 h-4 text-secondary transition-transform ${isNotificationSettingsOpen ? 'rotate-180' : ''}`}
+                  strokeWidth={2}
+                />
+                <span
+                  role="switch"
+                  aria-checked={notificationSettings.pushEnabled}
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleTogglePushNotifications();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      void handleTogglePushNotifications();
+                    }
+                  }}
+                  className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                    notificationSettings.pushEnabled ? 'bg-primary' : 'bg-border'
+                  } ${savingNotificationSettings ? 'opacity-60' : ''}`}
                 >
-                  {savingNotificationSettings && <Loader2 className="w-3 h-3 animate-spin text-secondary" />}
-                </div>
-              </button>
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Settings2 className="w-4 h-4 text-secondary" strokeWidth={2} />
-                <span className="text-xs font-semibold text-secondary uppercase tracking-widest">Gestures</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-secondary mb-1.5 block">Swipe right</span>
-                  <select
-                    value={notificationSettings.swipeRightAction}
-                    onChange={(event) => handleUpdateSwipeGesture('swipeRightAction', event.target.value as NotificationSwipeAction)}
-                    disabled={savingNotificationSettings}
-                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-60"
+                  <span
+                    className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-transform flex items-center justify-center ${
+                      notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                   >
-                    {notificationActionOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-xs text-secondary mb-1.5 block">Swipe left</span>
-                  <select
-                    value={notificationSettings.swipeLeftAction}
-                    onChange={(event) => handleUpdateSwipeGesture('swipeLeftAction', event.target.value as NotificationSwipeAction)}
-                    disabled={savingNotificationSettings}
-                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-60"
-                  >
-                    {notificationActionOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
+                    {savingNotificationSettings && <Loader2 className="w-3 h-3 animate-spin text-secondary" />}
+                  </span>
+                </span>
               </div>
-            </div>
+            </button>
 
-            {notificationMessage && (
-              <p className="text-xs text-secondary">{notificationMessage}</p>
-            )}
+            <AnimatePresence initial={false}>
+              {isNotificationSettingsOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="overflow-hidden border-t border-border"
+                >
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-3">
+                      <GestureControl
+                        label="Swipe right"
+                        value={notificationSettings.swipeRightAction}
+                        disabled={savingNotificationSettings}
+                        onChange={(action) => handleUpdateSwipeGesture('swipeRightAction', action)}
+                      />
+                      <GestureControl
+                        label="Swipe left"
+                        value={notificationSettings.swipeLeftAction}
+                        disabled={savingNotificationSettings}
+                        onChange={(action) => handleUpdateSwipeGesture('swipeLeftAction', action)}
+                      />
+                    </div>
+
+                    {notificationMessage && (
+                      <p className="text-xs text-secondary">{notificationMessage}</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
