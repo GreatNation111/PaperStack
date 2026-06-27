@@ -462,7 +462,7 @@ export function useNotifications(userId: string | undefined) {
                     isRead: !!receipts[n.id]
                 }));
 
-                setNotifications(welcomeNotification ? [welcomeNotification, ...merged] : merged);
+                setNotifications(welcomeNotification ? [...merged, welcomeNotification] : merged);
                 setLoading(false);
             } catch (e: any) {
                 console.error(e);

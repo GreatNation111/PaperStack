@@ -264,37 +264,34 @@ export function Notifications({ onBack }: NotificationsProps) {
                       className={`relative border rounded-2xl bg-card p-4 cursor-pointer select-none transition-all duration-300 touch-pan-y shadow-sm ${isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
                         }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
-                            }`}
-                        >
-                          {isRead ? (
-                            <CheckCircle className="w-5 h-5 text-green-500" />
-                          ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
-                            <AlertCircle className={`w-5 h-5 ${notification.type === 'alert' ? 'text-red-500' :
-                                notification.type === 'warning' ? 'text-amber-500' :
-                                  'text-blue-500'
-                              }`} />
-                          ) : (
-                            // Fallback
-                            <Bell className="w-5 h-5 text-primary" strokeWidth={1.5} />
+                      <div
+                        className={`absolute left-4 top-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
+                          }`}
+                      >
+                        {isRead ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
+                          <AlertCircle className={`w-4 h-4 ${notification.type === 'alert' ? 'text-red-500' :
+                              notification.type === 'warning' ? 'text-amber-500' :
+                                'text-blue-500'
+                            }`} />
+                        ) : (
+                          <Bell className="w-4 h-4 text-primary" strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-3 pl-11">
+                          <h3 className={`font-semibold leading-snug transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
+                          {!isRead && (
+                            <motion.div
+                              initial={{ scale: 1 }}
+                              exit={{ scale: 0 }}
+                              className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
+                            />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className={`font-semibold transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
-                            {!isRead && (
-                              <motion.div
-                                initial={{ scale: 1 }}
-                                exit={{ scale: 0 }}
-                                className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
-                              />
-                            )}
-                          </div>
-                          <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.body || notification.message}</p>
-                          <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
-                        </div>
+                        <p className="text-sm text-secondary mb-3 leading-relaxed">{notification.body || notification.message}</p>
+                        <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
                       </div>
                     </motion.div>
                   </div>
