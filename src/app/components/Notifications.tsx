@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles, CheckCircle, AlertCircle, Trash2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -13,10 +13,246 @@ import {
   type NotificationSwipeAction,
 } from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
+import { useAppleMailSwipe } from '@/hooks/useAppleMailSwipe';
 
 interface NotificationsProps {
   onBack: () => void;
 }
+
+// ─── Swipeable Notification Card ──────────────────────────────────────────
+// Self-contained card component that uses the Apple Mail swipe hook
+// and renders progressive action panels underneath the card surface.
+
+interface SwipeableCardProps {
+  notification: AppNotification;
+  isRead: boolean;
+  index: number;
+  swipeRightAction: NotificationSwipeAction;
+  swipeLeftAction: NotificationSwipeAction;
+  rightActionMeta: ReturnType<typeof getActionMeta>;
+  leftActionMeta: ReturnType<typeof getActionMeta>;
+  onSwipeAction: (notification: AppNotification, action: NotificationSwipeAction, isRead: boolean) => Promise<void>;
+  onMarkRead: (id: string, isRead: boolean) => Promise<void>;
+  formatTime: (createdAt: any) => string;
+}
+
+function SwipeableNotificationCard({
+  notification,
+  isRead,
+  index,
+  swipeRightAction,
+  swipeLeftAction,
+  rightActionMeta,
+  leftActionMeta,
+  onSwipeAction,
+  onMarkRead,
+  formatTime,
+}: SwipeableCardProps) {
+  const RightActionIcon = rightActionMeta.Icon;
+  const LeftActionIcon = leftActionMeta.Icon;
+
+  const {
+    state,
+    handlers,
+    shouldPreventClick,
+  } = useAppleMailSwipe({
+    enableLeft: swipeLeftAction !== 'none',
+    enableRight: swipeRightAction !== 'none',
+    onSwipeLeft: () => void onSwipeAction(notification, swipeLeftAction, isRead),
+    onSwipeRight: () => void onSwipeAction(notification, swipeRightAction, isRead),
+  });
+
+  const handleClick = useCallback(() => {
+    if (shouldPreventClick()) return;
+    void onMarkRead(notification.id, isRead);
+  }, [shouldPreventClick, onMarkRead, notification.id, isRead]);
+
+  // Calculate progressive reveal for action panels
+  const absOffset = Math.abs(state.offsetX);
+  const isSwipingRight = state.offsetX > 0;
+  const isSwipingLeft = state.offsetX < 0;
+
+  // Progressive icon scale: starts at 0.6, reaches 1.0 at reveal threshold, grows to 1.3 at full swipe
+  const iconScale = Math.min(0.6 + state.progress * 0.7, 1.3);
+
+  // Action panel width matches how far the card has moved
+  const actionPanelWidth = absOffset;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="relative overflow-hidden rounded-2xl"
+    >
+      {/* ─── Left Action Panel (revealed on swipe right) ─── */}
+      {isSwipingRight && (
+        <div
+          className="absolute inset-y-0 left-0 flex items-center justify-center rounded-l-2xl overflow-hidden"
+          style={{ width: actionPanelWidth }}
+        >
+          <div
+            className={`absolute inset-0 transition-colors duration-150 ${
+              state.didFullSwipe
+                ? rightActionMeta.action === 'delete'
+                  ? 'bg-red-500'
+                  : 'bg-green-500'
+                : rightActionMeta.action === 'delete'
+                  ? 'bg-red-500/15'
+                  : 'bg-green-500/15'
+            }`}
+          />
+          <div
+            className="relative flex flex-col items-center gap-1 transition-transform"
+            style={{ transform: `scale(${iconScale})` }}
+          >
+            <RightActionIcon
+              className={`w-5 h-5 transition-colors duration-150 ${
+                state.didFullSwipe ? 'text-white' : rightActionMeta.textClass
+              }`}
+            />
+            {absOffset > 50 && (
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 ${
+                  state.didFullSwipe ? 'text-white' : rightActionMeta.textClass
+                }`}
+              >
+                {rightActionMeta.label}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Right Action Panel (revealed on swipe left) ─── */}
+      {isSwipingLeft && (
+        <div
+          className="absolute inset-y-0 right-0 flex items-center justify-center rounded-r-2xl overflow-hidden"
+          style={{ width: actionPanelWidth }}
+        >
+          <div
+            className={`absolute inset-0 transition-colors duration-150 ${
+              state.didFullSwipe
+                ? leftActionMeta.action === 'delete'
+                  ? 'bg-red-500'
+                  : 'bg-green-500'
+                : leftActionMeta.action === 'delete'
+                  ? 'bg-red-500/15'
+                  : 'bg-green-500/15'
+            }`}
+          />
+          <div
+            className="relative flex flex-col items-center gap-1 transition-transform"
+            style={{ transform: `scale(${iconScale})` }}
+          >
+            <LeftActionIcon
+              className={`w-5 h-5 transition-colors duration-150 ${
+                state.didFullSwipe ? 'text-white' : leftActionMeta.textClass
+              }`}
+            />
+            {absOffset > 50 && (
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-150 ${
+                  state.didFullSwipe ? 'text-white' : leftActionMeta.textClass
+                }`}
+              >
+                {leftActionMeta.label}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Card Surface (finger-driven) ─── */}
+      <div
+        {...handlers}
+        onClick={handleClick}
+        className={`relative border rounded-2xl bg-card p-4 cursor-pointer select-none touch-pan-y shadow-sm will-change-transform ${
+          isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
+        }`}
+        style={{
+          transform: `translate3d(${state.offsetX}px, 0, 0)`,
+          transition: state.isDragging ? 'none' : undefined,
+        }}
+      >
+        <div
+          className={`absolute left-4 top-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${
+            isRead ? 'bg-muted' : 'bg-primary/10'
+          }`}
+        >
+          {isRead ? (
+            <CheckCircle className="w-4 h-4 text-green-500" />
+          ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
+            <AlertCircle
+              className={`w-4 h-4 ${
+                notification.type === 'alert'
+                  ? 'text-red-500'
+                  : notification.type === 'warning'
+                    ? 'text-amber-500'
+                    : 'text-blue-500'
+              }`}
+            />
+          ) : (
+            <Bell className="w-4 h-4 text-primary" strokeWidth={1.5} />
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-3 pl-11">
+            <h3
+              className={`font-semibold leading-snug transition-colors duration-300 ${
+                isRead ? 'text-foreground' : 'text-primary'
+              }`}
+            >
+              {notification.title}
+            </h3>
+            {!isRead && (
+              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
+            )}
+          </div>
+          <p className="text-sm text-secondary mb-3 leading-relaxed">
+            {notification.body || notification.message}
+          </p>
+          <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Action Meta Helper ─────────────────────────────────────────────────────
+
+function getActionMeta(action: NotificationSwipeAction) {
+  if (action === 'markRead') {
+    return {
+      Icon: CheckCircle,
+      label: 'Read',
+      action: 'markRead' as const,
+      backgroundClass: 'bg-green-500/10',
+      textClass: 'text-green-600',
+    };
+  }
+
+  if (action === 'delete') {
+    return {
+      Icon: Trash2,
+      label: 'Delete',
+      action: 'delete' as const,
+      backgroundClass: 'bg-red-500/10',
+      textClass: 'text-red-500',
+    };
+  }
+
+  return {
+    Icon: Bell,
+    label: 'None',
+    action: 'none' as const,
+    backgroundClass: 'bg-muted/60',
+    textClass: 'text-secondary',
+  };
+}
+
+// ─── Main Notifications Component ───────────────────────────────────────────
 
 export function Notifications({ onBack }: NotificationsProps) {
   const { user } = useAuth();
@@ -28,7 +264,6 @@ export function Notifications({ onBack }: NotificationsProps) {
   const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
   const [localDeletedIds, setLocalDeletedIds] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
-  const dragIntentRef = useRef(false);
 
   const swipeRightAction = profile?.notificationSettings?.swipeRightAction || 'markRead';
   const swipeLeftAction = profile?.notificationSettings?.swipeLeftAction || 'delete';
@@ -39,47 +274,42 @@ export function Notifications({ onBack }: NotificationsProps) {
     await recordFeatureInterest(user, title);
   };
 
-
-  const handleMarkRead = async (id: string, isRead: boolean) => {
+  const handleMarkRead = useCallback(async (id: string, isRead: boolean) => {
     if (isRead || !user) return;
-    // Optimistic update
     setLocalReadIds(prev => new Set(prev).add(id));
     await markNotificationRead(user.uid, id);
-    // Trigger hook refresh
     setReading(r => !r);
-  };
+  }, [user, setReading]);
 
   const handleMarkAll = async () => {
     if (!user || markingAll) return;
-    // Optimistic update - mark all as read locally
     const allIds = new Set(visibleNotifications.map(n => n.id));
     setLocalReadIds(allIds);
     const ids = visibleNotifications.map(n => n.id);
     setMarkingAll(true);
     try {
       await markAllNotificationsAsRead(user.uid, ids);
-      // Trigger hook refresh
       setReading(r => !r);
     } finally {
       setMarkingAll(false);
     }
   };
 
-  const handleDeleteNotification = async (id: string) => {
+  const handleDeleteNotification = useCallback(async (id: string) => {
     if (!user) return;
     setLocalDeletedIds(prev => new Set(prev).add(id));
     await deleteNotificationForUser(user.uid, id);
     setReading(r => !r);
-  };
+  }, [user, setReading]);
 
-  const handleSwipeAction = async (notification: AppNotification, action: NotificationSwipeAction, isRead: boolean) => {
+  const handleSwipeAction = useCallback(async (notification: AppNotification, action: NotificationSwipeAction, isRead: boolean) => {
     if (action === 'none') return;
     if (action === 'markRead') {
       await handleMarkRead(notification.id, isRead);
       return;
     }
     await handleDeleteNotification(notification.id);
-  };
+  }, [handleMarkRead, handleDeleteNotification]);
 
   // Merge local read state with fetched state for immediate UI feedback
   const isNotificationRead = (notif: typeof notifications[0]) => {
@@ -87,39 +317,6 @@ export function Notifications({ onBack }: NotificationsProps) {
   };
 
   const effectiveUnreadCount = visibleNotifications.filter(n => !isNotificationRead(n)).length;
-
-  const getActionLabel = (action: NotificationSwipeAction) => {
-    if (action === 'markRead') return 'Read';
-    if (action === 'delete') return 'Delete';
-    return 'No action';
-  };
-
-  const getActionMeta = (action: NotificationSwipeAction) => {
-    if (action === 'markRead') {
-      return {
-        Icon: CheckCircle,
-        label: getActionLabel(action),
-        backgroundClass: 'bg-green-500/10',
-        textClass: 'text-green-600',
-      };
-    }
-
-    if (action === 'delete') {
-      return {
-        Icon: Trash2,
-        label: getActionLabel(action),
-        backgroundClass: 'bg-red-500/10',
-        textClass: 'text-red-500',
-      };
-    }
-
-    return {
-      Icon: Bell,
-      label: getActionLabel(action),
-      backgroundClass: 'bg-muted/60',
-      textClass: 'text-secondary',
-    };
-  };
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return 'Welcome';
@@ -167,6 +364,9 @@ export function Notifications({ onBack }: NotificationsProps) {
     },
   ];
 
+  const rightMeta = getActionMeta(swipeRightAction);
+  const leftMeta = getActionMeta(swipeLeftAction);
+
   return (
     <div className="pb-24 min-h-screen">
       {/* Header */}
@@ -210,91 +410,20 @@ export function Notifications({ onBack }: NotificationsProps) {
             <AnimatePresence>
               {visibleNotifications.map((notification, index) => {
                 const isRead = isNotificationRead(notification);
-                const rightActionMeta = getActionMeta(swipeRightAction);
-                const leftActionMeta = getActionMeta(swipeLeftAction);
-                const RightActionIcon = rightActionMeta.Icon;
-                const LeftActionIcon = leftActionMeta.Icon;
                 return (
-                  <div key={notification.id} className="relative overflow-hidden rounded-2xl bg-card">
-                    <div className="absolute inset-y-0 left-0 w-28 flex items-center justify-start px-5 rounded-l-2xl bg-card">
-                      <div className={`flex h-full w-full items-center justify-start ${rightActionMeta.backgroundClass} ${rightActionMeta.textClass}`}>
-                        <div className="flex items-center gap-2 text-xs font-semibold">
-                          <RightActionIcon className="w-4 h-4" />
-                          {rightActionMeta.label}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="absolute inset-y-0 right-0 w-28 flex items-center justify-end px-5 rounded-r-2xl bg-card">
-                      <div className={`flex h-full w-full items-center justify-end ${leftActionMeta.backgroundClass} ${leftActionMeta.textClass}`}>
-                        <div className="flex items-center gap-2 text-xs font-semibold">
-                          {leftActionMeta.label}
-                          <LeftActionIcon className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </div>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      drag="x"
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={0.12}
-                      dragMomentum={false}
-                      whileDrag={{ scale: 0.995 }}
-                      onDragStart={() => {
-                        dragIntentRef.current = true;
-                      }}
-                      onDragEnd={(_, info) => {
-                        const threshold = 72;
-                        const velocityThreshold = 460;
-                        if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
-                          void handleSwipeAction(notification, swipeRightAction, isRead);
-                        } else if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
-                          void handleSwipeAction(notification, swipeLeftAction, isRead);
-                        }
-                        window.setTimeout(() => {
-                          dragIntentRef.current = false;
-                        }, 80);
-                      }}
-                      onClick={() => {
-                        if (dragIntentRef.current) return;
-                        void handleMarkRead(notification.id, isRead);
-                      }}
-                      className={`relative border rounded-2xl bg-card p-4 cursor-pointer select-none transition-all duration-300 touch-pan-y shadow-sm ${isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
-                        }`}
-                    >
-                      <div
-                        className={`absolute left-4 top-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
-                          }`}
-                      >
-                        {isRead ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
-                          <AlertCircle className={`w-4 h-4 ${notification.type === 'alert' ? 'text-red-500' :
-                              notification.type === 'warning' ? 'text-amber-500' :
-                                'text-blue-500'
-                            }`} />
-                        ) : (
-                          <Bell className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-3 pl-11">
-                          <h3 className={`font-semibold leading-snug transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
-                          {!isRead && (
-                            <motion.div
-                              initial={{ scale: 1 }}
-                              exit={{ scale: 0 }}
-                              className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
-                            />
-                          )}
-                        </div>
-                        <p className="text-sm text-secondary mb-3 leading-relaxed">{notification.body || notification.message}</p>
-                        <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
-                      </div>
-                    </motion.div>
-                  </div>
+                  <SwipeableNotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    isRead={isRead}
+                    index={index}
+                    swipeRightAction={swipeRightAction}
+                    swipeLeftAction={swipeLeftAction}
+                    rightActionMeta={rightMeta}
+                    leftActionMeta={leftMeta}
+                    onSwipeAction={handleSwipeAction}
+                    onMarkRead={handleMarkRead}
+                    formatTime={formatTime}
+                  />
                 );
               })}
             </AnimatePresence>
