@@ -10,7 +10,7 @@ export function SeedData() {
     const navigate = useNavigate();
 
     const handleSeed = async () => {
-        if (!confirm("Are you sure? This will rewrite database content.")) return;
+        if (!confirm("Add missing default records? Existing Firestore data will not be changed.")) return;
 
         setLoading(true);
         setStatus('idle');
@@ -39,8 +39,8 @@ export function SeedData() {
 
                 <h1 className="text-2xl font-bold text-foreground mb-2">Database Seeding</h1>
                 <p className="text-secondary text-sm mb-8">
-                    Populate Firestore with default departments, courses, and sample past questions.
-                    Use this for development only.
+                    Add missing default departments, courses, and sample records.
+                    Existing Firestore documents are skipped and left unchanged.
                 </p>
 
                 {status === 'success' && (
@@ -48,7 +48,7 @@ export function SeedData() {
                         <Check className="w-5 h-5 flex-shrink-0" />
                         <div className="text-sm">
                             <p className="font-semibold">Success!</p>
-                            <p>Database populated successfully.</p>
+                            <p>Missing default records were added safely.</p>
                         </div>
                     </div>
                 )}

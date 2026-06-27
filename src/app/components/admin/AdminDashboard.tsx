@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle, RefreshCw } from 'lucide-react';
+import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle, RefreshCw, Database, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { collection, getCountFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { seedDatabase } from '@/utils/seed';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -18,6 +19,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     notifications: 0
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const fetchCounts = useCallback(async () => {
     setRefreshing(true);
@@ -57,6 +60,28 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     { label: 'Feature Requests', value: counts.requests.toString(), icon: Flag, color: '#EC4899' },
     { label: 'Total Notifications', value: counts.notifications.toString(), icon: Bell, color: '#F43F5E' },
   ];
+
+  const handleSeedDefaults = async () => {
+    if (seeding) return;
+    if (!window.confirm('Add missing default departments and sample records? Existing Firestore records will not be changed.')) return;
+
+    setSeeding(true);
+    setSeedStatus('idle');
+
+    try {
+      const result = await seedDatabase();
+      setSeedStatus(result ? 'success' : 'error');
+      if (result) {
+        await fetchCounts();
+        window.setTimeout(() => setSeedStatus('idle'), 2200);
+      }
+    } catch (error) {
+      console.error('Error seeding defaults:', error);
+      setSeedStatus('error');
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
     <div className="p-4 lg:p-8 space-y-12">
@@ -183,6 +208,37 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </div>
             <div className="w-14 h-14 rounded-2xl bg-pink-500/5 flex items-center justify-center group-hover:bg-pink-500 text-pink-600 group-hover:text-white transition-all duration-500 shadow-sm">
               <ArrowUpRight className="w-7 h-7" strokeWidth={2.5} />
+            </div>
+          </button>
+
+          <button
+            onClick={handleSeedDefaults}
+            disabled={seeding}
+            className="group relative h-40 bg-card border border-border rounded-[2.5rem] px-10 flex items-center justify-between text-left hover:border-cyan-500/40 hover:shadow-2xl hover:shadow-cyan-500/5 transition-all overflow-hidden disabled:opacity-70"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10">
+              <div className="text-2xl font-black text-foreground tracking-tight mb-2">Seed Defaults</div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-widest opacity-60">
+                {seeding
+                  ? 'Adding Missing Records'
+                  : seedStatus === 'success'
+                    ? 'Seed Complete'
+                    : seedStatus === 'error'
+                      ? 'Seed Failed'
+                      : 'Add Missing Data Only'}
+              </div>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-cyan-500/5 flex items-center justify-center group-hover:bg-cyan-500 text-cyan-600 group-hover:text-white transition-all duration-500 shadow-sm">
+              {seeding ? (
+                <Loader2 className="w-7 h-7 animate-spin" strokeWidth={2.5} />
+              ) : seedStatus === 'success' ? (
+                <CheckCircle className="w-7 h-7" strokeWidth={2.5} />
+              ) : seedStatus === 'error' ? (
+                <AlertCircle className="w-7 h-7" strokeWidth={2.5} />
+              ) : (
+                <Database className="w-7 h-7" strokeWidth={2.5} />
+              )}
             </div>
           </button>
         </div>

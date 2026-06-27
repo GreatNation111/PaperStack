@@ -1,8 +1,23 @@
 import { db } from '@/lib/firebase';
-import { collection, doc, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
+import { doc, getDoc, writeBatch } from 'firebase/firestore';
 
 export async function seedDatabase() {
     const batch = writeBatch(db);
+    let queued = 0;
+    let skipped = 0;
+
+    const queueIfMissing = async (collectionName: string, item: { id: string; [key: string]: any }) => {
+        const ref = doc(db, collectionName, item.id);
+        const existing = await getDoc(ref);
+
+        if (existing.exists()) {
+            skipped++;
+            return;
+        }
+
+        batch.set(ref, item);
+        queued++;
+    };
 
     // 1. Departments (Sync with existing simple schema)
     const departments = [
@@ -15,10 +30,9 @@ export async function seedDatabase() {
         { id: 'art_ed', name: 'Art Education', code: 'ART ED', icon: 'palette' },
     ];
 
-    departments.forEach(dept => {
-        const ref = doc(db, 'departments', dept.id);
-        batch.set(ref, dept);
-    });
+    for (const dept of departments) {
+        await queueIfMissing('departments', dept);
+    }
 
     // 2. Courses
     const courses = [
@@ -31,58 +45,38 @@ export async function seedDatabase() {
         { id: 'chm101', code: 'CHM 101', title: 'General Chemistry I', departmentId: 'chemistry', level: '100L', semester: 'First', papers: 7, lecturer: 'Mme. Curie', driveFolderUrl: 'https://drive.google.com/drive/folders/1-placeholder-chm101' },
     ];
 
-    courses.forEach(course => {
-        const ref = doc(db, 'courses', course.id);
-        batch.set(ref, course);
-    });
-
-    // 3. User Repair & Role Assignment
-    // Fetch existing users and ensure they have roles
-    try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        usersSnap.forEach(userDoc => {
-            const data = userDoc.data();
-            const updates: any = {};
-
-            if (!data.role) updates.role = 'student';
-            if (!data.createdAt) updates.createdAt = serverTimestamp();
-            if (data.department) {
-                updates.departmentId = data.department;
-                // No delete in batch.set with merge, but we can't delete fields easily in batch without updateDoc
-            }
-            if (Object.keys(updates).length > 0) {
-                batch.set(userDoc.ref, updates, { merge: true });
-            }
-        });
-    } catch (e) {
-        console.error("Error preparing user repair:", e);
+    for (const course of courses) {
+        await queueIfMissing('courses', course);
     }
 
-    // 4. Contributors
+    // 3. Contributors
     const contributors = [
         { id: 'user1', name: 'Ada Lovelace', department: 'Computer Education', levelOrYear: '400L', contributionCount: 42, badge: 'Top Contributor' },
         { id: 'user2', name: 'Isaac Newton', department: 'Physics Education', levelOrYear: '300L', contributionCount: 28 },
         { id: 'user3', name: 'Marie Curie', department: 'Chemistry', levelOrYear: '200L', contributionCount: 15 },
     ];
 
-    contributors.forEach(contributor => {
-        const ref = doc(db, 'contributors', contributor.id);
-        batch.set(ref, contributor);
-    });
+    for (const contributor of contributors) {
+        await queueIfMissing('contributors', contributor);
+    }
 
-    // 5. Notifications
+    // 4. Notifications
     const notifications = [
         { id: 'notif1', title: 'Welcome to PaperStack!', message: 'Start exploring past questions to prepare for your exams.', type: 'info', createdAt: new Date(), isRead: false },
     ];
 
-    notifications.forEach(notif => {
-        const ref = doc(db, 'notifications', notif.id);
-        batch.set(ref, notif);
-    });
+    for (const notif of notifications) {
+        await queueIfMissing('notifications', notif);
+    }
 
     try {
+        if (queued === 0) {
+            console.log(`Seed skipped: all default records already exist (${skipped} checked).`);
+            return true;
+        }
+
         await batch.commit();
-        console.log('Database seeded and repaired successfully!');
+        console.log(`Seed completed safely. Added ${queued} missing records and skipped ${skipped} existing records.`);
         return true;
     } catch (error) {
         console.error('Error seeding database:', error);
