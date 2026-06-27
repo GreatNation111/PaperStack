@@ -82,6 +82,7 @@ export interface UserProfile {
     downloadsCount?: number; // Track PDF downloads
     isPremium: boolean;
     premiumExpiresAt?: any; // Firestore Timestamp
+    createdAt?: any;
 }
 
 export type NotificationSwipeAction = 'markRead' | 'delete' | 'none';
@@ -103,6 +104,10 @@ export interface Notification {
     createdAt: any;
     isRead: boolean;
 }
+
+const WELCOME_NOTIFICATION_ID = 'paperstack_welcome';
+const WELCOME_NOTIFICATION_TITLE = 'Welcome to PaperStack';
+const WELCOME_NOTIFICATION_BODY = 'Your study hub is ready. Set your department and level in Profile, explore past questions by course, save useful papers to your Library, and check Notifications for new uploads and important academic updates.';
 
 let departmentsCache: Department[] | null = null;
 const coursesCache: Record<string, Course[]> = {};
@@ -424,6 +429,7 @@ export function useNotifications(userId: string | undefined) {
                 // FILTERING LOGIC
                 const filtered = notifs.filter(n => {
                     if (deletedReceipts[n.id]) return false;
+                    if (n.id === 'notif1' && n.title?.toLowerCase().includes('welcome to paperstack')) return false;
 
                     // 1. Global: Always show
                     if (!n.target || n.target === 'global') return true;
@@ -436,12 +442,24 @@ export function useNotifications(userId: string | undefined) {
                     return true;
                 });
 
+                const welcomeNotification: Notification | null = deletedReceipts[WELCOME_NOTIFICATION_ID]
+                    ? null
+                    : {
+                        id: WELCOME_NOTIFICATION_ID,
+                        title: WELCOME_NOTIFICATION_TITLE,
+                        body: WELCOME_NOTIFICATION_BODY,
+                        type: 'info',
+                        target: 'global',
+                        createdAt: profile?.createdAt || null,
+                        isRead: !!receipts[WELCOME_NOTIFICATION_ID]
+                    };
+
                 const merged = filtered.map(n => ({
                     ...n,
                     isRead: !!receipts[n.id]
                 }));
 
-                setNotifications(merged);
+                setNotifications(welcomeNotification ? [welcomeNotification, ...merged] : merged);
                 setLoading(false);
             } catch (e: any) {
                 console.error(e);
@@ -450,7 +468,7 @@ export function useNotifications(userId: string | undefined) {
         });
 
         return () => unsubscribe();
-    }, [userId, reading, profile?.departmentId]); // Re-run if profile loads/changes
+    }, [userId, reading, profile?.departmentId, profile?.createdAt]); // Re-run if profile loads/changes
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
