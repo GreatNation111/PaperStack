@@ -31,6 +31,8 @@ export function UsersManagement() {
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showRefreshed, setShowRefreshed] = useState(false);
 
   // Contributor Modal State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -83,6 +85,22 @@ export function UsersManagement() {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleRefreshUsers = async () => {
+    if (isRefreshing) return;
+
+    setLastDoc(null);
+    setIsRefreshing(true);
+    setShowRefreshed(false);
+
+    try {
+      await fetchUsers();
+      setShowRefreshed(true);
+      window.setTimeout(() => setShowRefreshed(false), 1400);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handlePromoteToContributor = async () => {
     if (!selectedUser) return;
@@ -250,8 +268,18 @@ export function UsersManagement() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-[#AAA]">{totalUsers} total users (showing {users.length})</span>
           {roleFilter !== 'all' && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full capitalize">{roleFilter}s only</span>}
-          <button onClick={() => { setLastDoc(null); fetchUsers(); }} className="text-xs text-primary hover:underline flex items-center gap-1">
-            <RefreshCw className="w-3 h-3" /> Refresh
+          <button
+            onClick={handleRefreshUsers}
+            disabled={isRefreshing}
+            className="text-xs text-primary hover:underline disabled:opacity-70 disabled:hover:no-underline flex items-center gap-1"
+            aria-live="polite"
+          >
+            {showRefreshed ? (
+              <Check className="w-3 h-3" />
+            ) : (
+              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            )}
+            {isRefreshing ? 'Refreshing...' : showRefreshed ? 'Refreshed' : 'Refresh'}
           </button>
         </div>
       </div>
