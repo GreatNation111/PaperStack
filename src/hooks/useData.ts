@@ -411,19 +411,22 @@ export function useNotifications(userId: string | undefined) {
                 const deletedReceipts: Record<string, boolean> = {};
                 try {
                     const userReadRef = collection(db, 'users', userId, 'read_notifications');
-                    const userDeletedRef = collection(db, 'users', userId, 'deleted_notifications');
-                    const [readSnap, deletedSnap] = await Promise.all([
-                        getDocs(userReadRef),
-                        getDocs(userDeletedRef),
-                    ]);
+                    const readSnap = await getDocs(userReadRef);
                     readSnap.docs.forEach(d => {
                         receipts[d.id] = true;
                     });
+                } catch (e) {
+                    console.warn('Could not load notification read receipts:', e);
+                }
+
+                try {
+                    const userDeletedRef = collection(db, 'users', userId, 'deleted_notifications');
+                    const deletedSnap = await getDocs(userDeletedRef);
                     deletedSnap.docs.forEach(d => {
                         deletedReceipts[d.id] = true;
                     });
                 } catch (e) {
-                    // ignore
+                    console.warn('Could not load notification delete receipts:', e);
                 }
 
                 // FILTERING LOGIC

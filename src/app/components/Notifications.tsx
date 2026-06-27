@@ -89,7 +89,7 @@ export function Notifications({ onBack }: NotificationsProps) {
   const effectiveUnreadCount = visibleNotifications.filter(n => !isNotificationRead(n)).length;
 
   const getActionLabel = (action: NotificationSwipeAction) => {
-    if (action === 'markRead') return 'Mark read';
+    if (action === 'markRead') return 'Read';
     if (action === 'delete') return 'Delete';
     return 'No action';
   };
@@ -99,7 +99,7 @@ export function Notifications({ onBack }: NotificationsProps) {
       return {
         Icon: CheckCircle,
         label: getActionLabel(action),
-        backgroundClass: 'bg-green-500/10 border-green-500/20',
+        backgroundClass: 'bg-green-500/10',
         textClass: 'text-green-600',
       };
     }
@@ -108,7 +108,7 @@ export function Notifications({ onBack }: NotificationsProps) {
       return {
         Icon: Trash2,
         label: getActionLabel(action),
-        backgroundClass: 'bg-red-500/10 border-red-500/20',
+        backgroundClass: 'bg-red-500/10',
         textClass: 'text-red-500',
       };
     }
@@ -116,7 +116,7 @@ export function Notifications({ onBack }: NotificationsProps) {
     return {
       Icon: Bell,
       label: getActionLabel(action),
-      backgroundClass: 'bg-muted/40 border-border',
+      backgroundClass: 'bg-muted/60',
       textClass: 'text-secondary',
     };
   };
@@ -215,16 +215,18 @@ export function Notifications({ onBack }: NotificationsProps) {
                 const RightActionIcon = rightActionMeta.Icon;
                 const LeftActionIcon = leftActionMeta.Icon;
                 return (
-                  <div key={notification.id} className="relative overflow-hidden rounded-xl">
-                    <div className="absolute inset-0 flex rounded-xl overflow-hidden">
-                      <div className={`flex-1 flex items-center justify-start border px-5 ${rightActionMeta.backgroundClass} ${rightActionMeta.textClass}`}>
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                  <div key={notification.id} className="relative overflow-hidden rounded-2xl bg-card">
+                    <div className="absolute inset-y-0 left-0 w-28 flex items-center justify-start px-5 rounded-l-2xl bg-card">
+                      <div className={`flex h-full w-full items-center justify-start ${rightActionMeta.backgroundClass} ${rightActionMeta.textClass}`}>
+                        <div className="flex items-center gap-2 text-xs font-semibold">
                           <RightActionIcon className="w-4 h-4" />
                           {rightActionMeta.label}
                         </div>
                       </div>
-                      <div className={`flex-1 flex items-center justify-end border px-5 ${leftActionMeta.backgroundClass} ${leftActionMeta.textClass}`}>
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                    </div>
+                    <div className="absolute inset-y-0 right-0 w-28 flex items-center justify-end px-5 rounded-r-2xl bg-card">
+                      <div className={`flex h-full w-full items-center justify-end ${leftActionMeta.backgroundClass} ${leftActionMeta.textClass}`}>
+                        <div className="flex items-center gap-2 text-xs font-semibold">
                           {leftActionMeta.label}
                           <LeftActionIcon className="w-4 h-4" />
                         </div>
@@ -257,7 +259,7 @@ export function Notifications({ onBack }: NotificationsProps) {
                         if (dragIntentRef.current) return;
                         void handleMarkRead(notification.id, isRead);
                       }}
-                      className={`relative bg-card border rounded-xl p-4 cursor-pointer transition-all duration-300 touch-pan-y ${isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
+                      className={`relative border rounded-2xl bg-card p-4 cursor-pointer transition-all duration-300 touch-pan-y shadow-sm ${isRead ? 'border-border' : 'border-primary/30 ring-1 ring-primary/10'
                         }`}
                     >
                       <div className="flex items-start gap-3">

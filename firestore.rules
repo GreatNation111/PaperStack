@@ -81,6 +81,10 @@ service cloud.firestore {
       match /read_notifications/{notificationId} {
         allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       }
+
+      match /deleted_notifications/{notificationId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      }
       
       match /recent_courses/{courseId} {
         allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
