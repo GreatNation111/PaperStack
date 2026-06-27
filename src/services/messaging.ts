@@ -15,7 +15,8 @@ export const requestNotificationPermissionAndSaveToken = async (userId: string) 
             if (targetToken) {
                 // Save the FMC token to the user document
                 await updateDoc(doc(db, 'users', userId), {
-                    fcmTokens: arrayUnion(targetToken)
+                    fcmTokens: arrayUnion(targetToken),
+                    'notificationSettings.pushEnabled': true,
                 });
                 if (import.meta.env.DEV) console.log('Push notifications enabled and token registered.');
                 return targetToken;

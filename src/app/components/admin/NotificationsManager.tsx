@@ -172,7 +172,9 @@ export function NotificationsManager() {
           const tokens: string[] = [];
 
           snap.forEach(docSnap => {
-            const data = docSnap.data() as { fcmTokens?: string[] };
+            const data = docSnap.data() as { fcmTokens?: string[]; notificationSettings?: { pushEnabled?: boolean } };
+            if (data.notificationSettings?.pushEnabled === false) return;
+
             const userTokens = data.fcmTokens;
             if (Array.isArray(userTokens)) {
               tokens.push(...userTokens);

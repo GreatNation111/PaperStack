@@ -1,7 +1,17 @@
-import { useState } from 'react';
-import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ArrowLeft, Bell, TrendingUp, FileText, Zap, Sparkles, CheckCircle, AlertCircle, Trash2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNotifications, markNotificationRead, markAllNotificationsAsRead, recordFeatureInterest, useFeatureInterests } from '@/hooks/useData';
+import {
+  useNotifications,
+  markNotificationRead,
+  markAllNotificationsAsRead,
+  deleteNotificationForUser,
+  recordFeatureInterest,
+  useFeatureInterests,
+  useUserProfile,
+  type Notification as AppNotification,
+  type NotificationSwipeAction,
+} from '@/hooks/useData';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface NotificationsProps {
@@ -12,9 +22,17 @@ export function Notifications({ onBack }: NotificationsProps) {
   const { user } = useAuth();
   const { notifications, loading, setReading } = useNotifications(user?.uid);
   const { interests } = useFeatureInterests(user?.uid);
+  const { profile } = useUserProfile(user?.uid);
 
   // Local state for optimistic UI updates
   const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
+  const [localDeletedIds, setLocalDeletedIds] = useState<Set<string>>(new Set());
+  const [markingAll, setMarkingAll] = useState(false);
+  const dragIntentRef = useRef(false);
+
+  const swipeRightAction = profile?.notificationSettings?.swipeRightAction || 'markRead';
+  const swipeLeftAction = profile?.notificationSettings?.swipeLeftAction || 'delete';
+  const visibleNotifications = notifications.filter(notification => !localDeletedIds.has(notification.id));
 
   const handleNotifyInterest = async (title: string) => {
     if (!user) return;
@@ -32,14 +50,35 @@ export function Notifications({ onBack }: NotificationsProps) {
   };
 
   const handleMarkAll = async () => {
-    if (!user) return;
+    if (!user || markingAll) return;
     // Optimistic update - mark all as read locally
-    const allIds = new Set(notifications.map(n => n.id));
+    const allIds = new Set(visibleNotifications.map(n => n.id));
     setLocalReadIds(allIds);
-    const ids = notifications.map(n => n.id);
-    await markAllNotificationsAsRead(user.uid, ids);
-    // Trigger hook refresh
+    const ids = visibleNotifications.map(n => n.id);
+    setMarkingAll(true);
+    try {
+      await markAllNotificationsAsRead(user.uid, ids);
+      // Trigger hook refresh
+      setReading(r => !r);
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    if (!user) return;
+    setLocalDeletedIds(prev => new Set(prev).add(id));
+    await deleteNotificationForUser(user.uid, id);
     setReading(r => !r);
+  };
+
+  const handleSwipeAction = async (notification: AppNotification, action: NotificationSwipeAction, isRead: boolean) => {
+    if (action === 'none') return;
+    if (action === 'markRead') {
+      await handleMarkRead(notification.id, isRead);
+      return;
+    }
+    await handleDeleteNotification(notification.id);
   };
 
   // Merge local read state with fetched state for immediate UI feedback
@@ -47,7 +86,40 @@ export function Notifications({ onBack }: NotificationsProps) {
     return notif.isRead || localReadIds.has(notif.id);
   };
 
-  const effectiveUnreadCount = notifications.filter(n => !isNotificationRead(n)).length;
+  const effectiveUnreadCount = visibleNotifications.filter(n => !isNotificationRead(n)).length;
+
+  const getActionLabel = (action: NotificationSwipeAction) => {
+    if (action === 'markRead') return 'Mark read';
+    if (action === 'delete') return 'Delete';
+    return 'No action';
+  };
+
+  const getActionMeta = (action: NotificationSwipeAction) => {
+    if (action === 'markRead') {
+      return {
+        Icon: CheckCircle,
+        label: getActionLabel(action),
+        backgroundClass: 'bg-green-500/10 border-green-500/20',
+        textClass: 'text-green-600',
+      };
+    }
+
+    if (action === 'delete') {
+      return {
+        Icon: Trash2,
+        label: getActionLabel(action),
+        backgroundClass: 'bg-red-500/10 border-red-500/20',
+        textClass: 'text-red-500',
+      };
+    }
+
+    return {
+      Icon: Bell,
+      label: getActionLabel(action),
+      backgroundClass: 'bg-muted/40 border-border',
+      textClass: 'text-secondary',
+    };
+  };
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return '';
@@ -107,8 +179,13 @@ export function Notifications({ onBack }: NotificationsProps) {
           <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
         </div>
         {effectiveUnreadCount > 0 && (
-          <button onClick={handleMarkAll} className="text-xs font-semibold text-primary hover:underline">
-            Mark all read
+          <button
+            onClick={handleMarkAll}
+            disabled={markingAll}
+            className="text-xs font-semibold text-primary hover:underline disabled:opacity-60 flex items-center gap-1"
+          >
+            {markingAll && <Loader2 className="w-3 h-3 animate-spin" />}
+            Read all
           </button>
         )}
       </div>
@@ -121,7 +198,7 @@ export function Notifications({ onBack }: NotificationsProps) {
           <div className="space-y-3">
             {[1, 2].map(i => <div key={i} className="h-24 bg-muted/30 rounded-xl animate-pulse" />)}
           </div>
-        ) : notifications.length === 0 ? (
+        ) : visibleNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center select-none bg-muted/20 rounded-2xl border border-dashed border-border mb-8">
             <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
               <Bell className="w-8 h-8 text-muted-foreground/50" />
@@ -132,52 +209,92 @@ export function Notifications({ onBack }: NotificationsProps) {
         ) : (
           <div className="space-y-3 mb-8">
             <AnimatePresence>
-              {notifications.map((notification, index) => {
+              {visibleNotifications.map((notification, index) => {
                 const isRead = isNotificationRead(notification);
+                const rightActionMeta = getActionMeta(swipeRightAction);
+                const leftActionMeta = getActionMeta(swipeLeftAction);
+                const RightActionIcon = rightActionMeta.Icon;
+                const LeftActionIcon = leftActionMeta.Icon;
                 return (
-                  <motion.div
-                    key={notification.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => handleMarkRead(notification.id, isRead)}
-                    className={`bg-card border rounded-xl p-4 cursor-pointer transition-all duration-300 ${isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
-                      }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
-                          }`}
-                      >
-                        {isRead ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
-                          <AlertCircle className={`w-5 h-5 ${notification.type === 'alert' ? 'text-red-500' :
-                              notification.type === 'warning' ? 'text-amber-500' :
-                                'text-blue-500'
-                            }`} />
-                        ) : (
-                          // Fallback
-                          <Bell className="w-5 h-5 text-primary" strokeWidth={1.5} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className={`font-semibold transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
-                          {!isRead && (
-                            <motion.div
-                              initial={{ scale: 1 }}
-                              exit={{ scale: 0 }}
-                              className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
-                            />
-                          )}
+                  <div key={notification.id} className="relative overflow-hidden rounded-xl">
+                    <div className="absolute inset-0 flex rounded-xl overflow-hidden">
+                      <div className={`flex-1 flex items-center justify-start border px-5 ${rightActionMeta.backgroundClass} ${rightActionMeta.textClass}`}>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                          <RightActionIcon className="w-4 h-4" />
+                          {rightActionMeta.label}
                         </div>
-                        <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.body || notification.message}</p>
-                        <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+                      </div>
+                      <div className={`flex-1 flex items-center justify-end border px-5 ${leftActionMeta.backgroundClass} ${leftActionMeta.textClass}`}>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                          {leftActionMeta.label}
+                          <LeftActionIcon className="w-4 h-4" />
+                        </div>
                       </div>
                     </div>
-                  </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.18}
+                      onDragStart={() => {
+                        dragIntentRef.current = true;
+                      }}
+                      onDragEnd={(_, info) => {
+                        const threshold = 86;
+                        const velocityThreshold = 520;
+                        if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
+                          void handleSwipeAction(notification, swipeRightAction, isRead);
+                        } else if (info.offset.x < -threshold || info.velocity.x < -velocityThreshold) {
+                          void handleSwipeAction(notification, swipeLeftAction, isRead);
+                        }
+                        window.setTimeout(() => {
+                          dragIntentRef.current = false;
+                        }, 80);
+                      }}
+                      onClick={() => {
+                        if (dragIntentRef.current) return;
+                        void handleMarkRead(notification.id, isRead);
+                      }}
+                      className={`relative bg-card border rounded-xl p-4 cursor-pointer transition-all duration-300 touch-pan-y ${isRead ? 'border-border' : 'border-primary/30 bg-primary/5'
+                        }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300 ${isRead ? 'bg-muted' : 'bg-primary/10'
+                            }`}
+                        >
+                          {isRead ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : notification.type === 'alert' || notification.type === 'warning' || notification.type === 'info' ? (
+                            <AlertCircle className={`w-5 h-5 ${notification.type === 'alert' ? 'text-red-500' :
+                                notification.type === 'warning' ? 'text-amber-500' :
+                                  'text-blue-500'
+                              }`} />
+                          ) : (
+                            // Fallback
+                            <Bell className="w-5 h-5 text-primary" strokeWidth={1.5} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h3 className={`font-semibold transition-colors duration-300 ${isRead ? 'text-foreground' : 'text-primary'}`}>{notification.title}</h3>
+                            {!isRead && (
+                              <motion.div
+                                initial={{ scale: 1 }}
+                                exit={{ scale: 0 }}
+                                className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"
+                              />
+                            )}
+                          </div>
+                          <p className="text-sm text-secondary mb-2 leading-relaxed">{notification.body || notification.message}</p>
+                          <span className="text-xs text-secondary">{formatTime(notification.createdAt)}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
                 );
               })}
             </AnimatePresence>

@@ -54,6 +54,11 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
         level: '100L',
         role: 'student',
         isPremium: false,
+        notificationSettings: {
+          pushEnabled: true,
+          swipeRightAction: 'markRead',
+          swipeLeftAction: 'delete',
+        },
         bookmarks: [],
         readNotifications: [],
         recentCourses: [],
@@ -84,6 +89,11 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
         level: '100L',
         role: 'student',
         isPremium: false,
+        notificationSettings: {
+          pushEnabled: true,
+          swipeRightAction: 'markRead',
+          swipeLeftAction: 'delete',
+        },
         bookmarks: [],
         readNotifications: [],
         recentCourses: [],

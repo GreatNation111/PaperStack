@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle } from 'lucide-react';
+import { ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle, Bell, BellOff, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
-import { useUserProfile, updateUserProfile, useDepartments, useContributors } from '@/hooks/useData';
+import { useUserProfile, updateUserProfile, useDepartments, useContributors, type NotificationSwipeAction } from '@/hooks/useData';
+import { requestNotificationPermissionAndSaveToken } from '@/services/messaging';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -14,6 +15,12 @@ interface ProfileProps {
   onToggleDarkMode: () => void;
   onSignOut: () => void;
 }
+
+const notificationActionOptions: { value: NotificationSwipeAction; label: string }[] = [
+  { value: 'markRead', label: 'Mark as read' },
+  { value: 'delete', label: 'Delete' },
+  { value: 'none', label: 'No action' },
+];
 
 export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, onSignOut }: ProfileProps) {
   const navigate = useNavigate();
@@ -25,6 +32,8 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   const [isEditingAvatar, setIsEditingAvatar] = useState(false);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -79,6 +88,11 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
 
   const currentDepartmentName = departments.find(d => d.id === profile?.departmentId)?.name || 'Select Department';
   const displayName = profile?.name || user?.displayName || initialName;
+  const notificationSettings = {
+    pushEnabled: profile?.notificationSettings?.pushEnabled !== false,
+    swipeRightAction: profile?.notificationSettings?.swipeRightAction || 'markRead',
+    swipeLeftAction: profile?.notificationSettings?.swipeLeftAction || 'delete',
+  };
 
   // Check if user is a contributor (matching by name is risky but fallback for now without ID)
   // Ideally contributors collection should include userId.
@@ -87,6 +101,75 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   const handleBecomeContributor = () => {
     const msg = `Hello, I'd like to become a contributor on PaperStack.%0A%0AName: ${displayName}%0ADepartment: ${currentDepartmentName}%0ALevel: ${formData.level || 'Not set'}`;
     window.open(`https://wa.me/2349151782993?text=${msg}`, '_blank');
+  };
+
+  const saveNotificationSettings = async (nextSettings: typeof notificationSettings) => {
+    if (!user) return;
+    await updateUserProfile(user.uid, {
+      notificationSettings: {
+        ...profile?.notificationSettings,
+        ...nextSettings,
+      },
+    });
+  };
+
+  const handleTogglePushNotifications = async () => {
+    if (!user || savingNotificationSettings) return;
+
+    const nextPushEnabled = !notificationSettings.pushEnabled;
+    setSavingNotificationSettings(true);
+    setNotificationMessage('');
+
+    try {
+      if (nextPushEnabled) {
+        if (!('Notification' in window)) {
+          setNotificationMessage('Push notifications are not supported on this browser.');
+          return;
+        }
+
+        const token = await requestNotificationPermissionAndSaveToken(user.uid);
+        if (!token && Notification.permission !== 'granted') {
+          setNotificationMessage('Notifications are blocked in your browser settings.');
+          return;
+        }
+
+        localStorage.removeItem('hideNotificationBanner');
+      }
+
+      await saveNotificationSettings({
+        ...notificationSettings,
+        pushEnabled: nextPushEnabled,
+      });
+
+      setNotificationMessage(nextPushEnabled ? 'Push notifications are on.' : 'Push notifications are off.');
+      window.setTimeout(() => setNotificationMessage(''), 2200);
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+      setNotificationMessage('Could not update notification settings.');
+    } finally {
+      setSavingNotificationSettings(false);
+    }
+  };
+
+  const handleUpdateSwipeGesture = async (key: 'swipeRightAction' | 'swipeLeftAction', action: NotificationSwipeAction) => {
+    if (!user || savingNotificationSettings) return;
+
+    setSavingNotificationSettings(true);
+    setNotificationMessage('');
+
+    try {
+      await saveNotificationSettings({
+        ...notificationSettings,
+        [key]: action,
+      });
+      setNotificationMessage('Notification gestures updated.');
+      window.setTimeout(() => setNotificationMessage(''), 1800);
+    } catch (error) {
+      console.error('Error updating notification gestures:', error);
+      setNotificationMessage('Could not update notification gestures.');
+    } finally {
+      setSavingNotificationSettings(false);
+    }
   };
 
   const premiumFeatures = [
@@ -243,6 +326,81 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
                   }`}
               />
             </button>
+          </div>
+
+          <div className="w-full bg-card border border-border rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  {notificationSettings.pushEnabled ? (
+                    <Bell className="w-5 h-5 text-primary" strokeWidth={2} />
+                  ) : (
+                    <BellOff className="w-5 h-5 text-secondary" strokeWidth={2} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span className="font-medium text-foreground block">Notifications</span>
+                  <span className="text-xs text-secondary">
+                    {notificationSettings.pushEnabled ? 'Push alerts enabled' : 'Push alerts paused'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleTogglePushNotifications}
+                disabled={savingNotificationSettings}
+                aria-pressed={notificationSettings.pushEnabled}
+                className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 disabled:opacity-60 ${
+                  notificationSettings.pushEnabled ? 'bg-primary' : 'bg-border'
+                }`}
+              >
+                <div
+                  className={`absolute top-1 w-5 h-5 bg-card rounded-full transition-transform flex items-center justify-center ${
+                    notificationSettings.pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                >
+                  {savingNotificationSettings && <Loader2 className="w-3 h-3 animate-spin text-secondary" />}
+                </div>
+              </button>
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings2 className="w-4 h-4 text-secondary" strokeWidth={2} />
+                <span className="text-xs font-semibold text-secondary uppercase tracking-widest">Gestures</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs text-secondary mb-1.5 block">Swipe right</span>
+                  <select
+                    value={notificationSettings.swipeRightAction}
+                    onChange={(event) => handleUpdateSwipeGesture('swipeRightAction', event.target.value as NotificationSwipeAction)}
+                    disabled={savingNotificationSettings}
+                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-60"
+                  >
+                    {notificationActionOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs text-secondary mb-1.5 block">Swipe left</span>
+                  <select
+                    value={notificationSettings.swipeLeftAction}
+                    onChange={(event) => handleUpdateSwipeGesture('swipeLeftAction', event.target.value as NotificationSwipeAction)}
+                    disabled={savingNotificationSettings}
+                    className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-60"
+                  >
+                    {notificationActionOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {notificationMessage && (
+              <p className="text-xs text-secondary">{notificationMessage}</p>
+            )}
           </div>
         </div>
 

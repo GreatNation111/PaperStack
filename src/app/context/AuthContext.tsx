@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             level: '100L',
                             role: 'student',
                             isPremium: false,
+                            notificationSettings: {
+                                pushEnabled: true,
+                                swipeRightAction: 'markRead',
+                                swipeLeftAction: 'delete',
+                            },
                             bookmarks: [],
                             readNotifications: [],
                             recentCourses: [],

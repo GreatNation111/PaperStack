@@ -68,19 +68,24 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
   };
   const formatViewPaperLabel = (count?: number) => `View ${count === 1 ? 'Paper' : 'Papers'}`;
 
-  // Check notification permission status on mount
+  // Check notification permission status and profile preference.
   useEffect(() => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'default') {
-        setShowNotificationBanner(true);
-      }
+    const pushEnabled = profile?.notificationSettings?.pushEnabled !== false;
+    const dismissed = localStorage.getItem('hideNotificationBanner');
+
+    if (!pushEnabled || dismissed || !('Notification' in window) || Notification.permission !== 'default') {
+      setShowNotificationBanner(false);
+      return;
     }
-  }, []);
+
+    setShowNotificationBanner(true);
+  }, [profile?.notificationSettings?.pushEnabled]);
 
   const handleEnableNotifications = async () => {
     if (!user) return;
     const success = await requestNotificationPermissionAndSaveToken(user.uid);
     if (success) {
+      localStorage.removeItem('hideNotificationBanner');
       setShowNotificationBanner(false);
     }
   };
@@ -90,12 +95,6 @@ export function Home({ userName, onNotifications, onExplore }: HomeProps) {
     // Optionally save to local storage not to ask again
     localStorage.setItem('hideNotificationBanner', 'true');
   };
-
-  useEffect(() => {
-    if (localStorage.getItem('hideNotificationBanner')) {
-      setShowNotificationBanner(false);
-    }
-  }, []);
 
   // Dynamic icon mapping from admin-set icon field
   const ICON_MAP: Record<string, any> = {

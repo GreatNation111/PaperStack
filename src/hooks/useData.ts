@@ -77,10 +77,19 @@ export interface UserProfile {
     departmentId?: string;
     level?: string;
     avatar?: string;
+    notificationSettings?: NotificationSettings;
     savedPapers?: string[]; // Array of paper IDs
     downloadsCount?: number; // Track PDF downloads
     isPremium: boolean;
     premiumExpiresAt?: any; // Firestore Timestamp
+}
+
+export type NotificationSwipeAction = 'markRead' | 'delete' | 'none';
+
+export interface NotificationSettings {
+    pushEnabled?: boolean;
+    swipeRightAction?: NotificationSwipeAction;
+    swipeLeftAction?: NotificationSwipeAction;
 }
 
 export interface Notification {
@@ -88,7 +97,7 @@ export interface Notification {
     title: string;
     body: string; // Changed from message to body to match Admin
     message?: string; // Backwards compatibility
-    type: 'info' | 'alert' | 'warning';
+    type: 'info' | 'alert' | 'warning' | 'success';
     target?: 'global' | 'department';
     targetId?: string;
     createdAt: any;
@@ -392,13 +401,21 @@ export function useNotifications(userId: string | undefined) {
                     body: doc.data().body || doc.data().message || ''
                 } as Notification));
 
-                // Fetch read status for this user
+                // Fetch per-user receipts for read and deleted state.
                 const receipts: Record<string, boolean> = {};
+                const deletedReceipts: Record<string, boolean> = {};
                 try {
                     const userReadRef = collection(db, 'users', userId, 'read_notifications');
-                    const readSnap = await getDocs(userReadRef);
+                    const userDeletedRef = collection(db, 'users', userId, 'deleted_notifications');
+                    const [readSnap, deletedSnap] = await Promise.all([
+                        getDocs(userReadRef),
+                        getDocs(userDeletedRef),
+                    ]);
                     readSnap.docs.forEach(d => {
                         receipts[d.id] = true;
+                    });
+                    deletedSnap.docs.forEach(d => {
+                        deletedReceipts[d.id] = true;
                     });
                 } catch (e) {
                     // ignore
@@ -406,6 +423,8 @@ export function useNotifications(userId: string | undefined) {
 
                 // FILTERING LOGIC
                 const filtered = notifs.filter(n => {
+                    if (deletedReceipts[n.id]) return false;
+
                     // 1. Global: Always show
                     if (!n.target || n.target === 'global') return true;
 
@@ -454,6 +473,12 @@ export async function markAllNotificationsAsRead(userId: string, notificationIds
         return setDoc(userReadRef, { readAt: new Date() });
     });
     await Promise.all(promises);
+}
+
+export async function deleteNotificationForUser(userId: string, notificationId: string) {
+    if (!userId || !notificationId) return;
+    const userDeletedRef = doc(db, 'users', userId, 'deleted_notifications', notificationId);
+    await setDoc(userDeletedRef, { deletedAt: new Date() });
 }
 
 export function useUserProfile(userId: string | undefined) {
