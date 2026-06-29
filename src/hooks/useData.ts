@@ -535,9 +535,18 @@ export async function updateUserProfile(userId: string, data: any) {
     await setDoc(userRef, data, { merge: true });
 }
 
+function getFeatureInterestDocId(userId: string, featureName: string) {
+    const featureKey = featureName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'feature';
+
+    return `${userId}_${featureKey}`;
+}
+
 export async function recordFeatureInterest(user: any, featureName: string) {
     if (!user?.uid) return;
-    await addDoc(collection(db, 'feature_interest'), {
+    await setDoc(doc(db, 'feature_interest', getFeatureInterestDocId(user.uid, featureName)), {
         userId: user.uid,
         userName: user.displayName || user.name || 'Anonymous',
         userEmail: user.email || '',

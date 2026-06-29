@@ -21,6 +21,10 @@ interface GroupedRequest {
     voters: FeatureRequest[];
 }
 
+type InternalGroupedRequest = GroupedRequest & {
+    voterKeys: Set<string>;
+};
+
 export function FeatureRequestsViewer() {
     const [requests, setRequests] = useState<FeatureRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,27 +48,35 @@ export function FeatureRequestsViewer() {
 
     const groupedRequests: GroupedRequest[] = Object.values(requests.reduce((acc, curr: any) => {
         const key = curr.feature || 'unknown';
+        const voterKey = curr.userId || curr.userEmail || curr.id;
         if (!acc[key]) {
             acc[key] = {
                 featureKey: key,
                 count: 0,
                 lastRequested: curr.timestamp,
-                voters: []
+                voters: [],
+                voterKeys: new Set<string>()
             };
         }
-        acc[key].count += 1;
-        if (curr.userName) {
-            acc[key].voters.push(curr);
+
+        if (!acc[key].voterKeys.has(voterKey)) {
+            acc[key].voterKeys.add(voterKey);
+            acc[key].count += 1;
+            if (curr.userName) {
+                acc[key].voters.push(curr);
+            }
         }
+
         if (curr.timestamp > acc[key].lastRequested) {
             acc[key].lastRequested = curr.timestamp;
         }
         return acc;
-    }, {} as Record<string, GroupedRequest>));
+    }, {} as Record<string, InternalGroupedRequest>)).map(({ voterKeys: _voterKeys, ...group }) => group);
 
     const sortedRequests = groupedRequests
         .sort((a, b) => b.count - a.count)
         .filter(r => r.featureKey.toLowerCase().includes(searchQuery.toLowerCase()));
+    const uniqueRequestCount = groupedRequests.reduce((total, item) => total + item.count, 0);
 
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
@@ -100,8 +112,8 @@ export function FeatureRequestsViewer() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-5">
-                    <div className="text-sm text-[#AAA] mb-1">Total Requests</div>
-                    <div className="text-2xl font-semibold text-[#E5E5E5]">{requests.length}</div>
+                    <div className="text-sm text-[#AAA] mb-1">Unique Requests</div>
+                    <div className="text-2xl font-semibold text-[#E5E5E5]">{uniqueRequestCount}</div>
                 </div>
                 <div className="bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl p-5">
                     <div className="text-sm text-[#AAA] mb-1">Unique Features</div>
@@ -124,11 +136,11 @@ export function FeatureRequestsViewer() {
                         <tbody className="divide-y divide-[#2A2A2F]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-[#666]">Loading requests...</td>
+                                    <td colSpan={5} className="px-6 py-8 text-center text-[#666]">Loading requests...</td>
                                 </tr>
                             ) : sortedRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-[#666]">No requests found.</td>
+                                    <td colSpan={5} className="px-6 py-8 text-center text-[#666]">No requests found.</td>
                                 </tr>
                             ) : (
                                 sortedRequests.map((item, index) => (

@@ -141,13 +141,27 @@ service cloud.firestore {
 
     match /contributors/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          isAuthenticated()
+          && request.auth.uid == id
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['avatar', 'name'])
+        );
     }
     
     match /feature_interest/{id} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          isAuthenticated()
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.feature == resource.data.feature
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName', 'userEmail', 'userAvatar', 'timestamp'])
+        );
+      allow delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {

@@ -101,10 +101,14 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   const handleUpdateAvatar = async (key: string) => {
     if (!user) return;
     await updateUserProfile(user.uid, { avatar: key });
-    if (userContributor) {
-      await updateDoc(doc(db, 'contributors', userContributor.id!), {
-        avatar: key
-      });
+    if (userContributor?.id) {
+      try {
+        await updateDoc(doc(db, 'contributors', userContributor.id), {
+          avatar: key
+        });
+      } catch (error) {
+        console.error('Error syncing contributor avatar:', error);
+      }
     }
     setIsEditingAvatar(false);
   };
@@ -130,9 +134,13 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
 
       // Sync name to contributors collection if user is a contributor
       if (userContributor && trimmedName && trimmedName !== profile?.name) {
-        await updateDoc(doc(db, 'contributors', userContributor.id!), {
-          name: trimmedName
-        });
+        try {
+          await updateDoc(doc(db, 'contributors', userContributor.id!), {
+            name: trimmedName
+          });
+        } catch (error) {
+          console.error('Error syncing contributor name:', error);
+        }
       }
 
       setIsEditingDetails(false);
@@ -151,9 +159,17 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
     swipeLeftAction: profile?.notificationSettings?.swipeLeftAction || 'delete',
   };
 
-  // Check if user is a contributor (matching by name is risky but fallback for now without ID)
-  // Ideally contributors collection should include userId.
-  const userContributor = contributors.find(c => c.name === displayName);
+  const userContributor = contributors.find(c => (user?.uid && c.id === user.uid) || c.name === displayName);
+
+  useEffect(() => {
+    if (!userContributor?.id || !profile?.avatar || userContributor.avatar === profile.avatar) return;
+
+    updateDoc(doc(db, 'contributors', userContributor.id), {
+      avatar: profile.avatar
+    }).catch(error => {
+      console.error('Error syncing contributor avatar:', error);
+    });
+  }, [profile?.avatar, userContributor?.avatar, userContributor?.id]);
 
   const handleBecomeContributor = () => {
     const msg = `Hello, I'd like to become a contributor on PaperStack.%0A%0AName: ${displayName}%0ADepartment: ${currentDepartmentName}%0ALevel: ${formData.level || 'Not set'}`;

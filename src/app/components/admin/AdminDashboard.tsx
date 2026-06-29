@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { Building2, BookOpen, Users, Flag, ArrowUpRight, Bell, HelpCircle, RefreshCw, Database, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import { collection, getCountFromServer, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { seedDatabase } from '@/utils/seed';
 
@@ -30,15 +30,19 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         getCountFromServer(collection(db, 'departments')),
         getCountFromServer(collection(db, 'courses')),
         getCountFromServer(collection(db, 'contributors')),
-        getCountFromServer(collection(db, 'feature_interest')),
+        getDocs(collection(db, 'feature_interest')),
         getCountFromServer(collection(db, 'notifications')),
       ]);
+      const uniqueFeatureRequests = new Set(requests.docs.map(requestDoc => {
+        const data = requestDoc.data();
+        return `${data.feature || 'unknown'}:${data.userId || data.userEmail || requestDoc.id}`;
+      }));
       setCounts({
         users: users.data().count,
         departments: depts.data().count,
         courses: courses.data().count,
         contributors: contribs.data().count,
-        requests: requests.data().count,
+        requests: uniqueFeatureRequests.size,
         notifications: notifs.data().count,
       });
     } catch (err) {

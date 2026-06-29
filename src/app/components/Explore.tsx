@@ -292,19 +292,18 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
                 <div className="text-secondary text-sm">No contributors yet.</div>
               </div>
             ) : (
-              contributors.map((contributor, index) => (
+              contributors.map((contributor, index) => {
+                const avatarSeed = contributor.avatar || contributor.name || 'PaperStack Student';
+
+                return (
                 <motion.div key={contributor.id || `${contributor.name}-${index}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + index * 0.1 }} className="flex-shrink-0 w-64 bg-card border border-border rounded-2xl p-5">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 bg-primary rounded-full overflow-hidden flex items-center justify-center text-primary-foreground font-semibold flex-shrink-0">
-                      {contributor.avatar ? (
-                        <img 
-                          src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${contributor.avatar}&backgroundColor=b6e3f4,c0aede,d1d4f9`} 
-                          alt={`${contributor.name}'s avatar`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        contributor.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                      )}
+                      <img
+                        src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                        alt={`${contributor.name}'s avatar`}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-foreground truncate">{contributor.name}</div>
@@ -314,7 +313,8 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
                   <div className="text-sm text-secondary mb-2">{contributor.contributionCount} past questions</div>
                   {contributor.badge && <div className="flex items-center gap-2 bg-accent/10 text-accent px-3 py-1.5 rounded-lg text-xs font-medium"><Award className="w-3.5 h-3.5" strokeWidth={2} />{contributor.badge}</div>}
                 </motion.div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

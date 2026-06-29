@@ -1,9 +1,40 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, Loader2, Save, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
+import { Settings, Loader2, Save, Calendar, TrendingUp, CheckCircle, Users, X, Mail } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_PRICING_CONFIG, GlobalConfig, PricingConfig, useGlobalConfig, usePricingConfig } from '@/hooks/useData';
+
+type PricingVoter = {
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  userAvatar?: string;
+  suggestedPrice?: number;
+  createdAt?: any;
+};
+
+const getVoterAvatarSrc = (avatar?: string) => {
+  if (!avatar) return '';
+  if (/^https?:\/\//i.test(avatar)) return avatar;
+  return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+};
+
+const getVoterInitial = (name?: string) => name?.trim().charAt(0).toUpperCase() || 'U';
+
+const formatVoterDate = (timestamp?: any) => {
+  if (!timestamp) return 'No date recorded';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return 'No date recorded';
+
+  return date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
 
 export function AdminSettings() {
   const { config, loading } = useGlobalConfig();
@@ -11,7 +42,8 @@ export function AdminSettings() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { pricingConfig, loading: pricingLoading } = usePricingConfig();
   const [pricingStats, setPricingStats] = useState<Record<string, number>>({ total: 0 });
-  const [pricingVoters, setPricingVoters] = useState<Record<string, any[]>>({});
+  const [pricingVoters, setPricingVoters] = useState<Record<string, PricingVoter[]>>({});
+  const [selectedPricingGroup, setSelectedPricingGroup] = useState<{ price: string; voters: PricingVoter[] } | null>(null);
   const [localPricingConfig, setLocalPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
 
   // Local state for immediate UI feedback before blur/save
@@ -34,15 +66,15 @@ export function AdminSettings() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'pricingFeedback'), (snap) => {
       const stats: Record<string, number> = { total: snap.size };
-      const voters: Record<string, any[]> = {};
+      const voters: Record<string, PricingVoter[]> = {};
       
       snap.docs.forEach(doc => {
-        const data = doc.data();
+        const data = doc.data() as PricingVoter;
         const choice = data.suggestedPrice?.toString();
         if (choice) {
           stats[choice] = (stats[choice] || 0) + 1;
           if (!voters[choice]) voters[choice] = [];
-          if (data.userName) voters[choice].push(data); // only push if denormalized data exists
+          voters[choice].push(data);
         }
       });
       setPricingStats(stats);
@@ -376,10 +408,10 @@ export function AdminSettings() {
                                 key={voter.userId + i}
                                 className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-primary text-[10px] font-black uppercase shadow-sm relative group cursor-help z-10 hover:z-20 hover:scale-110 transition-transform overflow-hidden"
                               >
-                                {voter.userAvatar ? (
-                                  <img src={voter.userAvatar} alt={voter.userName} className="w-full h-full object-cover" />
+                                {getVoterAvatarSrc(voter.userAvatar) ? (
+                                  <img src={getVoterAvatarSrc(voter.userAvatar)} alt={voter.userName} className="w-full h-full object-cover" />
                                 ) : (
-                                  voter.userName?.charAt(0) || 'U'
+                                  getVoterInitial(voter.userName)
                                 )}
                                 <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-foreground text-background text-[9px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                                   {voter.userName}
@@ -394,6 +426,16 @@ export function AdminSettings() {
                           </div>
                         </div>
                       )}
+                      {count > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPricingGroup({ price, voters: pricingVoters[price] || [] })}
+                          className="mx-auto flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-4 text-xs font-bold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                        >
+                          <Users className="w-4 h-4" />
+                          View voters
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -402,6 +444,64 @@ export function AdminSettings() {
           </div>
         </div>
       </div>
+      {selectedPricingGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-secondary">Pricing voters</p>
+                <h2 className="text-2xl font-black text-foreground">{`\u20A6${parseInt(selectedPricingGroup.price).toLocaleString()}`}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPricingGroup(null)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-secondary transition-colors hover:border-primary/50 hover:text-primary"
+                aria-label="Close voter list"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-4">
+              {selectedPricingGroup.voters.length === 0 ? (
+                <div className="rounded-xl border border-border bg-muted/20 p-5 text-sm text-secondary">
+                  No voter profile details were stored for this price yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedPricingGroup.voters.map((voter, index) => (
+                    <div key={`${voter.userId || voter.userEmail || 'voter'}-${index}`} className="flex items-center gap-3 rounded-xl border border-border bg-background/60 p-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-sm font-black uppercase text-primary">
+                        {getVoterAvatarSrc(voter.userAvatar) ? (
+                          <img src={getVoterAvatarSrc(voter.userAvatar)} alt={voter.userName || 'Voter'} className="h-full w-full object-cover" />
+                        ) : (
+                          getVoterInitial(voter.userName)
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-bold text-foreground">{voter.userName || 'Unknown student'}</div>
+                        {voter.userEmail && (
+                          <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-secondary">
+                            <Mail className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{voter.userEmail}</span>
+                          </div>
+                        )}
+                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-secondary/70">
+                          {formatVoterDate(voter.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,7 +35,11 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'feature_interest'), (snap) => {
-      setFeatureRequestCount(snap.size);
+      const uniqueRequests = new Set(snap.docs.map(requestDoc => {
+        const data = requestDoc.data();
+        return `${data.feature || 'unknown'}:${data.userId || data.userEmail || requestDoc.id}`;
+      }));
+      setFeatureRequestCount(uniqueRequests.size);
     });
     return () => unsub();
   }, []);

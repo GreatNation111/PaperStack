@@ -263,15 +263,37 @@ export function Notifications({ onBack }: NotificationsProps) {
   // Local state for optimistic UI updates
   const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
   const [localDeletedIds, setLocalDeletedIds] = useState<Set<string>>(new Set());
+  const [localInterestTitles, setLocalInterestTitles] = useState<Set<string>>(new Set());
+  const [pendingInterestTitles, setPendingInterestTitles] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
 
   const swipeRightAction = profile?.notificationSettings?.swipeRightAction || 'markRead';
   const swipeLeftAction = profile?.notificationSettings?.swipeLeftAction || 'delete';
   const visibleNotifications = notifications.filter(notification => !localDeletedIds.has(notification.id));
+  const hasRequestedFeature = (title: string) => interests.includes(title) || localInterestTitles.has(title);
 
   const handleNotifyInterest = async (title: string) => {
-    if (!user) return;
-    await recordFeatureInterest(user, title);
+    if (!user || hasRequestedFeature(title) || pendingInterestTitles.has(title)) return;
+
+    setLocalInterestTitles(prev => new Set(prev).add(title));
+    setPendingInterestTitles(prev => new Set(prev).add(title));
+
+    try {
+      await recordFeatureInterest(user, title);
+    } catch (error) {
+      console.error('Error recording feature interest:', error);
+      setLocalInterestTitles(prev => {
+        const next = new Set(prev);
+        next.delete(title);
+        return next;
+      });
+    } finally {
+      setPendingInterestTitles(prev => {
+        const next = new Set(prev);
+        next.delete(title);
+        return next;
+      });
+    }
   };
 
   const handleMarkRead = useCallback(async (id: string, isRead: boolean) => {
@@ -453,16 +475,24 @@ export function Notifications({ onBack }: NotificationsProps) {
                       <p className="text-sm text-secondary leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleNotifyInterest(feature.title)}
-                    disabled={interests.includes(feature.title)}
-                    className={`w-full h-11 border-2 rounded-xl font-semibold transition-all ${interests.includes(feature.title)
-                      ? 'bg-primary border-primary text-primary-foreground'
-                      : 'border-primary text-primary hover:bg-primary/5'
-                      }`}
-                  >
-                    {interests.includes(feature.title) ? 'Request Sent!' : 'Notify Me When Ready'}
-                  </button>
+                  {(() => {
+                    const isRequested = hasRequestedFeature(feature.title);
+                    const isSending = pendingInterestTitles.has(feature.title);
+
+                    return (
+                      <button
+                        onClick={() => handleNotifyInterest(feature.title)}
+                        disabled={isRequested || isSending}
+                        className={`w-full h-11 border-2 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${isRequested || isSending
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'border-primary text-primary hover:bg-primary/5'
+                          }`}
+                      >
+                        {isSending && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {isSending ? 'Sending...' : isRequested ? 'Request sent' : 'Notify me when ready'}
+                      </button>
+                    );
+                  })()}
                 </motion.div>
               );
             })}
