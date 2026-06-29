@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, User, Loader2 } from 'lucide-react';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 interface SignUpProps {
   onBack: () => void;
@@ -44,9 +44,16 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
     setError('');
 
     try {
+      // Set global flag so AuthContext doesn't race us to create the user doc
+      (window as any).__paperstack_signup_in_progress = true;
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      // Write displayName to Firebase Auth profile
       await updateProfile(user, { displayName: fullName });
+
+      // Write user doc to Firestore (this is the source of truth for name)
       await setDoc(doc(db, 'users', user.uid), {
         name: fullName,
         email: email,
@@ -64,8 +71,13 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
         recentCourses: [],
         createdAt: serverTimestamp(),
       });
+
+      // Clear the flag now that the doc is written
+      (window as any).__paperstack_signup_in_progress = false;
+
       onComplete(fullName);
     } catch (err: any) {
+      (window as any).__paperstack_signup_in_progress = false;
       console.error(err);
       setError(getAuthErrorMessage(err.code));
     } finally {
@@ -82,23 +94,27 @@ export function SignUp({ onBack, onSignIn, onComplete }: SignUpProps) {
       const result = await signInWithPopup(auth, provider);
 
       const user = result.user;
-      await setDoc(doc(db, 'users', user.uid), {
-        name: user.displayName || 'Student',
-        email: user.email,
-        departmentId: 'General',
-        level: '100L',
-        role: 'student',
-        isPremium: false,
-        notificationSettings: {
-          pushEnabled: true,
-          swipeRightAction: 'markRead',
-          swipeLeftAction: 'delete',
-        },
-        bookmarks: [],
-        readNotifications: [],
-        recentCourses: [],
-        createdAt: serverTimestamp(),
-      }, { merge: true });
+      // Only create doc if it doesn't already exist (returning Google user)
+      const existingDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!existingDoc.exists()) {
+        await setDoc(doc(db, 'users', user.uid), {
+          name: user.displayName || 'Student',
+          email: user.email,
+          departmentId: 'General',
+          level: '100L',
+          role: 'student',
+          isPremium: false,
+          notificationSettings: {
+            pushEnabled: true,
+            swipeRightAction: 'markRead',
+            swipeLeftAction: 'delete',
+          },
+          bookmarks: [],
+          readNotifications: [],
+          recentCourses: [],
+          createdAt: serverTimestamp(),
+        });
+      }
       onComplete(user.displayName || 'Student');
     } catch (err: any) {
       console.error('Google Sign-In Error:', err);

@@ -1,13 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle, Bell, BellOff } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit, Moon, Sun, Crown, LogOut, Loader2, MessageCircle, Bell, BellOff, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/app/context/AuthContext';
 import { useUserProfile, updateUserProfile, useDepartments, useContributors, type NotificationSwipeAction } from '@/hooks/useData';
 import { requestNotificationPermissionAndSaveToken } from '@/services/messaging';
 import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
 
 interface ProfileProps {
   userName: string;
@@ -73,6 +74,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
 
   // Form State
   const [formData, setFormData] = useState({
+    name: '',
     departmentId: '',
     level: ''
   });
@@ -81,6 +83,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
   useEffect(() => {
     if (profile) {
       setFormData({
+        name: profile.name || user?.displayName || '',
         departmentId: profile.departmentId || '',
         level: profile.level || ''
       });
@@ -110,10 +113,28 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
     if (!user) return;
     setSaving(true);
     try {
-      await updateUserProfile(user.uid, {
+      const trimmedName = formData.name.trim();
+      const updates: Record<string, any> = {
         departmentId: formData.departmentId,
         level: formData.level
-      });
+      };
+
+      // Only update name if it's changed and not empty
+      if (trimmedName && trimmedName !== profile?.name) {
+        updates.name = trimmedName;
+        // Also sync to Firebase Auth displayName
+        await updateProfile(user, { displayName: trimmedName });
+      }
+
+      await updateUserProfile(user.uid, updates);
+
+      // Sync name to contributors collection if user is a contributor
+      if (userContributor && trimmedName && trimmedName !== profile?.name) {
+        await updateDoc(doc(db, 'contributors', userContributor.id!), {
+          name: trimmedName
+        });
+      }
+
       setIsEditingDetails(false);
     } catch (e) {
       console.error(e);
@@ -287,6 +308,22 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
             >
               <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                 <div>
+                  <label className="text-xs font-semibold text-secondary mb-1.5 block">Display Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" strokeWidth={1.5} />
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Your name"
+                      className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  {(displayName === 'Student' || !profile?.name) && (
+                    <p className="text-[11px] text-amber-500 mt-1.5 font-medium">Your name is showing as "Student" — update it here!</p>
+                  )}
+                </div>
+                <div>
                   <label className="text-xs font-semibold text-secondary mb-1.5 block">Department</label>
                   <select
                     value={formData.departmentId}
@@ -336,8 +373,8 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
               className="w-full bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:border-primary transition-all"
             >
               <div className="text-left">
-                <span className="font-medium text-foreground block">Department & Level</span>
-                <span className="text-xs text-secondary">Update your academic info</span>
+                <span className="font-medium text-foreground block">Profile Details</span>
+                <span className="text-xs text-secondary">Name, department, and level</span>
               </div>
               <ChevronRight className="w-5 h-5 text-secondary" strokeWidth={2} />
             </button>

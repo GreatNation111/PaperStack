@@ -48,30 +48,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (userDoc.exists()) {
                         setUserProfile(userDoc.data());
                     } else {
-                        // User exists in Auth but missing from Firestore (e.g. signup connection drop)
-                        const { setDoc, serverTimestamp } = await import('firebase/firestore');
-                        const defaultData = {
-                            name: currentUser.displayName || 'Student',
-                            email: currentUser.email,
-                            departmentId: 'General',
-                            level: '100L',
-                            role: 'student',
-                            isPremium: false,
-                            notificationSettings: {
-                                pushEnabled: true,
-                                swipeRightAction: 'markRead',
-                                swipeLeftAction: 'delete',
-                            },
-                            bookmarks: [],
-                            readNotifications: [],
-                            recentCourses: [],
-                            createdAt: serverTimestamp(),
-                        };
-                        try {
-                            await setDoc(doc(db, 'users', currentUser.uid), defaultData, { merge: true });
-                            setUserProfile(defaultData);
-                        } catch (err) {
-                            console.error('[AuthContext] Failed to auto-create missing user doc:', err);
+                        // If a signup is currently in progress, don't create a fallback doc —
+                        // the SignUp component will write the real doc with the user's actual name.
+                        // This prevents the race condition where AuthContext writes 'Student' before
+                        // SignUp has finished writing the real name.
+                        if ((window as any).__paperstack_signup_in_progress) {
+                            // Wait briefly for signup to finish writing the doc, then re-check
+                            await new Promise(r => setTimeout(r, 2000));
+                            const retryDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                            if (retryDoc.exists()) {
+                                setUserProfile(retryDoc.data());
+                            }
+                            // If still missing, the signup handler will create it
+                        } else {
+                            // User exists in Auth but missing from Firestore (e.g. signup connection drop)
+                            const { setDoc, serverTimestamp } = await import('firebase/firestore');
+                            const defaultData = {
+                                name: currentUser.displayName || 'Student',
+                                email: currentUser.email,
+                                departmentId: 'General',
+                                level: '100L',
+                                role: 'student',
+                                isPremium: false,
+                                notificationSettings: {
+                                    pushEnabled: true,
+                                    swipeRightAction: 'markRead',
+                                    swipeLeftAction: 'delete',
+                                },
+                                bookmarks: [],
+                                readNotifications: [],
+                                recentCourses: [],
+                                createdAt: serverTimestamp(),
+                            };
+                            try {
+                                await setDoc(doc(db, 'users', currentUser.uid), defaultData, { merge: true });
+                                setUserProfile(defaultData);
+                            } catch (err) {
+                                console.error('[AuthContext] Failed to auto-create missing user doc:', err);
+                            }
                         }
                     }
 
