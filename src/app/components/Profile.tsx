@@ -123,8 +123,8 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
         level: formData.level
       };
 
-      // Only update name if it's changed and not empty
-      if (trimmedName && trimmedName !== profile?.name) {
+      // Only update name if the user changed the visible display name.
+      if (trimmedName && trimmedName !== displayName) {
         updates.name = trimmedName;
         // Also sync to Firebase Auth displayName
         await updateProfile(user, { displayName: trimmedName });
@@ -133,7 +133,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
       await updateUserProfile(user.uid, updates);
 
       // Sync name to contributors collection if user is a contributor
-      if (userContributor && trimmedName && trimmedName !== profile?.name) {
+      if (userContributor && trimmedName && trimmedName !== displayName) {
         try {
           await updateDoc(doc(db, 'contributors', userContributor.id!), {
             name: trimmedName
@@ -335,7 +335,7 @@ export function Profile({ userName: initialName, isDarkMode, onToggleDarkMode, o
                       className="w-full bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
                     />
                   </div>
-                  {(displayName === 'Student' || !profile?.name) && (
+                  {displayName.trim().toLowerCase() === 'student' && (
                     <p className="text-[11px] text-amber-500 mt-1.5 font-medium">Your name is showing as "Student" — update it here!</p>
                   )}
                 </div>

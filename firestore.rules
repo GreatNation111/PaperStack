@@ -35,7 +35,7 @@ service cloud.firestore {
     }
 
     function userSelfUpdateFields() {
-      return ['departmentId', 'level', 'avatar', 'fcmTokens', 'downloadsCount', 'notificationSettings'];
+      return ['name', 'departmentId', 'level', 'avatar', 'fcmTokens', 'downloadsCount', 'notificationSettings'];
     }
 
     function validStudentCreate() {
