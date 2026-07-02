@@ -8,6 +8,7 @@ const UsersManagement = lazy(() => import('./UsersManagement').then(m => ({ defa
 const AdminSettings = lazy(() => import('./AdminSettings').then(m => ({ default: m.AdminSettings })));
 const DepartmentsManager = lazy(() => import('./DepartmentsManager').then(m => ({ default: m.DepartmentsManager })));
 const FeatureRequestsViewer = lazy(() => import('./FeatureRequestsViewer').then(m => ({ default: m.FeatureRequestsViewer })));
+const FeedbackViewer = lazy(() => import('./FeedbackViewer').then(m => ({ default: m.FeedbackViewer })));
 const TimetableManagement = lazy(() => import('./TimetableManagement').then(m => ({ default: m.TimetableManagement })));
 const RepeatedQuestionsManagement = lazy(() => import('./RepeatedQuestionsManagement').then(m => ({ default: m.RepeatedQuestionsManagement })));
 
@@ -30,6 +31,7 @@ type AdminPage =
   | 'departments' // Renamed from schools
   | 'users'
   | 'reports' // Will be Feature Requests
+  | 'feedback'
   | 'settings'
   | 'timetable'
   | 'repeated-questions';
@@ -55,6 +57,8 @@ export function AdminContainer({ onLogout, isDarkMode, onToggleDarkMode }: Admin
         return <UsersManagement />;
       case 'reports':
         return <FeatureRequestsViewer />;
+      case 'feedback':
+        return <FeedbackViewer />;
       case 'settings':
         return <AdminSettings />;
       case 'timetable':

@@ -105,6 +105,22 @@ export interface Notification {
     isRead: boolean;
 }
 
+export interface StudentFeedback {
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userAvatar?: string;
+    departmentId?: string;
+    departmentName?: string;
+    level?: string;
+    rating: number;
+    message?: string;
+    contextPath?: string;
+    createdAt: any;
+    updatedAt?: any;
+}
+
 const WELCOME_NOTIFICATION_ID = 'paperstack_welcome';
 const WELCOME_NOTIFICATION_TITLE = 'Welcome to PaperStack';
 const WELCOME_NOTIFICATION_BODY = 'Your study hub is ready. Set your department and level in Profile, explore past questions by course, save useful papers to your Library, and check Notifications for new uploads and important academic updates.';
@@ -533,6 +549,62 @@ export async function updateUserProfile(userId: string, data: any) {
     if (!userId) return;
     const userRef = doc(db, 'users', userId);
     await setDoc(userRef, data, { merge: true });
+}
+
+export async function submitStudentFeedback({
+    user,
+    profile,
+    departmentName,
+    rating,
+    message,
+    contextPath
+}: {
+    user: any;
+    profile?: UserProfile | null;
+    departmentName?: string;
+    rating: number;
+    message?: string;
+    contextPath?: string;
+}) {
+    if (!user?.uid) return;
+
+    const now = new Date();
+    const feedbackRef = doc(db, 'student_feedback', user.uid);
+
+    await setDoc(feedbackRef, {
+        userId: user.uid,
+        userName: profile?.name || user.displayName || 'Student',
+        userEmail: profile?.email || user.email || '',
+        userAvatar: profile?.avatar || user.photoURL || '',
+        departmentId: profile?.departmentId || '',
+        departmentName: departmentName || '',
+        level: profile?.level || '',
+        rating,
+        message: message?.trim() || '',
+        contextPath: contextPath || '',
+        createdAt: now,
+        updatedAt: now
+    }, { merge: true });
+}
+
+export function useStudentFeedbackResponses() {
+    const [feedback, setFeedback] = useState<StudentFeedback[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, 'student_feedback'), orderBy('createdAt', 'desc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setFeedback(snapshot.docs.map(d => ({ id: d.id, ...(d.data() as any) } as StudentFeedback)));
+            setLoading(false);
+        }, (error) => {
+            console.error('Error fetching student feedback:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { feedback, loading };
 }
 
 function getFeatureInterestDocId(userId: string, featureName: string) {

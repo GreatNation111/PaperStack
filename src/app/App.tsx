@@ -2,6 +2,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { BottomNav } from '@/app/components/BottomNav';
+import { EngagementPrompts } from '@/app/components/EngagementPrompts';
 import { OnboardingTour } from '@/app/components/OnboardingTour';
 import { Forbidden } from '@/app/components/Forbidden';
 import { MaintenanceGate } from '@/app/components/MaintenanceGate';
@@ -310,6 +311,8 @@ function AppContent() {
         )}
 
         <OnboardingTour enabled={!!user && showBottomNav && !isAdminRoute && !authLoading && needsAcademicProfile} />
+
+        <EngagementPrompts enabled={!!user && !isAdminRoute && !authLoading} />
 
         <OfflineBanner isOffline={isOffline} showBackOnline={showBackOnline} isAdminRoute={isAdminRoute} />
       </div>

@@ -14,6 +14,7 @@ import {
   LogOut,
   Calendar,
   MessageCircleQuestion,
+  MessageSquareText,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ interface AdminLayoutProps {
 export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDarkMode, onToggleDarkMode }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [featureRequestCount, setFeatureRequestCount] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'feature_interest'), (snap) => {
@@ -40,6 +42,13 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
         return `${data.feature || 'unknown'}:${data.userId || data.userEmail || requestDoc.id}`;
       }));
       setFeatureRequestCount(uniqueRequests.size);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'student_feedback'), (snap) => {
+      setFeedbackCount(snap.size);
     });
     return () => unsub();
   }, []);
@@ -53,6 +62,7 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
     { id: 'repeated-questions', label: 'Question Curator', icon: MessageCircleQuestion },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'reports', label: 'Feature Requests', icon: Flag, badge: featureRequestCount },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquareText, badge: feedbackCount },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -112,9 +122,9 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
                 )}
                 <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600' : ''}`} strokeWidth={isActive ? 2.5 : 1.5} />
                 <span className={`text-xs font-black uppercase tracking-[0.1em] flex-1 text-left ${isActive ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'}`}>{item.label}</span>
-                {item.id === 'reports' && featureRequestCount > 0 && (
+                {item.badge && item.badge > 0 && (
                   <span className="px-2 py-0.5 bg-pink-500 text-white text-[10px] font-black rounded-full shadow-lg shadow-pink-500/20">
-                    {featureRequestCount}
+                    {item.badge}
                   </span>
                 )}
               </button>
@@ -194,9 +204,9 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
                     >
                       <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={isActive ? 2.5 : 1.5} />
                       <span className="text-xs font-black uppercase tracking-[0.1em] flex-1 text-left">{item.label}</span>
-                      {item.id === 'reports' && featureRequestCount > 0 && (
+                      {item.badge && item.badge > 0 && (
                         <span className="px-2 py-0.5 bg-pink-500 text-white text-[10px] font-black rounded-full shadow-lg shadow-pink-500/20">
-                          {featureRequestCount}
+                          {item.badge}
                         </span>
                       )}
                     </button>
