@@ -20,6 +20,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { clearCourseDataCaches, useDepartments } from '@/hooks/useData';
 import { buildCourseCodeSuggestions, courseIdFromCode, findDuplicatePaper, normalizeCourseCode } from '@/utils/courseAdmin';
+import { getAcademicYearOptions, getDefaultAcademicYearOption, getPaperAcademicYear } from '@/utils/academicYear';
 
 const NativeDocumentEditor = lazy(() => import('./NativeDocumentEditor').then(m => ({ default: m.NativeDocumentEditor })));
 
@@ -40,6 +41,8 @@ interface Course {
 interface CoursePaper {
   id: string;
   year?: string;
+  academicYear?: string;
+  academicYearKey?: string;
   pdfUrl?: string;
   richTextContent?: string;
   pageCount?: number;
@@ -64,13 +67,15 @@ export function CoursesManagement() {
   const [showModal, setShowModal] = useState(false);
   const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
   const { departments } = useDepartments();
+  const defaultAcademicYear = getDefaultAcademicYearOption();
+  const academicYearOptions = getAcademicYearOptions();
 
   // Form State
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [attachedPaperId, setAttachedPaperId] = useState<string | null>(null);
-  const [paperYear, setPaperYear] = useState('');
+  const [paperYear, setPaperYear] = useState(defaultAcademicYear.label);
   const [formData, setFormData] = useState<CourseFormData>({
     code: '',
     title: '',
@@ -120,7 +125,7 @@ export function CoursesManagement() {
     });
     setPaperFile(null);
     setAttachedPaperId(null);
-    setPaperYear('');
+    setPaperYear(defaultAcademicYear.label);
     setFormError('');
     setDepartmentPickerOpen(false);
     setUploadMode('pdf');
@@ -144,7 +149,7 @@ export function CoursesManagement() {
     });
     setPaperFile(null);
     setAttachedPaperId(null);
-    setPaperYear('');
+    setPaperYear(defaultAcademicYear.label);
     setFormError('');
     setDepartmentPickerOpen(false);
     setUploadMode('pdf');
@@ -159,8 +164,9 @@ export function CoursesManagement() {
         .find(paper => paper.richTextContent || paper.pdfUrl);
 
       if (existingPaper) {
+        const existingAcademicYear = getPaperAcademicYear(existingPaper);
         setAttachedPaperId(existingPaper.id);
-        setPaperYear(existingPaper.year || '');
+        setPaperYear(existingAcademicYear.label);
         setFormData(prev => ({ ...prev, papers: existingPaper.pageCount || course.papers || 1 }));
         if (existingPaper.richTextContent) {
           setUploadMode('richtext');
@@ -233,13 +239,16 @@ export function CoursesManagement() {
         });
       }
 
+      const academicYear = getPaperAcademicYear({ academicYear: paperYear, year: paperYear });
       const paperPayload = {
         courseId: customId,
         departmentId: primaryDepartmentId,
         departmentIds: formData.departmentIds,
         code: normalizedCode,
         title: `${normalizedCode} Past Question`,
-        year: paperYear || new Date().getFullYear().toString(),
+        year: academicYear.label,
+        academicYear: academicYear.label,
+        academicYearKey: academicYear.key,
         semester: formData.semester,
         type: 'Exam',
         downloads: 0,
@@ -262,12 +271,13 @@ export function CoursesManagement() {
         const duplicate = await findDuplicatePaper({
           courseId: customId,
           year: nextPaperPayload.year,
+          academicYearKey: nextPaperPayload.academicYearKey,
           type: nextPaperPayload.type,
           semester: nextPaperPayload.semester,
           excludePaperId: attachedPaperId
         });
         const targetPaperId = attachedPaperId || duplicate?.id || null;
-        if (duplicate && !attachedPaperId && !confirm('A paper already exists for this course, year, type, and semester. Overwrite it?')) {
+        if (duplicate && !attachedPaperId && !confirm('A paper already exists for this course, academic year, type, and semester. Overwrite it?')) {
           setIsSaving(false);
           return;
         }
@@ -291,12 +301,13 @@ export function CoursesManagement() {
         const duplicate = await findDuplicatePaper({
           courseId: customId,
           year: nextPaperPayload.year,
+          academicYearKey: nextPaperPayload.academicYearKey,
           type: nextPaperPayload.type,
           semester: nextPaperPayload.semester,
           excludePaperId: attachedPaperId
         });
         const targetPaperId = attachedPaperId || duplicate?.id || null;
-        if (duplicate && !attachedPaperId && !confirm('A paper already exists for this course, year, type, and semester. Overwrite it?')) {
+        if (duplicate && !attachedPaperId && !confirm('A paper already exists for this course, academic year, type, and semester. Overwrite it?')) {
           setIsSaving(false);
           return;
         }
@@ -800,13 +811,16 @@ export function CoursesManagement() {
                           </label>
                         </div>
                         <p className="text-xs text-[#888]">Choose an existing PDF, or use Scan pages to photograph paper pages and convert them into one PDF.</p>
-                        <input
-                          type="text"
-                          placeholder="Year (e.g. 2023)"
+                        <select
+                          aria-label="Academic year"
                           value={paperYear}
                           onChange={(e) => setPaperYear(e.target.value)}
                           className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
-                        />
+                        >
+                          {academicYearOptions.map(option => (
+                            <option key={option.key} value={option.label}>{option.label}</option>
+                          ))}
+                        </select>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -818,13 +832,16 @@ export function CoursesManagement() {
                             onError={setFormError}
                           />
                         </Suspense>
-                        <input
-                          type="text"
-                          placeholder="Year (e.g. 2023)"
+                        <select
+                          aria-label="Academic year"
                           value={paperYear}
                           onChange={(e) => setPaperYear(e.target.value)}
                           className="w-full h-11 px-4 mt-8 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5]"
-                        />
+                        >
+                          {academicYearOptions.map(option => (
+                            <option key={option.key} value={option.label}>{option.label}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>

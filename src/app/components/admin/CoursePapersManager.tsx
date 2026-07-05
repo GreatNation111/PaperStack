@@ -9,12 +9,21 @@ import { generatePdfThumbnail, getPdfPageCount, validatePdfFile, MAX_PDF_SIZE_LA
 import { NativeDocumentEditor } from './NativeDocumentEditor';
 import { findDuplicatePaper } from '@/utils/courseAdmin';
 import { createPdfFromImageFiles } from '@/utils/imageToPdf';
+import {
+  formatSemesterLabel,
+  getAcademicYearOptions,
+  getDefaultAcademicYearOption,
+  getPaperAcademicYear,
+  normalizePaperSemester
+} from '@/utils/academicYear';
 
 interface Paper {
   id: string;
   title: string;
   code: string;
   year: string;
+  academicYear?: string;
+  academicYearKey?: string;
   semester: string;
   type: string;
   pdfUrl?: string;
@@ -37,12 +46,14 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const defaultAcademicYear = getDefaultAcademicYearOption();
+  const academicYearOptions = getAcademicYearOptions();
 
   // Form State
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
   const [uploadMode, setUploadMode] = useState<'pdf' | 'richtext'>('pdf');
   const [formData, setFormData] = useState({
-    year: new Date().getFullYear().toString(),
+    year: defaultAcademicYear.label,
     semester: 'First',
     type: 'Exam',
     title: ''
@@ -76,7 +87,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
 
   const resetForm = () => {
     setEditingPaper(null);
-    setFormData({ year: new Date().getFullYear().toString(), semester: 'First', type: 'Exam', title: '' });
+    setFormData({ year: defaultAcademicYear.label, semester: 'First', type: 'Exam', title: '' });
     setSelectedFile(null);
     setSelectedFilePageCount(null);
     setRichText('');
@@ -92,10 +103,11 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
   };
 
   const handleOpenEdit = (paper: Paper) => {
+    const paperAcademicYear = getPaperAcademicYear(paper);
     setEditingPaper(paper);
     setFormData({
-      year: paper.year || '',
-      semester: paper.semester || 'First',
+      year: paperAcademicYear.label,
+      semester: normalizePaperSemester(paper.semester),
       type: paper.type || 'Exam',
       title: paper.title || ''
     });
@@ -146,7 +158,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
     setStatusMsg('');
 
     if (!formData.year || !formData.type) {
-      setFormError('Please fill in required fields (Year, Type).');
+      setFormError('Please fill in required fields (Academic Year, Type).');
       return;
     }
 
@@ -173,21 +185,24 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
 
     setIsSaving(true);
     try {
+      const academicYear = getPaperAcademicYear({ academicYear: formData.year, year: formData.year });
+      const normalizedSemester = normalizePaperSemester(formData.semester);
       const duplicate = await findDuplicatePaper({
         courseId,
-        year: formData.year,
+        year: academicYear.label,
+        academicYearKey: academicYear.key,
         type: formData.type,
-        semester: formData.semester,
+        semester: normalizedSemester,
         excludePaperId: editingPaper?.id
       });
 
       if (duplicate && editingPaper) {
-        setFormError('Another paper already exists for this course, year, type, and semester.');
+        setFormError('Another paper already exists for this course, academic year, type, and semester.');
         setIsSaving(false);
         return;
       }
 
-      if (duplicate && !confirm('A paper already exists for this course, year, type, and semester. Overwrite it?')) {
+      if (duplicate && !confirm('A paper already exists for this course, academic year, type, and semester. Overwrite it?')) {
         setIsSaving(false);
         return;
       }
@@ -238,15 +253,17 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
         }
       }
 
-      const paperTitle = formData.title || `${courseCode} ${formData.type} ${formData.year}`;
+      const paperTitle = formData.title || `${courseCode} ${formData.type} ${academicYear.label}`;
 
       const payload: Record<string, any> = {
         title: paperTitle,
         code: courseCode,
         courseId,
         departmentId,
-        year: formData.year,
-        semester: formData.semester,
+        year: academicYear.label,
+        academicYear: academicYear.label,
+        academicYearKey: academicYear.key,
+        semester: normalizedSemester,
         type: formData.type,
         lastUpdated: serverTimestamp(),
       };
@@ -429,7 +446,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                         <div>
                           <h4 className="font-medium text-[#E5E5E5]">{paper.title}</h4>
                           <p className="text-xs text-[#AAA] mt-0.5">
-                            {paper.year} • {paper.semester} • {paper.type}
+                            {getPaperAcademicYear(paper).label} • {formatSemesterLabel(paper.semester)} • {paper.type}
                             {paper.richTextContent ? ' • Native Doc' : paper.pdfUrl ? ' • PDF' : ' • Legacy Link'}
                             {paper.pageCount ? ` • ${paper.pageCount} page${paper.pageCount === 1 ? '' : 's'}` : ''}
                           </p>
@@ -511,14 +528,16 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                 {/* Metadata Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#DDD] mb-2">Year *</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-medium text-[#DDD] mb-2">Academic Year *</label>
+                    <select
                       value={formData.year}
                       onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                      placeholder="e.g. 2024"
                       className="w-full h-11 px-4 bg-[#0F1115] border border-[#333] rounded-xl text-[#E5E5E5] focus:outline-none focus:border-[#4F46E5]"
-                    />
+                    >
+                      {academicYearOptions.map(option => (
+                        <option key={option.key} value={option.label}>{option.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#DDD] mb-2">Type *</label>
@@ -544,6 +563,7 @@ export function CoursePapersManager({ courseId, courseCode, departmentId, onClos
                     >
                       <option value="First">First</option>
                       <option value="Second">Second</option>
+                      <option value="Unknown">Not specified</option>
                     </select>
                   </div>
                   <div>

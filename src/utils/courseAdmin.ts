@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Department } from '@/hooks/useData';
+import { getPaperAcademicYear, normalizePaperSemester } from '@/utils/academicYear';
 
 const DEPARTMENT_ALIASES: Record<string, string[]> = {
   industrial_tech: ['ITE', 'IND'],
@@ -56,18 +57,31 @@ export function buildCourseCodeSuggestions(code: string, departments: Department
 export async function findDuplicatePaper(params: {
   courseId: string;
   year: string;
+  academicYearKey?: string;
   type: string;
   semester: string;
   excludePaperId?: string | null;
 }) {
+  const targetAcademicYear = getPaperAcademicYear({
+    academicYear: params.year,
+    academicYearKey: params.academicYearKey,
+    year: params.year,
+  });
+  const targetSemester = normalizePaperSemester(params.semester);
+
   const duplicateQuery = query(
     collection(db, 'papers'),
     where('courseId', '==', params.courseId),
-    where('year', '==', params.year),
-    where('type', '==', params.type),
-    where('semester', '==', params.semester)
+    where('type', '==', params.type)
   );
   const snapshot = await getDocs(duplicateQuery);
-  const duplicate = snapshot.docs.find(docSnap => docSnap.id !== params.excludePaperId);
+  const duplicate = snapshot.docs.find(docSnap => {
+    if (docSnap.id === params.excludePaperId) return false;
+
+    const data = docSnap.data() as any;
+    const paperAcademicYear = getPaperAcademicYear(data);
+    return paperAcademicYear.key === targetAcademicYear.key
+      && normalizePaperSemester(data.semester) === targetSemester;
+  });
   return duplicate ? { id: duplicate.id, data: duplicate.data() } : null;
 }

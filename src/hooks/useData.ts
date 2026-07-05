@@ -16,6 +16,7 @@ import {
     or
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getPaperAcademicYear, normalizePaperSemester } from '@/utils/academicYear';
 
 export interface Department {
     id: string;
@@ -57,6 +58,8 @@ export interface Paper {
     title: string;
     code: string;
     year: string;
+    academicYear?: string;
+    academicYearKey?: string;
     semester: string;
     type: string;
     pdfUrl?: string;
@@ -69,6 +72,16 @@ export interface Paper {
     courseId?: string;
     departmentId?: string;
     departmentIds?: string[];
+}
+
+function getPaperAcademicFields(data: any) {
+    const academicYear = getPaperAcademicYear(data);
+    return {
+        year: data.year || academicYear.label,
+        academicYear: data.academicYear || academicYear.label,
+        academicYearKey: data.academicYearKey || academicYear.key,
+        semester: normalizePaperSemester(data.semester),
+    };
 }
 
 export interface UserProfile {
@@ -146,6 +159,28 @@ function normalizeDepartmentIds(data: { departmentId?: string; departmentIds?: u
         return data.departmentIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
     }
     return data.departmentId ? [data.departmentId] : [];
+}
+
+function mapPaperData(id: string, data: any): Paper {
+    const departmentIds = normalizeDepartmentIds(data);
+    const academicFields = getPaperAcademicFields(data);
+
+    return {
+        id,
+        title: data.title || `${data.courseCode || data.code || ''} ${academicFields.academicYear}`.trim(),
+        code: data.courseCode || data.code || '',
+        ...academicFields,
+        type: data.type || '',
+        pdfUrl: data.pdfUrl || data.url || '',
+        richTextContent: data.richTextContent || '',
+        driveFolderUrl: data.driveFolderUrl || '',
+        thumbnailUrl: data.thumbnailUrl || '',
+        pageCount: data.pageCount || undefined,
+        downloads: data.downloads || 0,
+        courseId: data.courseId || data.course || undefined,
+        departmentId: data.departmentId || departmentIds[0],
+        departmentIds,
+    } as Paper;
 }
 
 function mapCourseDoc(d: any): Course {
@@ -359,25 +394,7 @@ export function useRecentPapers(departmentId: string | undefined) {
 
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const docs = snapshot.docs.map(d => {
-                    const data = d.data() as any;
-                    const departmentIds = normalizeDepartmentIds(data);
-                    return {
-                        id: d.id,
-                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                        code: data.courseCode || data.code || '',
-                        year: data.year || '',
-                        semester: data.semester || '',
-                        type: data.type || '',
-                        pdfUrl: data.pdfUrl || data.url || '',
-                        thumbnailUrl: data.thumbnailUrl || '',
-                        pageCount: data.pageCount || undefined,
-                        downloads: data.downloads || 0,
-                        courseId: data.courseId || data.course || undefined,
-                        departmentId: data.departmentId || departmentIds[0],
-                        departmentIds,
-                    } as Paper;
-                });
+                const docs = snapshot.docs.map(d => mapPaperData(d.id, d.data()));
                 setPapers(docs);
             } catch (err) {
                 console.error('Error fetching recent papers:', err);
@@ -802,15 +819,20 @@ export async function recordRecentCourse(userId: string, course: Course) {
 export async function recordPaperDownload(userId: string, paper: Paper) {
     if (!userId || !paper.id) return;
     const ref = doc(db, 'users', userId, 'downloaded_papers', paper.id);
+    const academicYear = getPaperAcademicYear(paper);
     await setDoc(ref, {
         paperId: paper.id,
         title: paper.title,
         code: paper.code,
         year: paper.year,
+        academicYear: paper.academicYear || academicYear.label,
+        academicYearKey: paper.academicYearKey || academicYear.key,
         semester: paper.semester,
         type: paper.type,
         pdfUrl: paper.pdfUrl || null,
         richTextContent: paper.richTextContent || null,
+        thumbnailUrl: paper.thumbnailUrl || null,
+        pageCount: paper.pageCount || null,
         courseId: paper.courseId || null,
         departmentId: paper.departmentId || paper.departmentIds?.[0] || null,
         departmentIds: paper.departmentIds || [],
@@ -842,8 +864,7 @@ export function useDownloadedPapers(userId: string | undefined) {
                         id: op.paperId,
                         title: op.title || 'Downloaded Paper',
                         code: '',
-                        year: '',
-                        semester: '',
+                        ...getPaperAcademicFields({}),
                         type: op.type === 'pdf' ? 'pdf' : 'native',
                     } as Paper));
                     setPapers(localPapers);
@@ -868,13 +889,7 @@ export function useDownloadedPapers(userId: string | undefined) {
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetched = snapshot.docs.map(docSnap => {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data
-                } as Paper;
-            });
+            const fetched = snapshot.docs.map(docSnap => mapPaperData(docSnap.id, docSnap.data()));
             downloadedPapersCache[userId] = fetched;
             setPapers(fetched);
             setLoading(false);
@@ -1017,25 +1032,7 @@ export function usePapers(_courseId: string | undefined, departmentId: string | 
                 );
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const docs = snapshot.docs.map(d => {
-                    const data = d.data() as any;
-                    const departmentIds = normalizeDepartmentIds(data);
-                    return {
-                        id: d.id,
-                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                        code: data.courseCode || data.code || '',
-                        year: data.year || '',
-                        semester: data.semester || '',
-                        type: data.type || '',
-                        pdfUrl: data.pdfUrl || data.url || '',
-                        thumbnailUrl: data.thumbnailUrl || '',
-                        pageCount: data.pageCount || undefined,
-                        downloads: data.downloads || 0,
-                        courseId: data.courseId || data.course || undefined,
-                        departmentId: data.departmentId || departmentIds[0],
-                        departmentIds,
-                    } as Paper;
-                });
+                const docs = snapshot.docs.map(d => mapPaperData(d.id, d.data()));
                 setPapers(docs);
             } catch (err) {
                 console.error('Error fetching papers:', err);
@@ -1072,23 +1069,7 @@ export function usePaper(paperId: string | undefined) {
                 if (!isMounted) return;
                 if (docSnap.exists()) {
                     const data = docSnap.data() as any;
-                    const departmentIds = normalizeDepartmentIds(data);
-                    setPaper({
-                        id: docSnap.id,
-                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                        code: data.courseCode || data.code || '',
-                        year: data.year || '',
-                        semester: data.semester || '',
-                        type: data.type || '',
-                        pdfUrl: data.pdfUrl || data.url || '',
-                        richTextContent: data.richTextContent || '',
-                        thumbnailUrl: data.thumbnailUrl || '',
-                        pageCount: data.pageCount || undefined,
-                        downloads: data.downloads || 0,
-                        courseId: data.courseId || undefined,
-                        departmentId: data.departmentId || departmentIds[0],
-                        departmentIds,
-                    });
+                    setPaper(mapPaperData(docSnap.id, data));
                 } else {
                     setPaper(null);
                 }
@@ -1125,26 +1106,7 @@ export function useCoursePapers(courseId: string | undefined) {
                 const q = query(collection(db, 'papers'), where('courseId', '==', courseId));
                 const snapshot = await getDocs(q);
                 if (!isMounted) return;
-                const docs = snapshot.docs.map(d => {
-                    const data = d.data() as any;
-                    const departmentIds = normalizeDepartmentIds(data);
-                    return {
-                        id: d.id,
-                        title: data.title || `${data.courseCode || data.code || ''} ${data.year || ''}`.trim(),
-                        code: data.courseCode || data.code || '',
-                        year: data.year || '',
-                        semester: data.semester || '',
-                        type: data.type || '',
-                        pdfUrl: data.pdfUrl || data.url || '',
-                        richTextContent: data.richTextContent || '',
-                        thumbnailUrl: data.thumbnailUrl || '',
-                        pageCount: data.pageCount || undefined,
-                        downloads: data.downloads || 0,
-                        courseId: data.courseId || undefined,
-                        departmentId: data.departmentId || departmentIds[0],
-                        departmentIds,
-                    } as Paper;
-                });
+                const docs = snapshot.docs.map(d => mapPaperData(d.id, d.data()));
                 setPapers(docs);
             } catch (err) {
                 console.error('Error fetching course papers:', err);
