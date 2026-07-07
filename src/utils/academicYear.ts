@@ -27,7 +27,7 @@ export function getAcademicYearOptions(date = new Date(), yearsBack = 6, yearsFo
   const defaultStartYear = getDefaultAcademicYearOption(date).startYear;
   const options: AcademicYearOption[] = [];
 
-  for (let startYear = defaultStartYear + yearsForward; startYear >= defaultStartYear - yearsBack; startYear -= 1) {
+  for (let startYear = defaultStartYear + yearsForward; startYear >= 2024; startYear -= 1) {
     options.push(createAcademicYearOption(startYear));
   }
 

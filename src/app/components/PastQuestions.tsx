@@ -5,6 +5,7 @@ import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, u
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Crown, X } from 'lucide-react';
+import { getAcademicYearOptions, getDefaultAcademicYearOption } from '@/utils/academicYear';
 
 interface PastQuestionsProps {
     onBack: () => void;
@@ -34,6 +35,9 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
     // Default semester logic: Sync with global settings until user manually chooses a semester
     const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
     const [hasInteractedWithSemester, setHasInteractedWithSemester] = useState(false);
+    const defaultYear = getDefaultAcademicYearOption();
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('all');
+    const yearOptions = getAcademicYearOptions();
     const [showFilter, setShowFilter] = useState(false);
 
     // Sync default semester once config loads (only if user hasn't manually changed it)
@@ -77,6 +81,11 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
         if (selectedLevel && c.level !== selectedLevel) return false;
         // Semester matching is case-insensitive
         if (selectedSemester && c.semester?.toLowerCase() !== selectedSemester.toLowerCase()) return false;
+        // Academic Year matching
+        if (selectedAcademicYear !== 'all') {
+            const courseYear = c.academicYearKey || '2024-2025';
+            if (courseYear !== selectedAcademicYear) return false;
+        }
         return true;
     });
 
@@ -154,6 +163,27 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
                                         className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedSemester === sem.value ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
                                     >
                                         {sem.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 pt-2">
+                            <p className="text-xs text-secondary mb-2 font-medium">Academic Year</p>
+                            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                                <button
+                                    onClick={() => setSelectedAcademicYear('all')}
+                                    className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedAcademicYear === 'all' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                >
+                                    All Years
+                                </button>
+                                {yearOptions.map(option => (
+                                    <button
+                                        key={option.key}
+                                        onClick={() => setSelectedAcademicYear(option.key)}
+                                        className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedAcademicYear === option.key ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
+                                    >
+                                        {option.label}
                                     </button>
                                 ))}
                             </div>

@@ -6,6 +6,7 @@ import { useAllCourses, useDepartments, useCourses, useContributors, useUserProf
 import { useAuth } from '@/app/context/AuthContext';
 import { getDepartmentArtwork } from '@/utils/departmentArtwork';
 import { courseMatchesSearch } from '@/utils/search';
+import { getAcademicYearOptions, getDefaultAcademicYearOption } from '@/utils/academicYear';
 
 interface ExploreProps {
   selectedDepartment?: string;
@@ -23,6 +24,18 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const defaultYear = getDefaultAcademicYearOption();
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('all');
+  const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
+  const [hasInteractedWithSemester, setHasInteractedWithSemester] = useState(false);
+  const yearOptions = getAcademicYearOptions();
+
+  // Sync default semester once config loads (only if user hasn't manually changed it)
+  useEffect(() => {
+    if (config.currentSemester && !hasInteractedWithSemester) {
+      setSelectedSemester(config.currentSemester);
+    }
+  }, [config.currentSemester, hasInteractedWithSemester]);
 
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses, loading: loadingCourses } = useCourses(departmentId);
@@ -54,8 +67,14 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
     if (course.level !== effectiveLevel) return false;
 
     // Semester Filter: Only apply if we are in the default "Courses for you" view
-    const globalSemester = config.currentSemester; // Hook already normalizes "1st" -> "First"
-    if (course.semester && course.semester.toLowerCase() !== globalSemester.toLowerCase()) return false;
+    const effectiveSemester = selectedSemester || config.currentSemester;
+    if (course.semester && course.semester.toLowerCase() !== effectiveSemester.toLowerCase()) return false;
+
+    // Academic Year Filter
+    if (selectedAcademicYear !== 'all') {
+      const courseYear = course.academicYearKey || '2024-2025';
+      if (courseYear !== selectedAcademicYear) return false;
+    }
 
     return true;
   });
@@ -106,6 +125,32 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
                     {lvl}
                   </button>
                 ))}
+              </div>
+
+              <div className="flex gap-2 flex-wrap mt-3">
+                <select
+                  value={selectedAcademicYear}
+                  onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                  className="px-4 py-2 text-sm font-medium rounded-full bg-card border border-border text-foreground hover:bg-muted outline-none focus:border-primary"
+                >
+                  <option value="all">All Years</option>
+                  {yearOptions.map(option => (
+                    <option key={option.key} value={option.key}>{option.label}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedSemester || 'all'}
+                  onChange={(e) => {
+                    setSelectedSemester(e.target.value === 'all' ? null : e.target.value);
+                    setHasInteractedWithSemester(true);
+                  }}
+                  className="px-4 py-2 text-sm font-medium rounded-full bg-card border border-border text-foreground hover:bg-muted outline-none focus:border-primary"
+                >
+                  <option value="all">All Semesters</option>
+                  <option value="First">1st Semester</option>
+                  <option value="Second">2nd Semester</option>
+                </select>
               </div>
             </motion.div>
           )}
@@ -235,7 +280,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
         <div className="mb-8">
           <h2 className="text-xl font-bold text-foreground mb-4">
             {hasSearchQuery ? 'Search Results' : 'Courses for you'}
-            {!hasSearchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel}) • {config.currentSemester === 'First' ? '1st' : '2nd'} Sem</span>}
+            {!hasSearchQuery && <span className="text-primary ml-2 text-sm font-normal">({selectedLevel || userLevel}) • {selectedSemester === 'First' ? '1st' : '2nd'} Sem</span>}
             {hasSearchQuery && <span className="text-primary ml-2 text-sm font-normal">all departments</span>}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">

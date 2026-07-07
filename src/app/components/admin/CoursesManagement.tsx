@@ -192,11 +192,14 @@ export function CoursesManagement() {
     try {
       const normalizedCode = normalizeCourseCode(formData.code);
       const primaryDepartmentId = formData.departmentIds[0] || '';
+      const academicYear = getPaperAcademicYear({ academicYear: paperYear, year: paperYear });
       const payload = {
         ...formData,
         departmentId: primaryDepartmentId,
         departmentIds: formData.departmentIds,
         code: normalizedCode,
+        academicYear: academicYear.label,
+        academicYearKey: academicYear.key,
         lastUpdated: serverTimestamp()
       };
 
@@ -239,7 +242,6 @@ export function CoursesManagement() {
         });
       }
 
-      const academicYear = getPaperAcademicYear({ academicYear: paperYear, year: paperYear });
       const paperPayload = {
         courseId: customId,
         departmentId: primaryDepartmentId,

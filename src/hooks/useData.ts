@@ -35,6 +35,8 @@ export interface Course {
     departmentIds?: string[];
     level: string;
     semester?: string;
+    academicYear?: string;
+    academicYearKey?: string;
     papers?: number;
     lecturer?: string;
     driveFolderUrl?: string; // MVP: Google Drive folder containing papers
