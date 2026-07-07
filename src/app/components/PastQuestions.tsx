@@ -37,6 +37,7 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
     const [hasInteractedWithSemester, setHasInteractedWithSemester] = useState(false);
     const defaultYear = getDefaultAcademicYearOption();
     const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('all');
+    const [hasInteractedWithYear, setHasInteractedWithYear] = useState(false);
     const yearOptions = getAcademicYearOptions();
     const [showFilter, setShowFilter] = useState(false);
 
@@ -46,6 +47,14 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
             setSelectedSemester(config.currentSemester);
         }
     }, [config.currentSemester, hasInteractedWithSemester]);
+
+    // Sync default academic year once config loads
+    useEffect(() => {
+        if (config.currentSession && !hasInteractedWithYear) {
+            const yearKey = normalizeAcademicYear(config.currentSession)?.key || '2024-2025';
+            setSelectedAcademicYear(yearKey);
+        }
+    }, [config.currentSession, hasInteractedWithYear]);
 
     const handleToggleBookmark = async (e: React.MouseEvent, courseId: string) => {
         e.stopPropagation();
@@ -172,7 +181,10 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
                             <p className="text-xs text-secondary mb-2 font-medium">Academic Year</p>
                             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                                 <button
-                                    onClick={() => setSelectedAcademicYear('all')}
+                                    onClick={() => {
+                                        setSelectedAcademicYear('all');
+                                        setHasInteractedWithYear(true);
+                                    }}
                                     className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedAcademicYear === 'all' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
                                 >
                                     All Years
@@ -180,7 +192,10 @@ export function PastQuestions({ onBack, departmentId, selectedLevel: initialLeve
                                 {yearOptions.map(option => (
                                     <button
                                         key={option.key}
-                                        onClick={() => setSelectedAcademicYear(option.key)}
+                                        onClick={() => {
+                                            setSelectedAcademicYear(option.key);
+                                            setHasInteractedWithYear(true);
+                                        }}
                                         className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedAcademicYear === option.key ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}
                                     >
                                         {option.label}

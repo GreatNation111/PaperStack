@@ -18,7 +18,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, addDoc, deleteDoc, doc, query, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface AdminLayoutProps {
@@ -51,6 +51,76 @@ export function AdminLayout({ children, currentPage, onNavigate, onLogout, isDar
       setFeedbackCount(snap.size);
     });
     return () => unsub();
+  }, []);
+
+  // Cron worker for Scheduled Notifications
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const q = query(
+          collection(db, 'admin_notifications_queue'),
+          where('status', '==', 'scheduled')
+        );
+        const snap = await getDocs(q);
+        const now = new Date();
+
+        for (const d of snap.docs) {
+          const n = { id: d.id, ...d.data() } as any;
+          if (n.scheduledDate && n.scheduledDate.toDate() <= now) {
+            console.log(`Processing scheduled notification: ${n.title}`);
+            // 1. Move to live notifications
+            await addDoc(collection(db, 'notifications'), {
+              title: n.title,
+              body: n.body,
+              type: n.type || 'info',
+              target: n.target,
+              targetId: n.targetId || '',
+              targetName: n.targetName || '',
+              createdAt: serverTimestamp(),
+              status: 'sent'
+            });
+
+            // 2. Delete from queue
+            await deleteDoc(doc(db, 'admin_notifications_queue', n.id));
+
+            // 3. Send Push Notification
+            let usersQuery: any = collection(db, 'users');
+            if (n.target === 'department' && n.targetId) {
+              usersQuery = query(collection(db, 'users'), where('departmentId', '==', n.targetId));
+            }
+
+            const usersSnap = await getDocs(usersQuery);
+            const tokens: string[] = [];
+
+            usersSnap.forEach(docSnap => {
+              const data = docSnap.data() as any;
+              if (data.notificationSettings?.pushEnabled === false) return;
+              if (Array.isArray(data.fcmTokens)) {
+                tokens.push(...data.fcmTokens);
+              }
+            });
+
+            if (tokens.length > 0) {
+              const uniqueTokens = [...new Set(tokens)];
+              await fetch('/api/send-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: n.title,
+                  body: n.body,
+                  tokens: uniqueTokens,
+                  data: { target: n.target, targetId: n.targetId }
+                })
+              }).catch(err => console.error('Push API err:', err));
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Scheduled notification error:", err);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
   }, []);
 
   const navItems = [

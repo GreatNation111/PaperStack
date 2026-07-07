@@ -23,7 +23,7 @@ export function getDefaultAcademicYearOption(date = new Date()) {
   return createAcademicYearOption(date.getFullYear() - 2);
 }
 
-export function getAcademicYearOptions(date = new Date(), yearsBack = 6, yearsForward = 2) {
+export function getAcademicYearOptions(date = new Date(), yearsBack = 6, yearsForward = 11) {
   const defaultStartYear = getDefaultAcademicYearOption(date).startYear;
   const options: AcademicYearOption[] = [];
 

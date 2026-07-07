@@ -4,6 +4,7 @@ import { Settings, Loader2, Save, Calendar, TrendingUp, CheckCircle, Users, X, M
 import { db } from '@/lib/firebase';
 import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { DEFAULT_PRICING_CONFIG, GlobalConfig, PricingConfig, useGlobalConfig, usePricingConfig } from '@/hooks/useData';
+import { getAcademicYearOptions } from '@/utils/academicYear';
 
 type PricingVoter = {
   userId?: string;
@@ -229,14 +230,21 @@ export function AdminSettings() {
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Current Session</label>
-                <input
-                  type="text"
+                <select
                   value={localConfig.currentSession}
-                  onChange={(e) => setLocalConfig({ ...localConfig, currentSession: e.target.value })}
-                  onBlur={() => handleUpdateConfig({ currentSession: localConfig.currentSession })}
-                  className="w-full bg-muted/40 border border-border rounded-xl h-11 px-4 font-bold text-foreground focus:border-indigo-500/40 outline-none text-sm"
-                  placeholder="2023/2024"
-                />
+                  onChange={(e) => {
+                    const newSession = e.target.value;
+                    setLocalConfig({ ...localConfig, currentSession: newSession });
+                    handleUpdateConfig({ currentSession: newSession });
+                  }}
+                  className="w-full bg-muted/40 border border-border rounded-xl h-11 px-4 font-bold text-foreground focus:border-indigo-500/40 outline-none text-sm appearance-none"
+                >
+                  {getAcademicYearOptions().map(option => (
+                    <option key={option.key} value={option.label}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-2">Current Semester</label>

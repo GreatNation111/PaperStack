@@ -26,6 +26,7 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const defaultYear = getDefaultAcademicYearOption();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('all');
+  const [hasInteractedWithYear, setHasInteractedWithYear] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<string | null>(null);
   const [hasInteractedWithSemester, setHasInteractedWithSemester] = useState(false);
   const yearOptions = getAcademicYearOptions();
@@ -36,6 +37,14 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
       setSelectedSemester(config.currentSemester);
     }
   }, [config.currentSemester, hasInteractedWithSemester]);
+
+  // Sync default academic year once config loads
+  useEffect(() => {
+    if (config.currentSession && !hasInteractedWithYear) {
+      const yearKey = normalizeAcademicYear(config.currentSession)?.key || '2024-2025';
+      setSelectedAcademicYear(yearKey);
+    }
+  }, [config.currentSession, hasInteractedWithYear]);
 
   const { departments, loading: loadingDepts } = useDepartments();
   const { courses, loading: loadingCourses } = useCourses(departmentId);
@@ -130,7 +139,10 @@ export function Explore({ selectedDepartment, onViewPastQuestions }: ExploreProp
               <div className="flex gap-2 flex-wrap mt-3">
                 <select
                   value={selectedAcademicYear}
-                  onChange={(e) => setSelectedAcademicYear(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedAcademicYear(e.target.value);
+                    setHasInteractedWithYear(true);
+                  }}
                   className="px-4 py-2 text-sm font-medium rounded-full bg-card border border-border text-foreground hover:bg-muted outline-none focus:border-primary"
                 >
                   <option value="all">All Years</option>

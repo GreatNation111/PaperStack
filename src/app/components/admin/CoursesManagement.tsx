@@ -60,12 +60,19 @@ interface CourseFormData {
   papers: number | '';
 }
 
+
 export function CoursesManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [departmentPickerOpen, setDepartmentPickerOpen] = useState(false);
+  
+  // Productive Filters
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterSemester, setFilterSemester] = useState<string>('all');
+  const [filterLevel, setFilterLevel] = useState<string>('all');
+
   const { departments } = useDepartments();
   const defaultAcademicYear = getDefaultAcademicYearOption();
   const academicYearOptions = getAcademicYearOptions();
@@ -388,14 +395,6 @@ export function CoursesManagement() {
     }
   };
 
-  const uploadNativeDocumentImage = async (file: File): Promise<string> => {
-    const courseKey = editingId || formData.code.toLowerCase().replace(/[^a-z0-9]/g, '') || 'draft-native-docs';
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storageRef = ref(storage, `papers/${courseKey}/native-images/${Date.now()}_${safeName}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    return getDownloadURL(snapshot.ref);
-  };
-
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       try {
@@ -413,23 +412,27 @@ export function CoursesManagement() {
     course.departmentIds?.length ? course.departmentIds : (course.departmentId ? [course.departmentId] : []);
   const selectedDepartmentNames = formData.departmentIds.map(id => getDepartmentName(id));
 
-  const toggleDepartment = (departmentId: string) => {
-    setFormData(prev => {
-      const isSelected = prev.departmentIds.includes(departmentId);
-      return {
-        ...prev,
-        departmentIds: isSelected
-          ? prev.departmentIds.filter(id => id !== departmentId)
-          : [...prev.departmentIds, departmentId],
-      };
-    });
-  };
-
   const filteredCourses = courses.filter(c => {
     const deptNames = getCourseDepartmentIds(c).map(id => getDepartmentName(id)).join(' ');
-    return c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
            c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
            deptNames.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    // Academic Year
+    if (filterYear !== 'all') {
+       const courseYear = c.academicYearKey || '2024-2025';
+       if (courseYear !== filterYear) return false;
+    }
+
+    // Semester
+    if (filterSemester !== 'all' && c.semester?.toLowerCase() !== filterSemester.toLowerCase()) return false;
+
+    // Level
+    if (filterLevel !== 'all' && c.level !== filterLevel) return false;
+
+    return true;
   });
 
   const handleCodeChange = (value: string) => {
@@ -478,8 +481,8 @@ export function CoursesManagement() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
+      {/* Search Bar & Filters */}
+      <div className="mb-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#666]" strokeWidth={1.5} />
           <input
@@ -489,6 +492,42 @@ export function CoursesManagement() {
             placeholder="Search by course code, title..."
             className="w-full h-12 pl-10 pr-4 bg-[#1A1A1F] border border-[#2A2A2F] rounded-xl text-[#E5E5E5] placeholder:text-[#666] focus:outline-none focus:border-[#4F46E5] transition-colors"
           />
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+            className="h-10 px-3 bg-[#1A1A1F] border border-[#2A2A2F] rounded-lg text-sm text-[#E5E5E5] appearance-none outline-none focus:border-[#4F46E5]"
+          >
+            <option value="all">All Years</option>
+            {academicYearOptions.map(option => (
+              <option key={option.key} value={option.key}>{option.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterSemester}
+            onChange={(e) => setFilterSemester(e.target.value)}
+            className="h-10 px-3 bg-[#1A1A1F] border border-[#2A2A2F] rounded-lg text-sm text-[#E5E5E5] appearance-none outline-none focus:border-[#4F46E5]"
+          >
+            <option value="all">All Semesters</option>
+            <option value="first">1st Semester</option>
+            <option value="second">2nd Semester</option>
+          </select>
+
+          <select
+            value={filterLevel}
+            onChange={(e) => setFilterLevel(e.target.value)}
+            className="h-10 px-3 bg-[#1A1A1F] border border-[#2A2A2F] rounded-lg text-sm text-[#E5E5E5] appearance-none outline-none focus:border-[#4F46E5]"
+          >
+            <option value="all">All Levels</option>
+            <option value="100L">100 Level</option>
+            <option value="200L">200 Level</option>
+            <option value="300L">300 Level</option>
+            <option value="400L">400 Level</option>
+            <option value="500L">500 Level</option>
+          </select>
         </div>
       </div>
 
