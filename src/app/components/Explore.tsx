@@ -6,7 +6,7 @@ import { useAllCourses, useDepartments, useCourses, useContributors, useUserProf
 import { useAuth } from '@/app/context/AuthContext';
 import { getDepartmentArtwork } from '@/utils/departmentArtwork';
 import { courseMatchesSearch } from '@/utils/search';
-import { getAcademicYearOptions, getDefaultAcademicYearOption } from '@/utils/academicYear';
+import { getAcademicYearOptions, getDefaultAcademicYearOption, normalizeAcademicYear } from '@/utils/academicYear';
 
 interface ExploreProps {
   selectedDepartment?: string;

@@ -5,7 +5,7 @@ import { useCourses, useBookmarks, toggleBookmark, recordRecentCourse, Course, u
 import { useAuth } from '@/app/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Crown, X } from 'lucide-react';
-import { getAcademicYearOptions, getDefaultAcademicYearOption } from '@/utils/academicYear';
+import { getAcademicYearOptions, getDefaultAcademicYearOption, normalizeAcademicYear } from '@/utils/academicYear';
 
 interface PastQuestionsProps {
     onBack: () => void;
